@@ -26,7 +26,7 @@ const Home = () => {
           <p className="sm:text-2xl lg:text-3xl font-semibold">ATTENDANCE SYSTEM</p>
         </div>
         <div>
-          <img src="/COVER.png" alt="CJCRSG Cover Photo" />
+          <img src="/COVER.jpg" alt="CJCRSG Cover Photo" />
         </div>
       </main>
 
