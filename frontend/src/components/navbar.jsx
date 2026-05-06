@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check if token exists in localStorage
   useEffect(() => {
@@ -92,19 +94,19 @@ const Navbar = () => {
       </AnimatePresence>
 
       <nav className="sticky top-0 z-40 shadow-md bg-white">
-        <div className="flex justify-between items-center px-8 py-4 md:text-lg lg:text-xl text-[#364687]">
+        <div className="flex justify-between items-center px-4 md:px-8 py-3 md:py-4 text-[#364687]">
           {/* Logo Section */}
-          <div className="flex flex-row justify-start items-center gap-4 pl-12">
+          <div className="flex items-center gap-3 md:gap-4">
             <img
               src="/LOGO.png"
               alt="CJCRSG LOGO"
-              className="w-[50px] h-[50px]"
+              className="w-10 h-10 md:w-[50px] md:h-[50px]"
             />
-            <p className="font-montserrat font-bold">CJCRSG PHILS. INC.</p>
+            <p className="font-montserrat font-bold text-sm md:text-base lg:text-xl">CJCRSG PHILS. INC.</p>
           </div>
 
-          {/* Navigation */}
-          <ul className="flex gap-6 font-montserrat items-center">
+          {/* Desktop Navigation */}
+          <ul className="hidden md:flex gap-10 lg:gap-16 font-montserrat text-md lg:text-xl items-center">
             <li className="relative group">
               <button
                 onClick={() => handleNavigate("/home")}
@@ -117,7 +119,6 @@ const Navbar = () => {
 
             {isLoggedIn ? (
               <>
-                {/* Dashboard Link */}
                 <li className="relative group">
                   <button
                     onClick={() => handleNavigate("/homepage")}
@@ -128,11 +129,10 @@ const Navbar = () => {
                   </button>
                 </li>
 
-                {/* Logout Link */}
                 <li className="relative group">
                   <button
                     onClick={() => setShowLogoutConfirm(true)}
-                    className="relative group text-red-600 hover:text-red-700 transition-all duration-300"
+                    className="relative group text-red-600 hover:text-red-700"
                   >
                     Logout
                     <span className="absolute left-0 -bottom-1 w-0 h-[3px] bg-red-600 transition-all duration-300 group-hover:w-full rounded"></span>
@@ -162,7 +162,80 @@ const Navbar = () => {
               </>
             )}
           </ul>
+
+          {/* Mobile Hamburger Button */}
+          <button 
+            className="md:hidden p-2"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              className="md:hidden bg-white border-t border-gray-200"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ul className="flex flex-col py-4 px-4 gap-4 font-montserrat text-base text-[#364687]">
+                <li>
+                  <button
+                    onClick={() => { handleNavigate("/home"); setMobileMenuOpen(false); }}
+                    className="block w-full text-left py-2"
+                  >
+                    Home
+                  </button>
+                </li>
+
+                {isLoggedIn ? (
+                  <>
+                    <li>
+                      <button
+                        onClick={() => { handleNavigate("/homepage"); setMobileMenuOpen(false); }}
+                        className="block w-full text-left py-2"
+                      >
+                        Dashboard
+                      </button>
+                    </li>
+
+                    <li>
+                      <button
+                        onClick={() => { setShowLogoutConfirm(true); setMobileMenuOpen(false); }}
+                        className="block w-full text-left py-2 text-red-600"
+                      >
+                        Logout
+                      </button>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li>
+                      <button
+                        onClick={() => { handleNavigate("/login"); setMobileMenuOpen(false); }}
+                        className="block w-full text-left py-2"
+                      >
+                        Log In
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { handleNavigate("/signup"); setMobileMenuOpen(false); }}
+                        className="block w-full text-left py-2"
+                      >
+                        Sign Up
+                      </button>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
     </>
   );

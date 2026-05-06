@@ -23,7 +23,7 @@ const Home = () => {
           <p className="sm:text-2xl lg:text-3xl font-semibold">WELCOME TO </p>
           <p className="text-xl sm:text-3xl md:text-4xl lg:text-5xl">CHURCH OF JESUS CHRIST</p>
           <p className="text-xl sm:text-3xl md:text-4xl lg:text-5xl">THE RISEN SON OF GOD PHILS. INC.</p>
-          <p className="sm:text-2xl lg:text-3xl font-semibold">ATTENDANCE SYSTEM</p>
+          <p className="sm:text-2xl lg:text-3xl font-semibold">ATTENDANCE AND MEMBER MANAGEMENT SYSTEM</p>
         </div>
         <div>
           <img src="/COVER.jpg" alt="CJCRSG Cover Photo" />
