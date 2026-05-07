@@ -87,7 +87,7 @@ const AdminNavbar = () => {
       </AnimatePresence>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 shadow-md bg-white">
+      <nav className="sticky top-0 z-40 shadow-md bg-white font-montserrat">
         <div className="flex justify-between items-center px-8 py-4 md:text-lg lg:text-xl text-[#364687]">
           {/* Logo */}
           <div className="flex flex-row justify-start items-center gap-4">
@@ -96,27 +96,27 @@ const AdminNavbar = () => {
           </div>
 
           {/* Navigation Links */}
-          <ul className="flex gap-6 font-montserrat items-center">
+          <ul className="flex gap-16 font-montserrat items-center">
             <li className="relative group">
-              <button onClick={() => handleNavigate("/adminDashboard")}>
+              <button onClick={() => handleNavigate("/admin/home")}>
                 Dashboard
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
               </button>
             </li>
             <li className="relative group">
-              <button onClick={() => handleNavigate("/adminDashboard/announcements")}>
+              <button onClick={() => handleNavigate("/admin/announcements")}>
                 Announcements
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
               </button>
             </li>
             <li className="relative group">
-              <button onClick={() => handleNavigate("/adminDashboard/members")}>
+              <button onClick={() => handleNavigate("/admin/members")}>
                 Members
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
               </button>
             </li>
             <li className="relative group">
-              <button onClick={() => handleNavigate("/adminDashboard/visitors")}>
+              <button onClick={() => handleNavigate("/admin/visitors")}>
                 Visitors
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
               </button>
@@ -126,10 +126,12 @@ const AdminNavbar = () => {
             <li className="relative group">
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className="text-red-600 hover:text-red-700 transition-all duration-300"
+                className="flex items-center gap-3 px-5 py-2 border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-all"
               >
-                Logout
-                <span className="absolute left-0 -bottom-1 w-0 h-[3px] bg-red-600 transition-all duration-300 group-hover:w-full rounded"></span>
+                <span className="text-[16px]">Admin</span>
+                <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
             </li>
           </ul>

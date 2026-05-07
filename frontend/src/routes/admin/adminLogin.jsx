@@ -29,7 +29,7 @@ const AdminLogin = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      navigate("/adminDashboard");
+      navigate("/admin");
     } catch (err) {
       console.error(err.response?.data || err.message);
       setError(err.response?.data?.message || "Login failed");

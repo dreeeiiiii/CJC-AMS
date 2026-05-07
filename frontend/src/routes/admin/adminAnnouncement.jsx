@@ -1,39 +1,429 @@
-import React from "react";
-import AdminNavbar from "../../components/adminNavbar";
+import React, { useState, useRef } from 'react'
+import AdminNavbar from '../../components/adminNavbar'
+import Footer from '../../components/footer'
+import { ImagePlus, Send, Calendar, Edit2, Trash2, Paperclip, X, Bold, Italic, Smile, Loader2, Eye } from 'lucide-react'
 
+const initialAnnouncements = [
+  {
+    id: 1,
+    content: 'Reminder to all members: Our general assembly will be held this Sunday at 9:00 AM. Please be at the venue by 8:30 AM for registration. Your presence is highly appreciated!',
+    image: null,
+    timestamp: '2026-05-05T09:00:00',
+  },
+  {
+    id: 2,
+    content: 'We are excited to announce our new community outreach program starting next month. Volunteers are needed to help with coordination and logistics. Sign up at the admin office or contact your chapter leader.',
+    image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&h=450&fit=crop',
+    timestamp: '2026-05-03T14:30:00',
+  },
+  {
+    id: 3,
+    content: 'Schedule update: The weekly meeting has been moved to Wednesday at 7:00 PM due to venue availability. Please adjust your calendars accordingly.',
+    image: null,
+    timestamp: '2026-05-01T10:15:00',
+  },
+]
 
-const Announcements = () => {
+const AdminAnnouncement = () => {
+  const [announcements, setAnnouncements] = useState(initialAnnouncements)
+  const [postContent, setPostContent] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [deleteModal, setDeleteModal] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editContent, setEditContent] = useState('')
+  const [loadingMore, setLoadingMore] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const maxChars = 280
+  const charCount = postContent.length
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setImagePreview(reader.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const clearImage = () => {
+    setSelectedFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handlePost = () => {
+    if (!postContent.trim() && !selectedFile) return
+
+    setIsLoading(true)
+    setTimeout(() => {
+      const newPost = {
+        id: Date.now(),
+        content: postContent,
+        image: imagePreview || null,
+        timestamp: new Date().toISOString(),
+      }
+      setAnnouncements(prev => [newPost, ...prev])
+      setPostContent('')
+      clearImage()
+      setIsLoading(false)
+    }, 600)
+  }
+
+  const handleDelete = (id) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id))
+    setDeleteModal(null)
+  }
+
+  const handleEdit = (id) => {
+    const announcement = announcements.find(a => a.id === id)
+    if (announcement) {
+      setEditingId(id)
+      setEditContent(announcement.content)
+    }
+  }
+
+  const handleSaveEdit = (id) => {
+    setAnnouncements(prev =>
+      prev.map(a => (a.id === id ? { ...a, content: editContent } : a))
+    )
+    setEditingId(null)
+    setEditContent('')
+  }
+
+  const handleLoadMore = () => {
+    setLoadingMore(true)
+    setTimeout(() => {
+      setLoadingMore(false)
+    }, 1000)
+  }
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const insertFormat = (syntax) => {
+    const textarea = document.getElementById('postEditor')
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const text = postContent
+      const selectedText = text.substring(start, end)
+      let wrapper = ''
+      switch (syntax) {
+        case 'bold':
+          wrapper = `**${selectedText || 'bold text'}**`
+          break
+        case 'italic':
+          wrapper = `*${selectedText || 'italic text'}*`
+          break
+        case 'emoji':
+          wrapper = '😊'
+          break
+        default:
+          break
+      }
+      const newText = text.substring(0, start) + wrapper + text.substring(end)
+      setPostContent(newText)
+    }
+  }
+
   return (
-    
-    <div>
-      <AdminNavbar/>
-      <h2 className="text-xl font-bold mb-4">Create Announcement</h2>
-      <form className="flex flex-col space-y-3">
-        <input
-          type="text"
-          placeholder="Title"
-          className="border rounded-lg px-3 py-2"
-        />
-        <textarea
-          placeholder="Message"
-          className="border rounded-lg px-3 py-2"
-          rows={4}
-        />
-        <button className="bg-blue-500 text-white py-2 rounded-lg w-32 hover:bg-blue-600 transition">
-          Post
-        </button>
-      </form>
+    <>
+      <AdminNavbar />
 
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2">Recent Announcements</h3>
-        <ul className="space-y-2">
-          <li className="border p-3 rounded-lg">Announcement 1</li>
-          <li className="border p-3 rounded-lg">Announcement 2</li>
-          <li className="border p-3 rounded-lg">Announcement 3</li>
-        </ul>
+      <div className="min-h-screen bg-gradient-to-b from-[#D9DFF2]/40 to-white font-montserrat">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+
+          {/* Left Column - Sticky Hero */}
+          <div className="lg:w-1/3 lg:sticky lg:top-24 lg:self-start">
+            <div className="flex flex-col gap-6">
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, Admin Gwy!</h2>
+                <p className="text-gray-500 text-sm mt-2">Create and manage announcements for the community.</p>
+                <button className="mt-4 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full justify-center">
+                  <Calendar size={18} />
+                  View Events
+                </button>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-600 mb-4">Announcement Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Total Posts</span>
+                    <span className="font-semibold text-[#4A558F]">{announcements.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">This Week</span>
+                    <span className="font-semibold text-[#4A558F]">2</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">With Images</span>
+                    <span className="font-semibold text-[#4A558F]">
+                      {announcements.filter(a => a.image).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Feed */}
+          <div className="lg:w-2/3 space-y-6">
+
+            {/* Create Post Card */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <h3 className="text-lg font-semibold text-[#4A558F] mb-4">Create Announcement</h3>
+
+              {/* Formatting Toolbar */}
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => insertFormat('bold')}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                  title="Bold"
+                >
+                  <Bold size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFormat('italic')}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                  title="Italic"
+                >
+                  <Italic size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFormat('emoji')}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                  title="Add Emoji"
+                >
+                  <Smile size={16} />
+                </button>
+              </div>
+
+              <textarea
+                id="postEditor"
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
+                placeholder="Write something..."
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
+                rows={4}
+                maxLength={maxChars}
+              />
+
+              <div className="flex items-center justify-between mt-2">
+                <span className={`text-xs ${charCount > maxChars * 0.9 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                  {charCount}/{maxChars}
+                </span>
+              </div>
+
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="mt-3 relative inline-block">
+                  <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl" />
+                  <button
+                    onClick={clearImage}
+                    className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
+                  >
+                    <X size={14} className="text-gray-600" />
+                  </button>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-[#4A558F] transition-colors text-sm">
+                    <ImagePlus size={18} />
+                    <span>Add Image</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {selectedFile && (
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Paperclip size={12} />
+                      {selectedFile.name}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handlePost}
+                  disabled={isLoading || (!postContent.trim() && !selectedFile)}
+                  className="bg-[#4A558F] text-white rounded-xl py-2 px-6 hover:bg-[#3a4575] transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Send size={18} />
+                  )}
+                  Post
+                </button>
+              </div>
+            </div>
+
+            {/* Announcement Feed */}
+            {announcements.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm p-12 border border-gray-100 text-center">
+                <div className="text-6xl mb-4">📢</div>
+                <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No updates yet!</h3>
+                <p className="text-gray-500 text-sm">Create your first announcement to keep the community informed.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {announcements.map((announcement) => (
+                  <div key={announcement.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <img src="/LOGO.png" alt="Logo" className="w-10 h-10 rounded-full" />
+                          <div>
+                            <h4 className="font-semibold text-[#4A558F] text-sm">Church of Jesus Christ</h4>
+                            <p className="text-xs text-gray-400">{formatTimestamp(announcement.timestamp)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      {editingId === announcement.id ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
+                            rows={4}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveEdit(announcement.id)}
+                              className="bg-[#4A558F] text-white text-sm rounded-lg px-4 py-1.5 hover:bg-[#3a4575] transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="bg-gray-200 text-gray-600 text-sm rounded-lg px-4 py-1.5 hover:bg-gray-300 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{announcement.content}</p>
+                      )}
+
+                      {/* Image Attachment */}
+                      {announcement.image && (
+                        <div className="mt-4">
+                          <img
+                            src={announcement.image}
+                            alt="Announcement"
+                            className="w-full h-auto max-h-80 object-cover rounded-xl"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => handleEdit(announcement.id)}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
+                      >
+                        <Edit2 size={14} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteModal(announcement.id)}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Load More */}
+            {announcements.length > 0 && (
+              <div className="flex justify-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 text-sm text-[#4A558F] hover:text-[#3a4575] transition-colors disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      Load More
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
-};
 
-export default Announcements;
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} className="text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Announcement?</h3>
+            <p className="text-sm text-gray-500 mb-6">This action cannot be undone. Are you sure you want to delete this post?</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="px-5 py-2 rounded-xl bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteModal)}
+                className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </>
+  )
+}
+
+export default AdminAnnouncement
