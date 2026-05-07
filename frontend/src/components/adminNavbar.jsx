@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const AdminNavbar = () => {
@@ -7,6 +8,7 @@ const AdminNavbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -88,15 +90,26 @@ const AdminNavbar = () => {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-40 shadow-md bg-white font-montserrat">
-        <div className="flex justify-between items-center px-8 py-4 md:text-lg lg:text-xl text-[#364687]">
+        <div className="flex justify-between items-center px-4 py-4 md:px-8 md:text-lg lg:text-xl text-[#364687]">
           {/* Logo */}
           <div className="flex flex-row justify-start items-center gap-4">
-            <img src="/LOGO.png" alt="CJCRSG LOGO" className="w-[50px] h-[50px]" />
-            <p className="font-montserrat font-bold">CJCRSG PHILS. INC.</p>
+            <img src="/LOGO.png" alt="CJCRSG LOGO" className="w-[40px] h-[40px] md:w-[50px] md:h-[50px]" />
+            <p className="font-montserrat font-bold text-sm md:text-base">CJCRSG PHILS. INC.</p>
           </div>
 
-          {/* Navigation Links */}
-          <ul className="flex gap-16 font-montserrat items-center">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden flex flex-col gap-1 p-2"
+            aria-label="Toggle menu"
+          >
+            <span className={`block w-6 h-0.5 bg-[#364687] transition-all ${mobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-[#364687] transition-all ${mobileMenuOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-[#364687] transition-all ${mobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
+          </button>
+
+          {/* Navigation Links - Desktop */}
+          <ul className="hidden md:flex gap-8 lg:gap-16 font-montserrat items-center">
             <li className="relative group">
               <button onClick={() => handleNavigate("/admin/home")}>
                 Dashboard
@@ -129,13 +142,83 @@ const AdminNavbar = () => {
                 className="flex items-center gap-3 px-5 py-2 border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-all"
               >
                 <span className="text-[16px]">Admin</span>
-                <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <LogOut className="w-4 h-4 opacity-60" />
               </button>
             </li>
           </ul>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="md:hidden overflow-hidden bg-white border-t border-gray-100"
+            >
+              <ul className="flex flex-col py-4 px-4 space-y-4 font-montserrat">
+                <li>
+                  <button
+                    onClick={() => {
+                      handleNavigate("/admin/home");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 hover:text-blue-600 transition"
+                  >
+                    Dashboard
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      handleNavigate("/admin/announcements");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 hover:text-blue-600 transition"
+                  >
+                    Announcements
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      handleNavigate("/admin/members");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 hover:text-blue-600 transition"
+                  >
+                    Members
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      handleNavigate("/admin/visitors");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 hover:text-blue-600 transition"
+                  >
+                    Visitors
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      setShowLogoutConfirm(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-5 py-2 border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-all w-full justify-center"
+                  >
+                    <span className="text-[16px]">Logout</span>
+                    <LogOut className="w-4 h-4 opacity-60" />
+                  </button>
+                </li>
+              </ul>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
     </>
   );
