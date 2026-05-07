@@ -7,7 +7,10 @@ import { Login } from './routes/members/loginPage';
 import { MessageReset } from './routes/auth/messageResetPage';
 import { VerifyReset } from './routes/auth/VerifyResetPage';
 import { ResetPassword } from './routes/auth/ResetPasswordPage';
-import UserDashboard from './routes/members/userDashboard';
+// import UserDashboard from './routes/members/userDashboard';
+import MemberPage from './routes/members/memberPage';
+import MemberProfile from './routes/members/memberProfile';
+import MemberAnnouncements from './routes/members/memberAnnouncement';
 import AdminLogin from './routes/admin/adminLogin';
 import Visitors from './routes/admin/adminVisitors';
 import Announcements from './routes/admin/adminAnnouncement';
@@ -89,9 +92,9 @@ function App() {
         <Route path="/resetPassword" element={<ResetPassword />} />
         <Route path="/admin" element={<AdminLogin />} />
 
-              {/* Protected Admin Routes */}
+        {/* Protected Admin Routes */}
         <Route
-        path="/adminDashboard"
+        path="/admin/home"
         element={
           <ProtectedRoutes adminOnly={true}>
             <AdminPage />
@@ -99,7 +102,7 @@ function App() {
         }
         />
         <Route
-        path="/adminDashboard/announcements"
+        path="/admin/announcements"
         element={
           <ProtectedRoutes adminOnly={true}>
             <Announcements />
@@ -107,7 +110,7 @@ function App() {
         }
         />
         <Route
-        path="/adminDashboard/members"
+        path="/admin/members"
         element={
           <ProtectedRoutes adminOnly={true}>
             <Members />
@@ -115,7 +118,7 @@ function App() {
         }
         />
         <Route
-        path="/adminDashboard/visitors"
+        path="/admin/visitors"
         element={
           <ProtectedRoutes adminOnly={true}>
             <Visitors />
@@ -130,7 +133,24 @@ function App() {
           path="/homepage"
           element={
             <ProtectedRoutes>
-              <UserDashboard />
+              {/* <UserDashboard /> */}
+              <MemberPage />
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/member/announcements"
+          element={
+            <ProtectedRoutes>
+              <MemberAnnouncements />
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/member/profile"
+          element={
+            <ProtectedRoutes>
+              <MemberProfile />
             </ProtectedRoutes>
           }
         />
