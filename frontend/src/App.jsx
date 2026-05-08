@@ -96,33 +96,33 @@ function App() {
         <Route
         path="/admin/home"
         element={
-          <ProtectedRoutes adminOnly={true}>
+          
             <AdminPage />
-          </ProtectedRoutes>
+          
         }
         />
         <Route
         path="/admin/announcements"
         element={
-          <ProtectedRoutes adminOnly={true}>
+          
             <Announcements />
-          </ProtectedRoutes>
+          
         }
         />
         <Route
         path="/admin/members"
         element={
-          <ProtectedRoutes adminOnly={true}>
+          
             <Members />
-          </ProtectedRoutes>
+          
         }
         />
         <Route
         path="/admin/visitors"
         element={
-          <ProtectedRoutes adminOnly={true}>
+          
             <Visitors />
-          </ProtectedRoutes>
+          
         }
         />
 
