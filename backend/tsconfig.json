@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    /* File Layout */
+    "rootDir": "./",
+    "outDir": "./dist",
+
+    /* Environment Settings */
+    "module": "NodeNext",          // Required for modern Node.js + "type": "module"
+    "moduleResolution": "NodeNext", // Helps find modules correctly in ESM
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "types": ["node"],             // Ensures @types/node is recognized
+
+    /* Other Outputs */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Stricter Typechecking Options */
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "strict": true,
+
+    /* Style & Safety Options */
+    "verbatimModuleSyntax": true,   // Forces 'import type' for type-only imports
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "esModuleInterop": true,        // Critical for importing CommonJS libs like bcrypt
+    "allowSyntheticDefaultImports": true,
+    
+    /* JSX (If you aren't using React in the backend, you can remove this) */
+    "jsx": "react-jsx" 
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

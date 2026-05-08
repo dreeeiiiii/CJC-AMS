@@ -1,0 +1,17 @@
+import { PrismaClient } from './generated/prisma/index.js';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg'; // Use default import for better ESM compatibility
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const adapter = new PrismaPg(pool);
+
+// This 'prisma' instance now carries the types from your custom folder
+const prisma = new PrismaClient({ adapter });
+
+export default prisma;

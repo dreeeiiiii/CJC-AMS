@@ -1,20 +1,22 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+// This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+  // url is handled in your prisma.config.ts for Prisma 7
 }
 
 enum Gender {
   Male
   Female
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+  VISITOR
 }
 
 enum Category {
@@ -23,32 +25,35 @@ enum Category {
 }
 
 model Member {
-  id Int        @id @default(autoincrement())
-  fullName      String
-  contactNo     String
-  address       String
-  gender        Gender
-  email         String @unique
-  password      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  contactNo String
+  address   String
+  gender    Gender
+  email     String   @unique
+  password  String
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Visitor {
-  id Int        @id @default(autoincrement())
-  fullName      String
-  contactNo     String? //optional
-  address       String?
-  gender        Gender
-  email         String? @unique
-  category      Category
-  visitedAt     DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  fullName          String
+  contactNo         String?
+  address           String?
+  gender            Gender
+  email             String?  @unique
+  category          Category @default(WalkIn)
+  churchAffiliation String?  // Added for Visitor identification
+  role              Role     @default(VISITOR) 
+  visitedAt         DateTime @default(now())
 }
 
 model Announcement {
-  id            Int @id @default(autoincrement())
-  title         String
-  message       String   @db.Text //for longer announcements
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
