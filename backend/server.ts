@@ -13,6 +13,9 @@ import prisma from "./db.js";
 // Import your routes with .js extensions
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import contentRoutes from "./routes/contentRoutes.js"
+import attendanceRoutes from "./routes/attendanceRoutes.js";
+import visitorRoutes from "./routes/visitorRoutes.js"
 
 // Load environment variables
 dotenv.config();
@@ -20,7 +23,12 @@ dotenv.config();
 const app = express();
 
 // --- Middleware ---
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // Allow your frontend
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // --- Swagger Documentation ---
@@ -28,7 +36,10 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
 app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/content", contentRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/visitors", visitorRoutes);
 
 /**
  * Test Route

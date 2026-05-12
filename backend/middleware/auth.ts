@@ -1,45 +1,40 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// 1. Define what your decoded token looks like
 interface DecodedToken {
-  id: string;
+  id: number; // Changed to number to match Prisma Int ID
   email: string;
-  role?: string;
-  // add other fields you include in your JWT payload
+  role: string;
 }
 
-// 2. Extend the Express Request type to include 'user'
 export interface AuthRequest extends Request {
-  user?: string | DecodedToken | jwt.JwtPayload;
+  user?: DecodedToken;
 }
 
-export const authMiddleware = (
-  req: AuthRequest, 
-  res: Response, 
-  next: NextFunction
-) => {
+// 1. Protect Middleware (Ensures user is logged in)
+export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
   const token = req.headers["authorization"]?.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({ message: "No token provided, authorization denied" });
   }
 
   try {
-    const secret = process.env.JWT_TOKEN_SECRET;
-
-    if (!secret) {
-      throw new Error("JWT_TOKEN_SECRET is not defined in environment variables");
-    }
-
-    const decoded = jwt.verify(token, secret);
+    const secret = process.env.JWT_TOKEN_SECRET!;
+    const decoded = jwt.verify(token, secret) as DecodedToken;
     
-    // Now TypeScript knows req.user is allowed on AuthRequest
     req.user = decoded; 
-    
     next();
   } catch (error: any) {
-    console.error("JWT verification error:", error.message);
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Token is not valid" });
+  }
+};
+
+// 2. Admin Only Middleware (Ensures user has ADMIN role)
+export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user && req.user.role.toUpperCase() === "ADMIN") {
+    next();
+  } else {
+    res.status(403).json({ message: "Access denied: Admins only" });
   }
 };
