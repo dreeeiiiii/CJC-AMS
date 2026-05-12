@@ -1,59 +1,31 @@
 import { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, MessageCircle, X } from "lucide-react";
+import { Search, SlidersHorizontal, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import MemberLayout from "../../components/memberLayout";
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// RSS Configuration
+const RSS_FEED_URL = "https://rss.app/feeds/RAkZj7EHehFaskRk.xml";
+const CONVERTER_URL = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_FEED_URL)}`;
 
-const MOCK_ANNOUNCEMENTS = [
-  {
-    id: 1,
-    title: "Upcoming Youth Service",
-    content: "Join us this Saturday for a special youth service with guest speaker Pastor Mark. Bring a friend and experience an evening of worship and fellowship!",
-    image: "/announcement1.jpg",
-    timestamp: "2 hours ago",
-    category: "Youth",
-    author: "Church of Jesus Christ the Risen Son of God Phils. Inc",
-  },
-  {
-    id: 2,
-    title: "Sunday Service Schedule Update",
-    content: "Please note the updated schedule for this Sunday. Morning service will start at 9:30 AM. Youth service remains at 2:00 PM. See you there!",
-    image: "/announcement2.jpg",
-    timestamp: "1 day ago",
-    category: "Service Updates",
-    author: "Church of Jesus Christ the Risen Son of God Phils. Inc",
-  },
-  {
-    id: 3,
-    title: "Community Outreach Program",
-    content: "We're organizing a community outreach next month. Volunteers are needed for food distribution and medical mission. Sign up at the admin office.",
-    image: "/announcement3.jpg",
-    timestamp: "3 days ago",
-    category: "Events",
-    author: "Church of Jesus Christ the Risen Son of God Phils. Inc",
-  },
-  {
-    id: 4,
-    title: "New Member Orientation",
-    content: "Welcome to all our new members! Please attend the orientation this Sunday after the morning service to get acquainted with our church community.",
-    image: "/announcement4.jpg",
-    timestamp: "5 days ago",
-    category: "General",
-    author: "Church of Jesus Christ the Risen Son of God Phils. Inc",
-  },
-];
+// FIX: decode HTML safely
+const decodeHTML = (html) => {
+  if (!html) return "";
+  const txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
+};
 
-const AnnouncementCard = ({ announcement, onComment }) => {
+const AnnouncementCard = ({ announcement }) => {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition flex flex-col h-full">
+      
       {/* Author Header */}
       <div className="flex items-center gap-3 p-4 pb-0">
         <img src="/LOGO.png" alt="Logo" className="w-10 h-10 object-contain" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[#3B4B89] truncate">
-            {announcement.author || "Church of Jesus Christ the Risen Son of God Phils. Inc"}
+            {announcement.author}
           </p>
           <p className="text-xs text-gray-500">{announcement.timestamp}</p>
         </div>
@@ -63,100 +35,43 @@ const AnnouncementCard = ({ announcement, onComment }) => {
       </div>
 
       {/* Post Text */}
-      <div className="px-4 pt-3">
-        <h3 className="text-base font-semibold text-gray-800 mb-1">{announcement.title}</h3>
-        <p className="text-sm text-gray-600 leading-relaxed">{announcement.content}</p>
+      <div className="px-4 pt-3 flex-grow">
+        <h3 className="text-base font-semibold text-gray-800 mb-1 truncate">
+          {announcement.title}
+        </h3>
+        <p className="text-sm text-gray-600 leading-relaxed line-clamp-4">
+          {announcement.content}
+        </p>
       </div>
 
       {/* Featured Image */}
       {announcement.image && (
-        <div className="mt-4 px-4 pb-2">
-          <div className="w-full h-48 bg-gradient-to-br from-[#3B4B89]/10 to-[#3B4B89]/5 rounded-lg overflow-hidden flex items-center justify-center">
-            <p className="text-sm text-gray-400 italic">Featured Image</p>
-          </div>
+        <div className="mt-4 px-4">
+          <img
+            src={announcement.image}
+            alt="Announcement"
+            referrerPolicy="no-referrer"
+            className="w-full h-52 object-cover rounded-lg border border-gray-100"
+            onError={(e) => {
+              // SAFE FAIL (no layout break)
+              e.target.style.display = "none";
+            }}
+          />
         </div>
       )}
 
-      {/* Interaction Bar */}
-      <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <button
-          onClick={() => onComment(announcement)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition"
+      {/* Footer */}
+      <div className="px-4 py-4 mt-4 border-t border-gray-100 flex items-center justify-end bg-gray-50/30">
+        <a
+          href={announcement.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-sm text-[#3B4B89] font-semibold hover:underline"
         >
-          <MessageCircle size={16} />
-          Comment
-        </button>
+          View Full Post <ExternalLink size={14} />
+        </a>
       </div>
     </div>
-  );
-};
-
-const CommentModal = ({ announcement, onClose }) => {
-  const [commentText, setCommentText] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (commentText.trim()) {
-      setSubmitted(true);
-      setTimeout(() => {
-        setCommentText("");
-        setSubmitted(false);
-        onClose();
-      }, 1500);
-    }
-  };
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ duration: 0.2 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Add Comment</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition">
-            <X size={20} className="text-gray-500" />
-          </button>
-        </div>
-
-        {/* Announcement Preview */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <p className="text-sm font-semibold text-[#3B4B89]">{announcement.title}</p>
-          <p className="text-xs text-gray-500 mt-1">{announcement.timestamp}</p>
-        </div>
-
-        {/* Comment Form */}
-        <form onSubmit={handleSubmit} className="p-4">
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Write your comment..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent resize-none h-28"
-            required
-          />
-          <div className="mt-3 flex justify-end">
-            <button
-              type="submit"
-              className="px-5 py-2 bg-[#3B4B89] text-white text-sm font-medium rounded-lg hover:bg-[#2d3a6a] transition"
-            >
-              {submitted ? "Posted!" : "Post Comment"}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
   );
 };
 
@@ -166,34 +81,81 @@ const MemberAnnouncements = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [commentAnnouncement, setCommentAnnouncement] = useState(null);
 
   const categories = ["all", "Events", "General", "Youth", "Service Updates"];
 
   useEffect(() => {
-    const fetchAnnouncements = async () => {
+    const fetchDynamicAnnouncements = async () => {
       try {
-        const res = await axios.get(`${BACKEND_URL}/announcements`);
-        if (res.data && res.data.length > 0) {
-          setAnnouncements(res.data);
-        } else {
-          setAnnouncements(MOCK_ANNOUNCEMENTS);
+        const res = await axios.get(CONVERTER_URL);
+
+        if (res.data?.items) {
+          const formatted = res.data.items.map((item, index) => {
+
+            // 1. ALWAYS decode first (critical)
+            const decodedDescription = decodeHTML(item.description || "");
+
+            // 2. clean text safely
+            const plainText = decodedDescription.replace(/<[^>]*>/g, "");
+
+            // 3. SMART IMAGE RESOLVER (FIXED)
+            const getImage = () => {
+              const rssImage =
+                item.enclosure?.link ||
+                item.thumbnail ||
+                null;
+
+              const htmlImageMatch = decodedDescription.match(
+                /<img[^>]+src=["']([^"']+)["']/i
+              );
+
+              const htmlImage = htmlImageMatch?.[1] || null;
+
+              const ogImageMatch = decodedDescription.match(
+                /og:image[^>]*content=["']([^"']+)["']/i
+              );
+
+              const ogImage = ogImageMatch?.[1] || null;
+
+              return rssImage || htmlImage || ogImage || null;
+            };
+
+            return {
+              id: index,
+              title: item.title || "Church Update",
+              content: plainText || "Click to view details on Facebook.",
+              image: getImage(),
+              timestamp: new Date(item.pubDate).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+              category: "General",
+              author: "CJCRSG Phils. Inc.",
+              link: item.link,
+            };
+          });
+
+          setAnnouncements(formatted);
         }
-      } catch {
-        setAnnouncements(MOCK_ANNOUNCEMENTS);
+      } catch (error) {
+        console.error("Error fetching feed:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchAnnouncements();
+
+    fetchDynamicAnnouncements();
   }, []);
 
   const filteredAnnouncements = announcements.filter((ann) => {
     const matchesSearch =
       ann.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ann.content?.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesCategory =
       selectedCategory === "all" || ann.category === selectedCategory;
+
     return matchesSearch && matchesCategory;
   });
 
@@ -209,24 +171,26 @@ const MemberAnnouncements = () => {
 
   return (
     <MemberLayout activeNav="announcements">
-      {/* Hero Section */}
+      {/* UI unchanged below */}
       <section className="px-6 md:px-12 py-10 md:py-14 bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#3B4B89] mb-3">Announcements</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-[#3B4B89] mb-3">
+            Church Announcements
+          </h1>
           <p className="text-gray-500 text-base md:text-lg max-w-2xl mx-auto">
-            Stay informed with the latest announcements for this week and upcoming events.
+            Stay updated with the latest events and spiritual updates from our official page.
           </p>
         </div>
       </section>
 
-      {/* Control Bar */}
       <section className="px-6 md:px-12 py-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">Important Updates</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Latest Updates
+            </h2>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              {/* Search Input */}
               <div className="relative flex-1 sm:flex-initial sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
@@ -238,7 +202,6 @@ const MemberAnnouncements = () => {
                 />
               </div>
 
-              {/* Filter Toggle */}
               <div className="relative">
                 <button
                   onClick={() => setFilterOpen(!filterOpen)}
@@ -258,7 +221,6 @@ const MemberAnnouncements = () => {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
                     >
                       {categories.map((cat) => (
                         <button
@@ -273,7 +235,7 @@ const MemberAnnouncements = () => {
                               : "text-gray-700 hover:bg-gray-100"
                           }`}
                         >
-                          {cat === "all" ? "All" : cat}
+                          {cat}
                         </button>
                       ))}
                     </motion.div>
@@ -282,64 +244,26 @@ const MemberAnnouncements = () => {
               </div>
             </div>
           </div>
-
-          {/* Active Filter Badge */}
-          {selectedCategory !== "all" && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm text-gray-500">Filter:</span>
-              <span className="px-3 py-1 bg-[#3B4B89]/10 text-[#3B4B89] rounded-full text-sm font-medium">
-                {selectedCategory}
-              </span>
-              <button
-                onClick={() => setSelectedCategory("all")}
-                className="text-sm text-gray-400 hover:text-gray-600 underline"
-              >
-                Clear
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* Announcement Grid */}
       <section className="px-6 md:px-12 pb-12">
         <div className="max-w-5xl mx-auto">
           {filteredAnnouncements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {filteredAnnouncements.map((ann) => (
-                <AnnouncementCard
-                  key={ann.id}
-                  announcement={ann}
-                  onComment={setCommentAnnouncement}
-                />
+                <AnnouncementCard key={ann.id} announcement={ann} />
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-gray-500 text-lg">No announcements found.</p>
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("all");
-                }}
-                className="mt-3 text-[#3B4B89] text-sm hover:underline"
-              >
-                Clear filters
-              </button>
+              <p className="text-gray-500 text-lg">
+                No announcements found matching your search.
+              </p>
             </div>
           )}
         </div>
       </section>
-
-      {/* Comment Modal */}
-      <AnimatePresence>
-        {commentAnnouncement && (
-          <CommentModal
-            announcement={commentAnnouncement}
-            onClose={() => setCommentAnnouncement(null)}
-          />
-        )}
-      </AnimatePresence>
     </MemberLayout>
   );
 };

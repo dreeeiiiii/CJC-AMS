@@ -3,19 +3,23 @@ import Footer from "../../components/footer";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import axios from "axios";
 
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
+    middleName: "", // Optional
     email: "",
     password: "",
     contact: "",
     address: "",
     gender: "",
   });
-  const [message, setMessage] = useState(""); // to show confirmation or error
-  const [isError, setIsError] = useState(false); // to style message on error/success
+
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -27,43 +31,45 @@ export const Signup = () => {
   };
 
   const handleGenderChange = (value) => {
+    const formatted = value.charAt(0).toUpperCase() + value.slice(1);
     setFormData((prev) => ({
       ...prev,
-      gender: prev.gender === value ? "" : value,
+      gender: prev.gender === formatted ? "" : formatted,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(""); // clear previous message
+    setMessage("");
     setIsError(false);
 
+    // Prepare data to match your updated Backend logic
+    const submissionData = {
+      type: "member",
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      middleName: formData.middleName,
+      contactNo: formData.contact,
+      address: formData.address,
+      gender: formData.gender,
+      email: formData.email,
+      password: formData.password,
+    };
+
     try {
-      const res = await fetch("http://localhost:5000/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      await axios.post(`${API_URL}/auth/register`, submissionData);
 
-      const data = await res.json();
-      console.log("✅ Response:", data);
+      setMessage("Account created successfully! Redirecting to login...");
+      setIsError(false);
 
-      if (!res.ok) {
-        setMessage(data.message || "Something went wrong");
-        setIsError(true);
-      } else {
-        setMessage("Account created successfully! Redirecting to login...");
-        setIsError(false);
-
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
-      }
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (error) {
-      console.error("❌ Error:", error);
-      setMessage("Error connecting to server");
+      console.error("❌ Signup Error:", error);
       setIsError(true);
+      setMessage(error.response?.data?.message || error.response?.data?.error || "Error connecting to server");
     }
   };
 
@@ -83,50 +89,76 @@ export const Signup = () => {
             <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Row for First and Last Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="firstName"
+                  placeholder="First Name"
+                  required
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                />
+                <input
+                  type="text"
+                  name="lastName"
+                  placeholder="Last Name"
+                  required
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                />
+              </div>
+
+              {/* Middle Name - Optional */}
               <input
                 type="text"
-                name="name"
-                placeholder="Full Name"
-                value={formData.name}
+                name="middleName"
+                placeholder="Middle Name (Optional)"
+                value={formData.middleName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
               />
+
               <input
                 type="text"
                 name="contact"
                 placeholder="Contact No."
+                required
                 value={formData.contact}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
               />
               <input
                 type="text"
                 name="address"
                 placeholder="Address"
+                required
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
               />
 
               <div className="flex space-x-8">
                 <span className="text-md font-medium pl-4">Gender:</span>
-                <label>
+                <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    value="female"
-                    checked={formData.gender === "female"}
+                    checked={formData.gender === "Female"}
                     onChange={() => handleGenderChange("female")}
+                    className="accent-indigo-400"
                   />
-                  Female
+                  <span>Female</span>
                 </label>
-                <label>
+                <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    value="male"
-                    checked={formData.gender === "male"}
+                    checked={formData.gender === "Male"}
                     onChange={() => handleGenderChange("male")}
+                    className="accent-indigo-400"
                   />
-                  Male
+                  <span>Male</span>
                 </label>
               </div>
 
@@ -134,9 +166,10 @@ export const Signup = () => {
                 type="email"
                 name="email"
                 placeholder="Email"
+                required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
               />
 
               <div className="relative">
@@ -144,32 +177,32 @@ export const Signup = () => {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="Password"
+                  required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3"
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500"
                 >
-                  {showPassword ? <Eye /> : <EyeOff />}
+                  {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                 </button>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white py-2 rounded-xl"
+                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl transition-colors"
               >
                 Sign Up
               </button>
 
-              {/* Message below form */}
               {message && (
                 <p
-                  className={`mt-4 text-center ${
+                  className={`mt-4 text-center font-semibold ${
                     isError ? "text-red-600" : "text-green-600"
-                  } font-semibold`}
+                  }`}
                 >
                   {message}
                 </p>

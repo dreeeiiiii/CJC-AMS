@@ -7,15 +7,15 @@ import { Login } from './routes/members/loginPage';
 import { MessageReset } from './routes/auth/messageResetPage';
 import { VerifyReset } from './routes/auth/VerifyResetPage';
 import { ResetPassword } from './routes/auth/ResetPasswordPage';
-// import UserDashboard from './routes/members/userDashboard';
 import MemberPage from './routes/members/memberPage';
 import MemberProfile from './routes/members/memberProfile';
 import MemberAnnouncements from './routes/members/memberAnnouncement';
-import AdminLogin from './routes/admin/adminLogin';
 import Visitors from './routes/admin/adminVisitors';
 import Announcements from './routes/admin/adminAnnouncement';
 import Members from './routes/admin/adminMembers';
-import ProtectedRoutes from './components/ProtectedRoutes';
+// Ensure this path is correct and the component is exported correctly
+import ProtectedRoute from './components/ProtectedRoutes'; 
+import ErrorPage from './components/ErrorPage';
 
 const Home = () => {
   return (
@@ -33,26 +33,28 @@ const Home = () => {
         </div>
       </main>
 
+      {/* Service Times */}
       <div className="justify-center flex items-center flex-col text-[#364687] lg:space-y-2 lg:text-4xl sm:text-2xl text-xl font-bold font-montserrat h-[400px]">
         <h2 className="font-medium text-xl lg:text-3xl">Service starts at</h2>
         <p>9:00 AM - Morning Service</p>
         <p>2:00 PM - Youth Service</p>
       </div>
 
+      {/* Mission & Vision Section */}
       <div className="flex sm:flex-row flex-col justify-evenly h-[600px] text-[#364687] lg:text-4xl md:text-3xl font-bold font-montserrat bg-[#364687]/10 mb-3">
         <div className="container flex justify-center items-center flex-col">
           <h2 className="font-light text-2xl md:text-3xl lg:text-4xl">Connect with us:</h2>
           <div className="flex flex-row justify-center items-center text-xs font-light">
-            <div className="flex flex-col justify-center items-center">
-              <img src="/FACEBOOK.png" alt="facebook_icon" className="w-full h-full object-contain" />
+             <div className="flex flex-col justify-center items-center">
+              <img src="/FACEBOOK.png" alt="facebook_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
               <p className="sm:text-xl">Facebook</p>
             </div>
             <div className="flex flex-col justify-center items-center">
-              <img src="/GMAIL.png" alt="gmail_icon" className="w-full h-full object-contain" />
+              <img src="/GMAIL.png" alt="gmail_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
               <p className="sm:text-xl">Gmail</p>
             </div>
             <div className="flex flex-col justify-center items-center">
-              <img src="/CONTACT.png" alt="contact_icon" className="w-full h-full object-contain" />
+              <img src="/CONTACT.png" alt="contact_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
               <p className="sm:text-xl">Contact</p>
             </div>
           </div>
@@ -90,70 +92,67 @@ function App() {
         <Route path="/messageReset" element={<MessageReset />} />
         <Route path="/verifyReset" element={<VerifyReset />} />
         <Route path="/resetPassword" element={<ResetPassword />} />
-        <Route path="/admin" element={<AdminLogin />} />
 
         {/* Protected Admin Routes */}
         <Route
-        path="/admin/home"
-        element={
-          
-            <AdminPage />
-          
-        }
+          path="/admin/home"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminPage />
+            </ProtectedRoute>
+          }
         />
         <Route
-        path="/admin/announcements"
-        element={
-          
-            <Announcements />
-          
-        }
+          path="/admin/announcements"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Announcements />
+            </ProtectedRoute>
+          }
         />
         <Route
-        path="/admin/members"
-        element={
-          
-            <Members />
-          
-        }
+          path="/admin/members"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Members />
+            </ProtectedRoute>
+          }
         />
         <Route
-        path="/admin/visitors"
-        element={
-          
-            <Visitors />
-          
-        }
+          path="/admin/visitors"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Visitors />
+            </ProtectedRoute>
+          }
         />
-
-
 
         {/* Protected Member Dashboard */}
         <Route
           path="/homepage"
           element={
-            <ProtectedRoutes>
-              {/* <UserDashboard /> */}
+            <ProtectedRoute adminOnly={false}>
               <MemberPage />
-            </ProtectedRoutes>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/member/announcements"
           element={
-            <ProtectedRoutes>
+            <ProtectedRoute adminOnly={false}>
               <MemberAnnouncements />
-            </ProtectedRoutes>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/member/profile"
           element={
-            <ProtectedRoutes>
+            <ProtectedRoute adminOnly={false}>
               <MemberProfile />
-            </ProtectedRoutes>
+            </ProtectedRoute>
           }
         />
+        <Route path="*" element={<ErrorPage />} />
       </Routes>
     </Router>
   );

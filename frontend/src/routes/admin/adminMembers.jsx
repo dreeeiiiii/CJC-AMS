@@ -1,18 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import { Search, Filter, Download, Plus, ArrowLeft, User, Phone, MapPin, Calendar, CheckCircle, X, ChevronDown, Trash2, AlertCircle } from 'lucide-react'
-
-const initialMembers = [
-  { id: 1, firstName: 'Juan', middleInitial: 'D', lastName: 'Dela Cruz', status: 'Old Member', memberSince: '2024-01-15' },
-  { id: 2, firstName: 'Maria', middleInitial: 'S', lastName: 'Santos', status: 'New Member', memberSince: '2026-04-20' },
-  { id: 3, firstName: 'Pedro', middleInitial: 'R', lastName: 'Reyes', status: 'Old Member', memberSince: '2023-11-05' },
-  { id: 4, firstName: 'Ana', middleInitial: 'G', lastName: 'Garcia', status: 'New Member', memberSince: '2026-05-01' },
-  { id: 5, firstName: 'Jose', middleInitial: 'M', lastName: 'Mendoza', status: 'Old Member', memberSince: '2022-08-12' },
-  { id: 6, firstName: 'Luz', middleInitial: 'T', lastName: 'Torres', status: 'New Member', memberSince: '2026-04-28' },
-  { id: 7, firstName: 'Carlos', middleInitial: 'B', lastName: 'Bautista', status: 'Old Member', memberSince: '2025-03-10' },
-  { id: 8, firstName: 'Rosa', middleInitial: 'L', lastName: 'Lopez', status: 'Old Member', memberSince: '2024-06-22' },
-]
+import { 
+  Search, Filter, Plus, ArrowLeft, User, Phone, 
+  MapPin, CheckCircle, X, ChevronDown, Trash2, 
+  AlertCircle, Loader2, Download 
+} from 'lucide-react'
 
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
   <div className="relative mt-4">
@@ -42,13 +35,20 @@ const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', place
 )
 
 const AdminMembers = () => {
-  const [members, setMembers] = useState(initialMembers)
+  const [members, setMembers] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState([])
   const [toast, setToast] = useState(null)
   const [toastType, setToastType] = useState('success')
+
+  // --- Filter and Sort State ---
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [sortBy, setSortBy] = useState('newest') 
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  const filterRef = useRef(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -58,10 +58,38 @@ const AdminMembers = () => {
     contactNo: '',
     address: '',
     gender: '',
-    memberSince: new Date().toISOString().split('T')[0],
     status: 'New Member',
   })
   const [formErrors, setFormErrors] = useState({})
+
+  // Fetch Members
+  const fetchMembers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/users'); 
+      const data = await response.json();
+      setMembers(data);
+    } catch (error) {
+      showToast("Failed to load members", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  // Click outside listener for filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Debounce search
   useEffect(() => {
@@ -75,15 +103,22 @@ const AdminMembers = () => {
     setTimeout(() => setToast(null), 3000)
   }, [])
 
-  const filteredMembers = members.filter(member => {
-    const search = debouncedSearch.toLowerCase()
-    const fullName = `${member.firstName} ${member.middleInitial} ${member.lastName}`.toLowerCase()
-    return (
-      fullName.includes(search) ||
-      member.status.toLowerCase().includes(search) ||
-      member.memberSince.includes(search)
-    )
-  })
+  // 📌 Combined Filter and Sort Logic
+  const filteredMembers = members
+    .filter(member => {
+      const search = debouncedSearch.toLowerCase()
+      const fullName = `${member.firstName} ${member.middleName || ''} ${member.lastName}`.toLowerCase()
+      const matchesSearch = fullName.includes(search) || member.status?.toLowerCase().includes(search)
+      const matchesStatus = statusFilter === 'All' || member.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+    .sort((a, b) => {
+      if (sortBy === 'firstName') return a.firstName.localeCompare(b.firstName)
+      if (sortBy === 'lastName') return a.lastName.localeCompare(b.lastName)
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt)
+      if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt)
+      return 0
+    })
 
   const newMembersCount = members.filter(m => m.status === 'New Member').length
   const oldMembersCount = members.filter(m => m.status === 'Old Member').length
@@ -91,9 +126,7 @@ const AdminMembers = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }))
-    }
+    if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const validateForm = () => {
@@ -106,43 +139,76 @@ const AdminMembers = () => {
     return Object.keys(errors).length === 0
   }
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (!validateForm()) return
-
-    const newMember = {
-      id: Date.now(),
-      firstName: formData.firstName.trim(),
-      middleInitial: formData.middleInitial.trim().toUpperCase() || '-',
-      lastName: formData.lastName.trim(),
-      status: formData.status,
-      memberSince: formData.memberSince || '-',
+    try {
+      const response = await fetch('http://localhost:5000/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        showToast('Member added successfully!');
+        resetForm();
+        setShowModal(false);
+        fetchMembers();
+      } else {
+        const err = await response.json();
+        showToast(err.message || "Error adding member", "error");
+      }
+    } catch (error) {
+      showToast("Server error", "error");
     }
-    setMembers(prev => [newMember, ...prev])
-    resetForm()
-    setShowModal(false)
-    showToast('Member added successfully!')
   }
 
   const resetForm = () => {
-    setFormData({
-      firstName: '',
-      middleInitial: '',
-      lastName: '',
-      contactNo: '',
-      address: '',
-      gender: '',
-      memberSince: new Date().toISOString().split('T')[0],
-      status: 'New Member',
-    })
+    setFormData({ firstName: '', middleInitial: '', lastName: '', contactNo: '', address: '', gender: '', status: 'New Member' })
     setFormErrors({})
   }
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedMembers.length === 0) return
-    setMembers(prev => prev.filter(m => !selectedMembers.includes(m.id)))
-    setSelectedMembers([])
-    showToast(`${selectedMembers.length} member(s) deleted.`, 'error')
+    if (!window.confirm(`Are you sure you want to delete ${selectedMembers.length} members?`)) return;
+    try {
+      await Promise.all(selectedMembers.map(id => 
+        fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
+      ));
+      showToast(`${selectedMembers.length} member(s) deleted.`, 'error');
+      setSelectedMembers([]);
+      fetchMembers();
+    } catch (error) {
+      showToast("Error deleting members", "error");
+    }
   }
+
+  const handleExportCSV = () => {
+    if (filteredMembers.length === 0) {
+      showToast("No data to export", "error");
+      return;
+    }
+
+    const headers = ["First Name", "Middle Name", "Last Name", "Contact No", "Gender", "Status", "Address", "Date Registered"];
+    const rows = filteredMembers.map(m => [
+      `"${m.firstName}"`,
+      `"${m.middleName || ''}"`,
+      `"${m.lastName}"`,
+      `"${m.contactNo || ''}"`,
+      `"${m.gender || ''}"`,
+      `"${m.status}"`,
+      `"${(m.address || '').replace(/"/g, '""')}"`,
+      `"${new Date(m.createdAt).toLocaleDateString()}"`
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `CJC_Members_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const toggleSelectAll = () => {
     if (selectedMembers.length === filteredMembers.length) {
@@ -181,27 +247,29 @@ const AdminMembers = () => {
           {/* KPI Metrics Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{newMembersCount}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{loading ? '...' : newMembersCount}</p>
               <p className="text-sm text-gray-500 mt-1">New Members</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{oldMembersCount}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{loading ? '...' : oldMembersCount}</p>
               <p className="text-sm text-gray-500 mt-1">Old Members</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{members.length}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{loading ? '...' : members.length}</p>
               <p className="text-sm text-gray-500 mt-1">Overall Members</p>
             </div>
           </div>
 
           {/* Data Management Area */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
             <div className="p-5 border-b border-gray-100">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h3 className="text-xl font-semibold text-[#4A558F]">Members</h3>
+                <h3 className="text-xl font-semibold text-[#4A558F]">Members List</h3>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  {/* Search */}
-                  <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors">
+                  
+                  {/* Filter & Sort Dropdown */}
+
+                  <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors bg-white">
                     <Search size={16} className="text-gray-400" />
                     <input
                       type="search"
@@ -212,30 +280,65 @@ const AdminMembers = () => {
                     />
                   </div>
 
-                  {/* Filter */}
-                  <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50">
-                    <Filter size={16} />
-                    Filter
-                  </button>
+                  <div className="relative" ref={filterRef}>
+                    <button 
+                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                    >
+                      <Filter size={16} />
+                      <span>Filter & Sort</span>
+                      <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                    </button>
 
-                  {/* Export */}
-                  <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50">
+                    {showFilterDropdown && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter Status</div>
+                        {['All', 'New Member', 'Old Member'].map((opt) => (
+                          <button
+                            key={opt}
+                            onClick={() => { setStatusFilter(opt); setShowFilterDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                        <div className="my-1 border-t border-gray-100"></div>
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+                        {[
+                          { label: 'First Name', val: 'firstName' },
+                          { label: 'Last Name', val: 'lastName' },
+                          { label: 'Newest Registered', val: 'newest' },
+                          { label: 'Oldest Registered', val: 'oldest' }
+                        ].map((opt) => (
+                          <button
+                            key={opt.val}
+                            onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+
+                  <button 
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
+                  >
                     <Download size={16} />
                     Export
                   </button>
+
                 </div>
               </div>
 
-              {/* Bulk Actions */}
               {selectedMembers.length > 0 && (
-                <div className="mt-3 flex items-center gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2">
-                  <span className="text-sm text-[#4A558F]">{selectedMembers.length} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                    Delete Selected
+                <div className="mt-3 flex items-center gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
+                  <span className="text-sm text-[#4A558F] font-medium">{selectedMembers.length} selected</span>
+                  <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors">
+                    <Trash2 size={14} /> Delete Selected
                   </button>
                 </div>
               )}
@@ -243,13 +346,15 @@ const AdminMembers = () => {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              {filteredMembers.length === 0 ? (
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="animate-spin text-[#4A558F] mb-2" size={32} />
+                  <p className="text-gray-500 text-sm">Fetching members...</p>
+                </div>
+              ) : filteredMembers.length === 0 ? (
                 <div className="text-center py-12">
                   <AlertCircle size={48} className="text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">No members found.</p>
-                  {debouncedSearch && (
-                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search query.</p>
-                  )}
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -263,41 +368,16 @@ const AdminMembers = () => {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          First Name <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Middle Initial <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Last Name <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Status <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Member Since <ChevronDown size={14} />
-                        </div>
-                      </th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">First Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Middle Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Last Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Member Since</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMembers.map((member, index) => (
-                      <tr
-                        key={member.id}
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                        }`}
-                      >
+                    {filteredMembers.map((member) => (
+                      <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-5">
                           <input
                             type="checkbox"
@@ -307,21 +387,18 @@ const AdminMembers = () => {
                           />
                         </td>
                         <td className="py-3 px-4 text-gray-700">{member.firstName}</td>
-                        <td className="py-3 px-4 text-gray-700">{member.middleInitial}</td>
+                        <td className="py-3 px-4 text-gray-700">{member.middleName || '-'}</td>
                         <td className="py-3 px-4 text-gray-700">{member.lastName}</td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              member.status === 'Old Member'
-                                ? 'bg-[#D9DFF2] text-[#4A558F]'
-                                : 'bg-green-100 text-green-700'
-                            }`}
-                          >
-                            <CheckCircle size={12} />
-                            {member.status}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                            member.status === 'Old Member' ? 'bg-[#D9DFF2] text-[#4A558F]' : 'bg-green-100 text-green-700'
+                          }`}>
+                            <CheckCircle size={12} /> {member.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-500">{member.memberSince}</td>
+                        <td className="py-3 px-4 text-gray-500">
+                          {new Date(member.createdAt).toLocaleDateString()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -336,18 +413,13 @@ const AdminMembers = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex items-center gap-4 p-5 border-b border-gray-100">
-              <button
-                onClick={() => { setShowModal(false); resetForm() }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <button onClick={() => { setShowModal(false); resetForm() }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <ArrowLeft size={20} className="text-[#4A558F]" />
               </button>
               <h3 className="text-lg font-semibold text-[#4A558F]">Add New Member</h3>
             </div>
 
-            {/* Modal Body */}
             <div className="p-5">
               <div className="grid grid-cols-2 gap-x-4">
                 <FloatingLabelInput label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="Juan" error={formErrors.firstName} icon={User} />
@@ -357,84 +429,42 @@ const AdminMembers = () => {
               <FloatingLabelInput label="Contact No." name="contactNo" value={formData.contactNo} onChange={handleInputChange} type="tel" placeholder="09XXXXXXXXX" error={formErrors.contactNo} icon={Phone} />
               <FloatingLabelInput label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main St, City" icon={MapPin} />
 
-              {/* Gender */}
               <div className="relative mt-4">
                 <label className="block text-sm text-gray-600 mb-2 font-medium">Gender</label>
                 <div className="flex gap-4">
-                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
-                    formData.gender === 'Male' ? 'border-[#4A558F] bg-[#D9DFF2]/50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Male"
-                      checked={formData.gender === 'Male'}
-                      onChange={handleInputChange}
-                      className="hidden"
-                    />
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      formData.gender === 'Male' ? 'border-[#4A558F]' : 'border-gray-300'
+                  {['Male', 'Female'].map((g) => (
+                    <label key={g} className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
+                      formData.gender === g ? 'border-[#4A558F] bg-[#D9DFF2]/50' : 'border-gray-200 hover:border-gray-300'
                     }`}>
-                      {formData.gender === 'Male' && <div className="w-2 h-2 rounded-full bg-[#4A558F]" />}
-                    </div>
-                    <span className="text-sm">Male</span>
-                  </label>
-                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
-                    formData.gender === 'Female' ? 'border-[#4A558F] bg-[#D9DFF2]/50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="Female"
-                      checked={formData.gender === 'Female'}
-                      onChange={handleInputChange}
-                      className="hidden"
-                    />
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      formData.gender === 'Female' ? 'border-[#4A558F]' : 'border-gray-300'
-                    }`}>
-                      {formData.gender === 'Female' && <div className="w-2 h-2 rounded-full bg-[#4A558F]" />}
-                    </div>
-                    <span className="text-sm">Female</span>
-                  </label>
+                      <input type="radio" name="gender" value={g} checked={formData.gender === g} onChange={handleInputChange} className="hidden" />
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.gender === g ? 'border-[#4A558F]' : 'border-gray-300'}`}>
+                        {formData.gender === g && <div className="w-2 h-2 rounded-full bg-[#4A558F]" />}
+                      </div>
+                      <span className="text-sm">{g}</span>
+                    </label>
+                  ))}
                 </div>
                 {formErrors.gender && <p className="text-xs text-red-500 mt-1 ml-1">{formErrors.gender}</p>}
               </div>
 
-              {/* Member Since & Status */}
-              <div className="grid grid-cols-2 gap-x-4 mt-4">
-                <FloatingLabelInput label="Member Since" name="memberSince" value={formData.memberSince} onChange={handleInputChange} type="date" icon={Calendar} />
-                <div className="relative mt-4">
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="peer w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors text-sm appearance-none bg-white"
-                  >
-                    <option value="New Member">New Member</option>
-                    <option value="Old Member">Old Member</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <label className="absolute left-4 top-0 -translate-y-1/2 text-xs text-[#4A558F] bg-white px-1">
-                    Status
-                  </label>
-                </div>
+              <div className="relative mt-8">
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="peer w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors text-sm appearance-none bg-white"
+                >
+                  <option value="New Member">New Member</option>
+                  <option value="Old Member">Old Member</option>
+                </select>
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <label className="absolute left-4 top-0 -translate-y-1/2 text-xs text-[#4A558F] bg-white px-1">Status</label>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => { setShowModal(false); resetForm() }}
-                  className="flex-1 bg-gray-200 text-gray-600 rounded-xl py-3 hover:bg-gray-300 transition-colors text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddMember}
-                  className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Plus size={18} />
-                  Add Member
+              <div className="flex gap-3 mt-8">
+                <button onClick={() => { setShowModal(false); resetForm() }} className="flex-1 bg-gray-200 text-gray-600 rounded-xl py-3 hover:bg-gray-300 transition-colors text-sm font-medium">Cancel</button>
+                <button onClick={handleAddMember} className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2">
+                  <Plus size={18} /> Add Member
                 </button>
               </div>
             </div>
@@ -445,9 +475,7 @@ const AdminMembers = () => {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm ${
-            toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-          }`}>
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
             {toastType === 'success' ? <CheckCircle size={18} /> : <X size={18} />}
             {toast}
           </div>
@@ -458,7 +486,7 @@ const AdminMembers = () => {
 
       <style>{`
         @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-slide-up {
@@ -469,4 +497,4 @@ const AdminMembers = () => {
   )
 }
 
-export default AdminMembers
+export default AdminMembers;

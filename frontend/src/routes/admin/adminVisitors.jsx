@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import axios from 'axios'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import { Search, Filter, Download, Plus, ArrowLeft, User, Building2, Calendar, CheckCircle, X, ChevronDown, Loader2, AlertCircle, Clock } from 'lucide-react'
+import { 
+  Search, Filter, Download, Plus, ArrowLeft, User, 
+  Building2, Calendar, CheckCircle, X, ChevronDown, 
+  Loader2, AlertCircle, Clock, Trash2 
+} from 'lucide-react'
 
-const initialVisitors = [
-  { id: 1, fullName: 'Pastor Kim', originalChurch: 'CJCRSG Korea', dateOfAttendance: '2026-05-01', timestamp: '08:45 AM', isFirstTime: true, invitedBy: '' },
-  { id: 2, fullName: 'Sam', originalChurch: 'Living Epistle Ambulong', dateOfAttendance: '2026-04-28', timestamp: '09:15 AM', isFirstTime: false, invitedBy: 'Juan Dela Cruz' },
-  { id: 3, fullName: 'Alex Manzanilla', originalChurch: 'VCCF Sto. Tomas', dateOfAttendance: '2026-04-25', timestamp: '08:30 AM', isFirstTime: true, invitedBy: '' },
-  { id: 4, fullName: 'Claire Magsino', originalChurch: 'JPCC Sto. Tomas', dateOfAttendance: '2026-04-20', timestamp: '09:00 AM', isFirstTime: false, invitedBy: 'Maria Santos' },
-  { id: 5, fullName: 'Joy', originalChurch: 'Victory Church', dateOfAttendance: '2026-04-15', timestamp: '10:30 AM', isFirstTime: true, invitedBy: '' },
-]
+const API_URL = 'http://localhost:5000/api/visitors';
 
-const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
+const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', error, icon: Icon, ...props }) => (
   <div className="relative mt-4">
     <input
       type={type}
@@ -39,27 +38,40 @@ const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', place
 )
 
 const AdminVisitors = () => {
-  const [visitors, setVisitors] = useState(initialVisitors)
+  // --- Data State ---
+  const [visitors, setVisitors] = useState([])
+  const [stats, setStats] = useState({ total: 0, week: 0, month: 0 })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // --- UI State ---
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedVisitors, setSelectedVisitors] = useState([])
   const [toast, setToast] = useState(null)
   const [toastType, setToastType] = useState('success')
-  const [loadingMore, setLoadingMore] = useState(false)
 
   const [formData, setFormData] = useState({
     fullName: '',
     originalChurch: '',
     invitedBy: '',
+    gender: 'Male',
     dateOfVisit: new Date().toISOString().split('T')[0],
   })
   const [formErrors, setFormErrors] = useState({})
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+  // --- Auth & Fetching ---
+  const getAuthHeaders = useCallback(() => {
+    const token = localStorage.getItem('token'); 
+    return {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true
+    };
+  }, []);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast(message)
@@ -67,96 +79,120 @@ const AdminVisitors = () => {
     setTimeout(() => setToast(null), 3000)
   }, [])
 
-  const filteredVisitors = visitors.filter(visitor => {
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const config = getAuthHeaders();
+      const [visitorsRes, statsRes] = await Promise.all([
+        axios.get(API_URL, config),
+        axios.get(`${API_URL}/stats`, config)
+      ])
+      setVisitors(visitorsRes.data)
+      setStats(statsRes.data)
+    } catch (error) {
+      showToast('Could not load data from server.', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [getAuthHeaders, showToast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // --- Search Logic ---
+  const filteredVisitors = useMemo(() => {
     const search = debouncedSearch.toLowerCase()
-    return (
-      visitor.fullName.toLowerCase().includes(search) ||
-      visitor.originalChurch.toLowerCase().includes(search) ||
-      visitor.dateOfAttendance.includes(search) ||
-      (visitor.invitedBy && visitor.invitedBy.toLowerCase().includes(search))
-    )
-  })
+    return visitors.filter(v => {
+      const name = `${v.firstName || ''} ${v.lastName || v.fullName || ''}`.toLowerCase()
+      const church = (v.churchAffiliation || v.originalChurch || '').toLowerCase()
+      return name.includes(search) || church.includes(search)
+    })
+  }, [visitors, debouncedSearch])
 
-  const now = new Date()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - now.getDay())
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-
-  const visitorsThisWeek = visitors.filter(v => new Date(v.dateOfAttendance) >= weekStart).length
-  const visitorsThisMonth = visitors.filter(v => new Date(v.dateOfAttendance) >= monthStart).length
-
+  // --- Logic Functions ---
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }))
-    }
+    if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }))
   }
 
-  const validateForm = () => {
-    const errors = {}
-    if (!formData.fullName.trim()) errors.fullName = 'Full name is required'
-    if (!formData.originalChurch.trim()) errors.originalChurch = 'Original church is required'
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  const handleAddVisitor = () => {
-    if (!validateForm()) return
-
-    const currentTime = new Date()
-    const timestamp = currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-
-    const isDuplicate = visitors.some(
-      v => v.originalChurch.toLowerCase() === formData.originalChurch.toLowerCase() &&
-           v.fullName.toLowerCase() === formData.fullName.toLowerCase()
-    )
-
-    const newVisitor = {
-      id: Date.now(),
-      fullName: formData.fullName.trim(),
-      originalChurch: formData.originalChurch.trim(),
-      dateOfAttendance: formData.dateOfVisit || new Date().toISOString().split('T')[0],
-      timestamp,
-      isFirstTime: !isDuplicate,
-      invitedBy: formData.invitedBy.trim(),
+  const handleAddVisitor = async () => {
+    if (!formData.fullName.trim() || !formData.originalChurch.trim()) {
+      setFormErrors({ 
+        fullName: !formData.fullName.trim() ? 'Required' : '',
+        originalChurch: !formData.originalChurch.trim() ? 'Required' : ''
+      })
+      return
     }
-    setVisitors(prev => [newVisitor, ...prev])
-    resetForm()
-    setShowModal(false)
-    showToast('Visitor added successfully!')
+
+    setIsSubmitting(true)
+    try {
+      await axios.post(API_URL, formData, getAuthHeaders())
+      showToast('Visitor saved successfully!')
+      setShowModal(false)
+      resetForm()
+      fetchData()
+    } catch (error) {
+      showToast('Error saving visitor.', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const resetForm = () => {
-    setFormData({
-      fullName: '',
-      originalChurch: '',
-      invitedBy: '',
-      dateOfVisit: new Date().toISOString().split('T')[0],
-    })
+    setFormData({ fullName: '', originalChurch: '', invitedBy: '', gender: 'Male', dateOfVisit: new Date().toISOString().split('T')[0] })
     setFormErrors({})
   }
 
   const toggleSelectAll = () => {
-    if (selectedVisitors.length === filteredVisitors.length) {
-      setSelectedVisitors([])
-    } else {
-      setSelectedVisitors(filteredVisitors.map(v => v.id))
-    }
+    setSelectedVisitors(selectedVisitors.length === filteredVisitors.length ? [] : filteredVisitors.map(v => v.id))
   }
 
   const toggleSelect = (id) => {
-    setSelectedVisitors(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    )
+    setSelectedVisitors(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
 
-  const handleLoadMore = () => {
-    setLoadingMore(true)
-    setTimeout(() => {
-      setLoadingMore(false)
-    }, 1000)
-  }
+  // --- Export Function ---
+  const handleExport = () => {
+    if (filteredVisitors.length === 0) {
+      showToast('Nothing to export', 'error');
+      return;
+    }
+
+    showToast('Generating CSV file...', 'success');
+
+    // 1. Create headers
+    const headers = ["Full Name", "Gender", "Original Church", "Invited By", "Visit Date"];
+    
+    // 2. Map data to rows (handling commas in values by wrapping in quotes)
+    const rows = filteredVisitors.map(v => [
+      `"${v.firstName || ''} ${v.lastName || v.fullName || ''}"`,
+      `"${v.gender || ''}"`,
+      `"${v.churchAffiliation || v.originalChurch || ''}"`,
+      `"${v.invitedBy || 'Walk-in'}"`,
+      `"${new Date(v.visitedAt || v.dateOfAttendance).toLocaleDateString()}"`
+    ]);
+
+    // 3. Combine headers and rows
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+
+    // 4. Create a Blob and trigger the download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `CJC_Visitors_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <>
@@ -181,15 +217,15 @@ const AdminVisitors = () => {
           {/* KPI Metrics Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{visitorsThisWeek}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{stats.week}</p>
               <p className="text-sm text-gray-500 mt-1">Visitors This Week</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{visitorsThisMonth}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{stats.month}</p>
               <p className="text-sm text-gray-500 mt-1">Visitors This Month</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{visitors.length}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{stats.total}</p>
               <p className="text-sm text-gray-500 mt-1">Overall Visitors</p>
             </div>
           </div>
@@ -198,7 +234,7 @@ const AdminVisitors = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h3 className="text-xl font-semibold text-[#4A558F]">Visitors</h3>
+                <h3 className="text-xl font-semibold text-[#4A558F]">Visitors Log</h3>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors">
                     <Search size={16} className="text-gray-400" />
@@ -216,7 +252,10 @@ const AdminVisitors = () => {
                     Filter
                   </button>
 
-                  <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50">
+                  <button 
+                    onClick={handleExport} 
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 active:scale-95 transition-all"
+                  >
                     <Download size={16} />
                     Export
                   </button>
@@ -224,24 +263,28 @@ const AdminVisitors = () => {
               </div>
 
               {selectedVisitors.length > 0 && (
-                <div className="mt-3 flex items-center gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2">
-                  <span className="text-sm text-[#4A558F]">{selectedVisitors.length} selected</span>
-                  <button className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors">
-                    <X size={14} />
-                    Clear Selection
+                <div className="mt-3 flex items-center justify-between bg-[#D9DFF2]/50 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-[#4A558F] font-medium">{selectedVisitors.length} selected</span>
+                    <button onClick={() => setSelectedVisitors([])} className="text-xs text-gray-500 hover:underline">Clear Selection</button>
+                  </div>
+                  <button className="text-red-600 hover:text-red-700 flex items-center gap-1 text-sm font-medium">
+                    <Trash2 size={14} /> Delete Selected
                   </button>
                 </div>
               )}
             </div>
 
             <div className="overflow-x-auto">
-              {filteredVisitors.length === 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center py-20">
+                  <Loader2 className="animate-spin text-[#4A558F] mb-2" size={40} />
+                  <p className="text-gray-400 text-sm">Syncing records...</p>
+                </div>
+              ) : filteredVisitors.length === 0 ? (
                 <div className="text-center py-12">
                   <AlertCircle size={48} className="text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">No visitors found.</p>
-                  {debouncedSearch && (
-                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search query.</p>
-                  )}
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -255,26 +298,10 @@ const AdminVisitors = () => {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Full Name <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Original Church <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Date of Attendance <ChevronDown size={14} />
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium cursor-pointer hover:text-[#4A558F]">
-                        <div className="flex items-center gap-1">
-                          Timestamp <ChevronDown size={14} />
-                        </div>
-                      </th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Full Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Original Church</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Invited By</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Date & Time</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -295,30 +322,36 @@ const AdminVisitors = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-700">{visitor.fullName}</span>
+                            <span className="text-gray-700 font-medium">
+                              {visitor.firstName} {visitor.lastName || visitor.fullName}
+                            </span>
                             {visitor.isFirstTime && (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                 First Time
                               </span>
                             )}
                           </div>
+                          <div className="text-[10px] text-gray-400 uppercase">{visitor.gender}</div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5 text-gray-700">
+                          <div className="flex items-center gap-1.5 text-gray-600">
                             <Building2 size={14} className="text-gray-400" />
-                            {visitor.originalChurch}
+                            {visitor.churchAffiliation || visitor.originalChurch}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5 text-gray-500">
+                          <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
+                            {visitor.invitedBy || 'Walk-in'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-gray-600">
                             <Calendar size={14} className="text-gray-400" />
-                            {visitor.dateOfAttendance}
+                            {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5 text-gray-500">
-                            <Clock size={14} className="text-gray-400" />
-                            {visitor.timestamp}
+                          <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
+                            <Clock size={12} />
+                            {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </td>
                       </tr>
@@ -326,24 +359,6 @@ const AdminVisitors = () => {
                   </tbody>
                 </table>
               )}
-            </div>
-
-            {/* Load More */}
-            <div className="flex justify-center py-4 border-t border-gray-100">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="flex items-center gap-2 text-sm text-[#4A558F] hover:text-[#3a4575] transition-colors disabled:opacity-50"
-              >
-                {loadingMore ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  'Load More'
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -364,24 +379,38 @@ const AdminVisitors = () => {
             </div>
 
             <div className="p-5">
-              <FloatingLabelInput label="Full Name" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Juan Dela Cruz" error={formErrors.fullName} icon={User} />
-              <FloatingLabelInput label="Original Church" name="originalChurch" value={formData.originalChurch} onChange={handleInputChange} placeholder="CJCRSG" error={formErrors.originalChurch} icon={Building2} />
-              <FloatingLabelInput label="Invited By (Optional)" name="invitedBy" value={formData.invitedBy} onChange={handleInputChange} placeholder="Member who invited them" />
+              <FloatingLabelInput label="Full Name" name="fullName" value={formData.fullName} onChange={handleInputChange} error={formErrors.fullName} icon={User} />
+              
+              <div className="flex gap-4">
+                <div className="flex-[2]">
+                   <FloatingLabelInput label="Original Church" name="originalChurch" value={formData.originalChurch} onChange={handleInputChange} error={formErrors.originalChurch} icon={Building2} />
+                </div>
+                <div className="flex-1 mt-4">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Gender</label>
+                  <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm mt-1 focus:outline-none">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+              </div>
+
+              <FloatingLabelInput label="Invited By (Optional)" name="invitedBy" value={formData.invitedBy} onChange={handleInputChange} />
               <FloatingLabelInput label="Date of Visit" name="dateOfVisit" value={formData.dateOfVisit} onChange={handleInputChange} type="date" icon={Calendar} />
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 mt-8">
                 <button
+                  disabled={isSubmitting}
                   onClick={() => { setShowModal(false); resetForm() }}
-                  className="flex-1 bg-gray-200 text-gray-600 rounded-xl py-3 hover:bg-gray-300 transition-colors text-sm font-medium"
+                  className="flex-1 bg-gray-100 text-gray-500 rounded-xl py-3 hover:bg-gray-200 transition-colors text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
+                  disabled={isSubmitting}
                   onClick={handleAddVisitor}
                   className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  <Plus size={18} />
-                  Add Visitor
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <><Plus size={18} /> Add Visitor</>}
                 </button>
               </div>
             </div>
@@ -392,7 +421,7 @@ const AdminVisitors = () => {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm ${
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
             toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}>
             {toastType === 'success' ? <CheckCircle size={18} /> : <X size={18} />}
@@ -416,4 +445,4 @@ const AdminVisitors = () => {
   )
 }
 
-export default AdminVisitors
+export default AdminVisitors;

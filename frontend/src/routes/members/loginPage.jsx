@@ -15,47 +15,57 @@ export const Login = () => {
 
     const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-    // Email/password login
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
 
         try {
-            // Determine which endpoint to hit based on the email
-            const isAdmin = email === "andreimanacop1@gmail.com";
-            const endpoint = isAdmin ? "/auth/admin/login" : "/auth/member/login";
+            // Strictly using the member login endpoint for this page
+            const endpoint = "/auth/member/login";
 
             const response = await axios.post(`${BACKEND_URL}${endpoint}`, { email, password });
             
-            // Store data
-            localStorage.setItem("token", response.data.token);
-            localStorage.setItem("user", JSON.stringify(response.data.user));
+            const { token, user } = response.data;
 
-            // Navigation logic
-            if (isAdmin) {
-                navigate('/admin');
+            // Store standardized token and user object
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
+
+            // Navigate based on the role stored in your DB
+            // standardized to handle potential casing differences
+            const role = user.role?.toUpperCase();
+            
+            if (role === "ADMIN") {
+                navigate('/admin/home');
             } else {
                 navigate('/homepage');
             }
             
         } catch (err) {
             console.error("Login error:", err.response?.data || err.message);
+            // If the backend returns 403 (wrong role) or 401 (wrong pass), show that message
             setError(err.response?.data?.message || "Login failed. Please check your credentials.");
         }
     };
 
-    // Google login
     const handleGoogleSuccess = async (credentialResponse) => {
         setError("");
         try {
             const res = await axios.post(`${BACKEND_URL}/auth/google`, {
                 token: credentialResponse.credential,
             });
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
             
-            // Google users default to homepage unless you add role logic to googleLogin controller
-            navigate("/homepage");
+            const { token, user } = res.data;
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
+            
+            const role = user.role?.toUpperCase();
+            
+            if (role === "ADMIN") {
+                navigate("/admin");
+            } else {
+                navigate("/homepage");
+            }
         } catch (err) {
             console.error("Google login error:", err.response?.data || err.message);
             setError(err.response?.data?.message || "Google login failed");
@@ -72,17 +82,19 @@ export const Login = () => {
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-l from-indigo-400 to-indigo-900">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-screen-xl p-6 font-montserrat">
 
+                    {/* Left Side: Branding/Welcome */}
                     <div className="text-white flex flex-col justify-center items-center text-center">
                         <h1 className="text-3xl lg:text-4xl font-bold mb-4">Enter your account</h1>
                         <p className="text-xl lg:text-2xl mb-6">Please log in using your personal information to stay connected with us.</p>
                         <div className="text-sm flex gap-4 mt-0 md:mt-64">
                             <span>Connect with us: </span>
                             <a href="https://www.facebook.com/cjcrsg" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">Facebook</a>
-                            <a href="mailto:cjcrsgonline@gmail.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">Gmail</a>
-                            <a href="mailto:cjcrsgonline@gmail.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">Contact</a>
+                            <a href="mailto:cjcrsgonline@gmail.com" className="underline hover:text-blue-300">Gmail</a>
+                            <a href="#" className="underline hover:text-blue-300">Contact</a>
                         </div>
                     </div>
 
+                    {/* Right Side: Login Form */}
                     <div className="bg-white rounded-2xl p-8 shadow-md w-full max-w-lg mx-auto">
                         <h2 className="text-2xl font-semibold text-center mb-6">Log In</h2>
                         <form onSubmit={handleLogin} className="space-y-4 text-sm lg:text-md">
@@ -94,6 +106,10 @@ export const Login = () => {
                                     size='large'
                                     theme='outline'
                                 />
+                            </div>
+
+                            <div className="flex items-center my-4 before:flex-1 before:border-t before:border-gray-300 after:flex-1 after:border-t after:border-gray-300">
+                                <p className="mx-4 mb-0 text-center font-semibold text-gray-500 text-xs">OR</p>
                             </div>
 
                             <input 
@@ -119,13 +135,13 @@ export const Login = () => {
                                 </button>
                             </div>
 
-                            {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
+                            {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
 
                             <div className="text-right text-sm lg:text-md">
                                 <Link to="/messageReset" className="text-indigo-500 hover:underline">Forgot password?</Link>
                             </div>
 
-                            <button type="submit" className="w-full bg-indigo-400 text-white text-lg font-semibold py-2 rounded-xl hover:bg-indigo-500 transition cursor-pointer">
+                            <button type="submit" className="w-full bg-indigo-400 text-white text-lg font-semibold py-2 rounded-xl hover:bg-indigo-500 transition cursor-pointer shadow-md">
                                 Log In
                             </button>
 

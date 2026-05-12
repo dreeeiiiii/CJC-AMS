@@ -1,22 +1,23 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 
-// adminOnly = true if this route is for admin only
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  // Get user info from localStorage
+  const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Redirect if user is not logged in
-  if (!user || !user.email) {
+  // Check if user is logged in
+  if (!token || !user.email) {
     return <Navigate to="/login" replace />;
   }
 
+  // Standardize role to uppercase to avoid "admin" vs "ADMIN" mismatch
+  const userRole = user.role?.toUpperCase();
+
   // Redirect if route is admin-only but user is not an admin
-  if (adminOnly && user.role !== "admin") {
+  if (adminOnly && userRole !== "ADMIN") {
     return <Navigate to="/homepage" replace />;
   }
 
-  // Otherwise, allow access
   return children;
 };
 
