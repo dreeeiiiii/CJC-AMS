@@ -120,15 +120,14 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
 
       <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-100 px-4 md:px-8 py-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <img src="/LOGO.png" alt="Logo" className="w-8 h-8 md:w-10 md:h-10" />
-          <span className="font-bold text-[#3B4B89] text-sm md:text-lg uppercase">CJCRSG PHILS. INC.</span>
-        </div>
-
-        <div className="relative flex items-center gap-2">
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-gray-600">
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
+          <img src="/LOGO.png" alt="Logo" className="hidden md:block w-8 h-8 md:w-10 md:h-10" />
+          <span className="hidden md:inline font-bold text-[#3B4B89] text-sm md:text-lg uppercase">CJCRSG PHILS. INC.</span>
+        </div>
 
+        <div className="relative flex items-center gap-2">
           <div className="relative">
             <button
               onClick={() => setMemberDropdownOpen(!memberDropdownOpen)}

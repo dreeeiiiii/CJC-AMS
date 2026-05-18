@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const AdminNavbar = () => {
@@ -9,6 +9,15 @@ const AdminNavbar = () => {
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [adminDropdownOpen, setadminDropdownOpen] = useState(false);
+  const [userData] = useState(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try { return JSON.parse(stored); } catch (e) {}
+    }
+    return { fullName: "Admin", role: "ADMIN" };
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -57,7 +66,7 @@ const AdminNavbar = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl shadow-lg p-6 w-80 text-center"
+              className="bg-white rounded-xl shadow-lg p-6 w-80 text-center font-montserrat"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
@@ -94,7 +103,7 @@ const AdminNavbar = () => {
           {/* Logo */}
           <div className="flex flex-row justify-start items-center gap-4">
             <img src="/LOGO.png" alt="CJCRSG LOGO" className="w-[40px] h-[40px] md:w-[50px] md:h-[50px]" />
-            <p className="font-montserrat font-bold text-sm md:text-base">CJCRSG PHILS. INC.</p>
+            <p className="hidden lg:block font-montserrat font-bold text-sm md:text-lg">CJCRSG PHILS. INC.</p>
           </div>
 
           {/* Mobile Menu Button */}
@@ -135,15 +144,42 @@ const AdminNavbar = () => {
               </button>
             </li>
 
-            {/* Logout */}
-            <li className="relative group">
+            <li className="relative">
               <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="flex items-center gap-3 px-5 py-2 border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-all"
+                onClick={() => setadminDropdownOpen(!adminDropdownOpen)}
+                className="flex items-center gap-2 bg-[#364687] text-white px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium hover:bg-[#2d3a6a] transition"
               >
-                <span className="text-[16px]">Admin</span>
-                <LogOut className="w-4 h-4 opacity-60" />
+                <span className="hidden sm:inline capitalize">{userData.role.toLowerCase()}</span>
+                <ChevronDown size={16} className={`transition-transform ${adminDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
+
+              <AnimatePresence>
+                {adminDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setadminDropdownOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 overflow-hidden"
+                    >
+                      <div className="px-4 py-2 border-b border-gray-50">
+                        <p className="text-xs font-semibold text-gray-400 uppercase">Account</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setadminDropdownOpen(false);
+                          setShowLogoutConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        Logout
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </li>
           </ul>
         </div>
@@ -158,7 +194,7 @@ const AdminNavbar = () => {
               transition={{ duration: 0.3 }}
               className="md:hidden overflow-hidden bg-white border-t border-gray-100"
             >
-              <ul className="flex flex-col py-4 px-4 space-y-4 font-montserrat">
+              <ul className="flex flex-col py-4 px-4 space-y-4 font-montserrat text-[#364687]">
                 <li>
                   <button
                     onClick={() => {
@@ -211,8 +247,8 @@ const AdminNavbar = () => {
                     }}
                     className="flex items-center gap-3 px-5 py-2 border border-gray-200 rounded-md shadow-sm hover:shadow-md transition-all w-full justify-center"
                   >
-                    <span className="text-[16px]">Logout</span>
-                    <LogOut className="w-4 h-4 opacity-60" />
+                    <LogOut className="w-4 h-4 text-red-600" />
+                    <span className="text-[16px] text-red-600">Logout</span>
                   </button>
                 </li>
               </ul>

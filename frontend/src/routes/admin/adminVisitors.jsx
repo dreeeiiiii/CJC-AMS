@@ -56,7 +56,6 @@ const AdminVisitors = () => {
     fullName: '',
     originalChurch: '',
     invitedBy: '',
-    gender: 'Male',
     dateOfVisit: new Date().toISOString().split('T')[0],
   })
   const [formErrors, setFormErrors] = useState({})
@@ -146,7 +145,7 @@ const AdminVisitors = () => {
   }
 
   const resetForm = () => {
-    setFormData({ fullName: '', originalChurch: '', invitedBy: '', gender: 'Male', dateOfVisit: new Date().toISOString().split('T')[0] })
+    setFormData({ fullName: '', originalChurch: '', invitedBy: '', dateOfVisit: new Date().toISOString().split('T')[0] })
     setFormErrors({})
   }
 
@@ -168,12 +167,11 @@ const AdminVisitors = () => {
     showToast('Generating CSV file...', 'success');
 
     // 1. Create headers
-    const headers = ["Full Name", "Gender", "Original Church", "Invited By", "Visit Date"];
+    const headers = ["Full Name", "Original Church", "Invited By", "Visit Date"];
     
     // 2. Map data to rows (handling commas in values by wrapping in quotes)
     const rows = filteredVisitors.map(v => [
       `"${v.firstName || ''} ${v.lastName || v.fullName || ''}"`,
-      `"${v.gender || ''}"`,
       `"${v.churchAffiliation || v.originalChurch || ''}"`,
       `"${v.invitedBy || 'Walk-in'}"`,
       `"${new Date(v.visitedAt || v.dateOfAttendance).toLocaleDateString()}"`
@@ -331,7 +329,6 @@ const AdminVisitors = () => {
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-gray-400 uppercase">{visitor.gender}</div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1.5 text-gray-600">
@@ -384,13 +381,6 @@ const AdminVisitors = () => {
               <div className="flex gap-4">
                 <div className="flex-[2]">
                    <FloatingLabelInput label="Original Church" name="originalChurch" value={formData.originalChurch} onChange={handleInputChange} error={formErrors.originalChurch} icon={Building2} />
-                </div>
-                <div className="flex-1 mt-4">
-                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Gender</label>
-                  <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm mt-1 focus:outline-none">
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
                 </div>
               </div>
 
