@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, ChevronDown, Home, Bell, User, Camera, LogOut } from "lucide-react";
+import { Menu, X, ChevronDown, Home, Bell, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -17,47 +16,35 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        
-        // Construct Full Name if the 'fullName' key isn't provided by the backend
-        let nameToDisplay = parsedUser.fullName;
-        
-        if (!nameToDisplay && parsedUser.firstName) {
-          const mInitial = parsedUser.middleName ? `${parsedUser.middleName.charAt(0)}.` : "";
-          nameToDisplay = `${parsedUser.firstName} ${mInitial} ${parsedUser.lastName}`.replace(/\s+/g, ' ');
+    const syncUser = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+
+          let nameToDisplay = parsedUser.fullName;
+
+          if (!nameToDisplay && parsedUser.firstName) {
+            const mInitial = parsedUser.middleName ? `${parsedUser.middleName.charAt(0)}.` : "";
+            nameToDisplay = `${parsedUser.firstName} ${mInitial} ${parsedUser.lastName}`.replace(/\s+/g, ' ');
+          }
+
+          setUserData({
+            fullName: nameToDisplay || "User",
+            role: parsedUser.role || "VISITOR",
+            profileImage: parsedUser.profileImage || null 
+          });
+        } catch (error) {
+          console.error("Error parsing user data:", error);
         }
-
-        setUserData({
-          fullName: nameToDisplay || "User",
-          role: parsedUser.role || "VISITOR",
-          profileImage: parsedUser.profileImage || null 
-        });
-      } catch (error) {
-        console.error("Error parsing user data:", error);
       }
-    }
-  }, []);
+    };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newImage = reader.result;
-        
-        // 1. Update Layout State
-        setUserData(prev => ({ ...prev, profileImage: newImage }));
-        
-        // 2. Update LocalStorage so other components (like Profile) see it
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        localStorage.setItem("user", JSON.stringify({ ...storedUser, profileImage: newImage }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    syncUser();
+
+    window.addEventListener("userDataUpdated", syncUser);
+    return () => window.removeEventListener("userDataUpdated", syncUser);
+  }, []);
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, path: "/homepage" },
@@ -73,7 +60,6 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     setShowLogoutConfirm(false);
     navigate("/login");
   };
@@ -82,10 +68,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
                     userData.role === "MEMBER" ? "CJC Member" : "Visitor";
 
   const ProfileAvatar = ({ sizeClass }) => (
-    <div 
-      className={`relative group cursor-pointer overflow-hidden rounded-full border-4 border-[#3B4B89] shadow-md ${sizeClass}`}
-      onClick={() => fileInputRef.current?.click()}
-    >
+    <div className={`overflow-hidden rounded-full border-4 border-[#3B4B89] shadow-md ${sizeClass}`}>
       {userData.profileImage ? (
         <img src={userData.profileImage} alt="Profile" className="w-full h-full object-cover" />
       ) : (
@@ -93,10 +76,6 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
           <User className="text-gray-400 w-1/2 h-1/2" />
         </div>
       )}
-      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${userData.profileImage ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-        <Camera className="text-white w-1/3 h-1/3" />
-      </div>
-      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
     </div>
   );
 

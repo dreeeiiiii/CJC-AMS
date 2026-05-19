@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, X, Download, User, Camera } from "lucide-react";
+import { Pencil, X, Download, User, Camera, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import MemberLayout from "../../components/MemberLayout";
@@ -24,6 +24,7 @@ const MemberProfile = () => {
 
   const [editForm, setEditForm] = useState({ ...userData });
   const [saved, setSaved] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -52,15 +53,23 @@ const MemberProfile = () => {
   };
 
   const handleSave = () => {
-    const updatedUser = { ...editForm };
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const updatedUser = { ...storedUser, ...editForm };
+    if (pendingImage) {
+      updatedUser.profileImage = pendingImage;
+    }
     setUserData(updatedUser);
+    setEditForm(updatedUser);
+    setPendingImage(null);
     localStorage.setItem("user", JSON.stringify(updatedUser));
-    
+
     setSaved(true);
     setTimeout(() => {
       setEditMode(false);
       setSaved(false);
     }, 1200);
+
+    window.dispatchEvent(new Event("userDataUpdated"));
   };
 
   const handleImageUpload = (e) => {
@@ -68,13 +77,25 @@ const MemberProfile = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const updatedUser = { ...userData, profileImage: reader.result };
-        setUserData(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setEditForm(prev => ({ ...prev, profileImage: reader.result }));
+        setPendingImage(reader.result);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleSaveImage = () => {
+    if (!pendingImage) return;
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const updatedUser = { ...storedUser, profileImage: pendingImage };
+    setUserData(prev => ({ ...prev, profileImage: pendingImage }));
+    setEditForm(prev => ({ ...prev, profileImage: pendingImage }));
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    setPendingImage(null);
+    window.dispatchEvent(new Event("userDataUpdated"));
+  };
+
+  const handleCancelImage = () => {
+    setPendingImage(null);
   };
 
   const handleDownloadQR = () => {
@@ -118,21 +139,33 @@ const MemberProfile = () => {
           </button>
 
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
-            <div 
-                className="relative group cursor-pointer w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-[#3B4B89] overflow-hidden bg-white shadow-lg"
-                onClick={() => fileInputRef.current.click()}
-            >
-              {userData.profileImage ? (
-                <img src={userData.profileImage} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
-                  <User size={48} />
+            <div className="flex flex-col items-center">
+              <div 
+                  className="relative group cursor-pointer w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-[#3B4B89] overflow-hidden bg-white shadow-lg"
+                  onClick={() => fileInputRef.current.click()}
+              >
+                {(userData.profileImage || pendingImage) ? (
+                  <img src={pendingImage || userData.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                    <User size={48} />
+                  </div>
+                )}
+                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${(userData.profileImage || pendingImage) ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+                  <Camera className="text-white" size={24} />
+                </div>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+              </div>
+              {pendingImage && (
+                <div className="flex gap-2 mt-3">
+                  <button onClick={handleSaveImage} className="px-4 py-1.5 bg-[#3B4B89] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1">
+                    <Check size={14} /> Save
+                  </button>
+                  <button onClick={handleCancelImage} className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition">
+                    Cancel
+                  </button>
                 </div>
               )}
-              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${userData.profileImage ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                <Camera className="text-white" size={24} />
-              </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
 
             <div className="text-center md:text-left">

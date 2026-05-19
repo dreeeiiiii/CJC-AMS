@@ -34,7 +34,6 @@ const Navbar = () => {
       // Simulate async logout (API call, etc.)
       await new Promise((resolve) => setTimeout(resolve, 300)); 
       localStorage.removeItem("token");
-      localStorage.removeItem("user");
       setIsLoggedIn(false);
       setShowLogoutConfirm(false);
       navigate("/login");

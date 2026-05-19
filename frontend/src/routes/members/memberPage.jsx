@@ -133,12 +133,32 @@ const MemberPage = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center py-10 opacity-80">
-              <MessageSquareQuote size={48} className="text-white/40 mb-4" />
-              <p className="text-white/90 text-lg italic">"No testimonies have been shared yet. How has God worked in your life lately?"</p>
-              <button className="mt-6 px-6 py-2 bg-white text-[#3B4B89] rounded-full font-semibold text-sm hover:bg-gray-100 transition">
+            <div className="group flex flex-col items-center py-10 opacity-80 relative">
+              <MessageSquareQuote
+                size={48}
+                className="text-white/40 mb-4"
+              />
+
+              <p className="text-white/90 text-lg italic">
+                "No testimonies have been shared yet. How has God worked in your life lately?"
+              </p>
+
+              <a
+                href="https://forms.gle/75P6vqRV255yVNZ36"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="
+                  mt-6 px-6 py-2 bg-white text-[#3B4B89]
+                  rounded-full font-semibold text-sm
+                  hover:bg-gray-100 transition-all duration-300
+                  opacity-0 translate-y-2
+                  group-hover:opacity-100
+                  group-hover:translate-y-0
+                  inline-block
+                "
+              >
                 Share My Story
-              </button>
+              </a>
             </div>
           )}
         </div>

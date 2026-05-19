@@ -29,7 +29,11 @@ export const Login = () => {
 
             // Store standardized token and user object
             localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
+            const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+            const mergedUser = existingUser.email === user.email
+              ? { ...user, ...existingUser }
+              : user;
+            localStorage.setItem("user", JSON.stringify(mergedUser));
 
             // Navigate based on the role stored in your DB
             // standardized to handle potential casing differences
@@ -57,7 +61,11 @@ export const Login = () => {
             
             const { token, user } = res.data;
             localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
+            const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+            const mergedUser = existingUser.email === user.email
+              ? { ...user, ...existingUser }
+              : user;
+            localStorage.setItem("user", JSON.stringify(mergedUser));
             
             const role = user.role?.toUpperCase();
             
@@ -86,12 +94,6 @@ export const Login = () => {
                     <div className="text-white flex flex-col justify-center items-center text-center">
                         <h1 className="text-3xl lg:text-4xl font-bold mb-4">Enter your account</h1>
                         <p className="text-xl lg:text-2xl mb-6">Please log in using your personal information to stay connected with us.</p>
-                        <div className="text-sm flex gap-4 mt-0 md:mt-64">
-                            <span>Connect with us: </span>
-                            <a href="https://www.facebook.com/cjcrsg" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">Facebook</a>
-                            <a href="mailto:cjcrsgonline@gmail.com" className="underline hover:text-blue-300">Gmail</a>
-                            <a href="#" className="underline hover:text-blue-300">Contact</a>
-                        </div>
                     </div>
 
                     {/* Right Side: Login Form */}
