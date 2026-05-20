@@ -1,31 +1,11 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import { ImagePlus, Send, Calendar, Edit2, Trash2, Paperclip, X, Bold, Italic, Smile, Loader2, Eye } from 'lucide-react'
-
-const initialAnnouncements = [
-  {
-    id: 1,
-    content: 'Reminder to all members: Our general assembly will be held this Sunday at 9:00 AM. Please be at the venue by 8:30 AM for registration. Your presence is highly appreciated!',
-    image: null,
-    timestamp: '2026-05-05T09:00:00',
-  },
-  {
-    id: 2,
-    content: 'We are excited to announce our new community outreach program starting next month. Volunteers are needed to help with coordination and logistics. Sign up at the admin office or contact your chapter leader.',
-    image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&h=450&fit=crop',
-    timestamp: '2026-05-03T14:30:00',
-  },
-  {
-    id: 3,
-    content: 'Schedule update: The weekly meeting has been moved to Wednesday at 7:00 PM due to venue availability. Please adjust your calendars accordingly.',
-    image: null,
-    timestamp: '2026-05-01T10:15:00',
-  },
-]
+import { ImagePlus, Send, Calendar, Edit2, Trash2, Paperclip, X, Bold, Italic, Smile, Loader2 } from 'lucide-react'
 
 const AdminAnnouncement = () => {
-  const [announcements, setAnnouncements] = useState(initialAnnouncements)
+  // Initialize with an empty array to pull live from database configuration
+  const [announcements, setAnnouncements] = useState([])
   const [postContent, setPostContent] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -38,6 +18,23 @@ const AdminAnnouncement = () => {
 
   const maxChars = 280
   const charCount = postContent.length
+
+  // 🚀 Fetch live announcements on mount
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        // Updated route layout to standard multi-resource API endpoints
+        const response = await fetch('/api/announcements/routes')
+        if (response.ok) {
+          const data = await response.json()
+          setAnnouncements(data)
+        }
+      } catch (error) {
+        console.error('Failed to load announcements:', error)
+      }
+    }
+    fetchAnnouncements()
+  }, [])
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0]
@@ -55,27 +52,51 @@ const AdminAnnouncement = () => {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handlePost = () => {
+  // 🚀 Live creation with multi-part file payloads
+  const handlePost = async () => {
     if (!postContent.trim() && !selectedFile) return
 
     setIsLoading(true)
-    setTimeout(() => {
-      const newPost = {
-        id: Date.now(),
-        content: postContent,
-        image: imagePreview || null,
-        timestamp: new Date().toISOString(),
+    try {
+      const formData = new FormData()
+      formData.append('content', postContent)
+      if (selectedFile) {
+        formData.append('image', selectedFile)
       }
-      setAnnouncements(prev => [newPost, ...prev])
-      setPostContent('')
-      clearImage()
+
+      // Updated target route architecture
+      const response = await fetch('/api/announcements/routes', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const newPost = await response.json()
+        setAnnouncements(prev => [newPost, ...prev])
+        setPostContent('')
+        clearImage()
+      }
+    } catch (error) {
+      console.error('Error posting announcement:', error)
+    } finally {
       setIsLoading(false)
-    }, 600)
+    }
   }
 
-  const handleDelete = (id) => {
-    setAnnouncements(prev => prev.filter(a => a.id !== id))
-    setDeleteModal(null)
+  // 🚀 Live delete tracking
+  const handleDelete = async (id) => {
+    try {
+      // Adjusted route layout for explicit parameter path queries
+      const response = await fetch(`/api/announcements/routes?id=${id}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        setAnnouncements(prev => prev.filter(a => a.id !== id))
+        setDeleteModal(null)
+      }
+    } catch (error) {
+      console.error('Error removing announcement:', error)
+    }
   }
 
   const handleEdit = (id) => {
@@ -86,22 +107,49 @@ const AdminAnnouncement = () => {
     }
   }
 
-  const handleSaveEdit = (id) => {
-    setAnnouncements(prev =>
-      prev.map(a => (a.id === id ? { ...a, content: editContent } : a))
-    )
-    setEditingId(null)
-    setEditContent('')
+  // 🚀 Live inline content updating
+  const handleSaveEdit = async (id) => {
+    try {
+      // Adjusted route layout for unified dynamic parameters
+      const response = await fetch(`/api/announcements/routes?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent })
+      })
+
+      if (response.ok) {
+        const updated = await response.json()
+        setAnnouncements(prev =>
+          prev.map(a => (a.id === id ? { ...a, content: updated.content } : a))
+        )
+        setEditingId(null)
+        setEditContent('')
+      }
+    } catch (error) {
+      console.error('Error updating announcement:', error)
+    }
   }
 
-  const handleLoadMore = () => {
+  const handleLoadMore = async () => {
     setLoadingMore(true)
-    setTimeout(() => {
+    try {
+      // Synced offset endpoint params alongside updated routes layout
+      const response = await fetch(`/api/announcements/routes?offset=${announcements.length}`)
+      if (response.ok) {
+        const moreData = await response.json()
+        if (moreData.length > 0) {
+          setAnnouncements(prev => [...prev, ...moreData])
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more entries:', error)
+    } finally {
       setLoadingMore(false)
-    }, 1000)
+    }
   }
 
   const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Just now'
     const date = new Date(timestamp)
     const now = new Date()
     const diffMs = now - date
@@ -139,6 +187,12 @@ const AdminAnnouncement = () => {
       }
       const newText = text.substring(0, start) + wrapper + text.substring(end)
       setPostContent(newText)
+      
+      // UX Fix: Refocus textarea after inserting syntax wrappers
+      setTimeout(() => {
+        textarea.focus()
+        textarea.setSelectionRange(start + wrapper.length, start + wrapper.length)
+      }, 0)
     }
   }
 
@@ -302,7 +356,7 @@ const AdminAnnouncement = () => {
                           <img src="/LOGO.png" alt="Logo" className="w-10 h-10 rounded-full" />
                           <div>
                             <h4 className="font-semibold text-[#4A558F] text-sm">Church of Jesus Christ</h4>
-                            <p className="text-xs text-gray-400">{formatTimestamp(announcement.timestamp)}</p>
+                            <p className="text-xs text-gray-400">{formatTimestamp(announcement.createdAt || announcement.timestamp)}</p>
                           </div>
                         </div>
                       </div>

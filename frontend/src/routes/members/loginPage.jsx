@@ -15,39 +15,34 @@ export const Login = () => {
 
     const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+    // Helper function to manage user storage and route directly to the user homepage
+    const handleAuthSuccess = (token, user) => {
+        localStorage.setItem("token", token);
+        
+        const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const mergedUser = existingUser.email === user.email
+            ? { ...user, ...existingUser }
+            : user;
+            
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+
+        // 🚀 Admin routing removed. Regular members always land here now.
+        navigate('/homepage');
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
 
         try {
-            // Strictly using the member login endpoint for this page
-            const endpoint = "/auth/member/login";
-
-            const response = await axios.post(`${BACKEND_URL}${endpoint}`, { email, password });
-            
+            // 🚀 Pointed to your dedicated member authentication endpoint
+            const response = await axios.post(`${BACKEND_URL}/auth/memberLogin`, { email, password });
             const { token, user } = response.data;
 
-            // Store standardized token and user object
-            localStorage.setItem("token", token);
-            const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
-            const mergedUser = existingUser.email === user.email
-              ? { ...user, ...existingUser }
-              : user;
-            localStorage.setItem("user", JSON.stringify(mergedUser));
-
-            // Navigate based on the role stored in your DB
-            // standardized to handle potential casing differences
-            const role = user.role?.toUpperCase();
-            
-            if (role === "ADMIN") {
-                navigate('/admin/home');
-            } else {
-                navigate('/homepage');
-            }
+            handleAuthSuccess(token, user);
             
         } catch (err) {
             console.error("Login error:", err.response?.data || err.message);
-            // If the backend returns 403 (wrong role) or 401 (wrong pass), show that message
             setError(err.response?.data?.message || "Login failed. Please check your credentials.");
         }
     };
@@ -60,20 +55,8 @@ export const Login = () => {
             });
             
             const { token, user } = res.data;
-            localStorage.setItem("token", token);
-            const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
-            const mergedUser = existingUser.email === user.email
-              ? { ...user, ...existingUser }
-              : user;
-            localStorage.setItem("user", JSON.stringify(mergedUser));
-            
-            const role = user.role?.toUpperCase();
-            
-            if (role === "ADMIN") {
-                navigate("/admin");
-            } else {
-                navigate("/homepage");
-            }
+            handleAuthSuccess(token, user);
+
         } catch (err) {
             console.error("Google login error:", err.response?.data || err.message);
             setError(err.response?.data?.message || "Google login failed");

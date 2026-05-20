@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, X, Download, User, Camera, Check } from "lucide-react";
+import { Pencil, X, Download, User, Camera, Check, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import MemberLayout from "../../components/MemberLayout";
@@ -9,7 +9,6 @@ const MemberProfile = () => {
   const qrRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Updated state to include middleName
   const [userData, setUserData] = useState({
     firstName: "",
     middleName: "",
@@ -24,7 +23,11 @@ const MemberProfile = () => {
 
   const [editForm, setEditForm] = useState({ ...userData });
   const [saved, setSaved] = useState(false);
-  const [pendingImage, setPendingImage] = useState(null);
+  
+  // New states for image handling
+  const [pendingImage, setPendingImage] = useState(null); // Base64 for UI preview only
+  const [selectedFile, setSelectedFile] = useState(null); // The actual file to upload
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -35,10 +38,10 @@ const MemberProfile = () => {
         middleName: parsed.middleName || "",
         lastName: parsed.lastName || "",
         email: parsed.email || "",
-        contact: parsed.contactNo || parsed.contact || "", // Sync with backend key 'contactNo'
+        contact: parsed.contactNo || parsed.contact || "",
         address: parsed.address || "",
         id: parsed.id || "CJC-2024-001",
-        profileImage: parsed.profileImage || null,
+        profileImage: parsed.profileImage || null, // This is now a URL string
         role: parsed.role || "MEMBER"
       };
       setUserData(initialData);
@@ -54,13 +57,11 @@ const MemberProfile = () => {
 
   const handleSave = () => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    // Only update text data here, image is handled separately
     const updatedUser = { ...storedUser, ...editForm };
-    if (pendingImage) {
-      updatedUser.profileImage = pendingImage;
-    }
+    
     setUserData(updatedUser);
     setEditForm(updatedUser);
-    setPendingImage(null);
     localStorage.setItem("user", JSON.stringify(updatedUser));
 
     setSaved(true);
@@ -75,27 +76,59 @@ const MemberProfile = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setSelectedFile(file); // Store file for backend
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPendingImage(reader.result);
+        setPendingImage(reader.result); // Store preview for UI
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSaveImage = () => {
-    if (!pendingImage) return;
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const updatedUser = { ...storedUser, profileImage: pendingImage };
-    setUserData(prev => ({ ...prev, profileImage: pendingImage }));
-    setEditForm(prev => ({ ...prev, profileImage: pendingImage }));
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    setPendingImage(null);
-    window.dispatchEvent(new Event("userDataUpdated"));
+  const handleSaveImage = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+
+    const formData = new FormData();
+    formData.append("profileImage", selectedFile);
+    formData.append("userId", userData.id);
+
+    try {
+      // Send image to backend
+      const response = await fetch("http://localhost:5000/api/upload-profile", {
+        method: "POST",
+        // headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }, // Uncomment if using auth tokens
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to upload image");
+
+      const data = await response.json();
+      const newImageUrl = data.imageUrl; 
+
+      // Update local storage with the new URL (Not the base64 string)
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedUser = { ...storedUser, profileImage: newImageUrl };
+      
+      setUserData(prev => ({ ...prev, profileImage: newImageUrl }));
+      setEditForm(prev => ({ ...prev, profileImage: newImageUrl }));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      setPendingImage(null);
+      setSelectedFile(null);
+      window.dispatchEvent(new Event("userDataUpdated"));
+      
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCancelImage = () => {
     setPendingImage(null);
+    setSelectedFile(null);
   };
 
   const handleDownloadQR = () => {
@@ -118,7 +151,6 @@ const MemberProfile = () => {
     img.src = "data:image/svg+xml;base64," + btoa(svgData);
   };
 
-  // Construct display name with initial if middleName exists
   const formattedFullName = `${userData.firstName}${userData.middleName ? ` ${userData.middleName.charAt(0)}.` : ''} ${userData.lastName}`;
   const qrValue = `${userData.id}|${userData.email}|${formattedFullName}`;
 
@@ -156,12 +188,22 @@ const MemberProfile = () => {
                 </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
               </div>
+              
               {pendingImage && (
                 <div className="flex gap-2 mt-3">
-                  <button onClick={handleSaveImage} className="px-4 py-1.5 bg-[#3B4B89] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1">
-                    <Check size={14} /> Save
+                  <button 
+                    onClick={handleSaveImage} 
+                    disabled={isUploading}
+                    className="px-4 py-1.5 bg-[#3B4B89] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1 disabled:opacity-70"
+                  >
+                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
+                    {isUploading ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={handleCancelImage} className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition">
+                  <button 
+                    onClick={handleCancelImage} 
+                    disabled={isUploading}
+                    className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition disabled:opacity-70"
+                  >
                     Cancel
                   </button>
                 </div>
