@@ -66,6 +66,7 @@ export const createVerse = async (req: Request, res: Response) => {
 export const getTestimonies = async (req: Request, res: Response) => {
   try {
     const testimonies = await prisma.testimony.findMany({
+      where: { status: "approved" },
       orderBy: { createdAt: 'desc' },
     });
 

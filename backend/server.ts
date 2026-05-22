@@ -24,6 +24,7 @@ import contentRoutes from "./routes/contentRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import visitorRoutes from "./routes/visitorRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js"; // 🚀 Imported modular routes
+import testimonyRoutes from "./routes/testimonyRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +68,7 @@ app.use("/api/content", contentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/visitors", visitorRoutes);
 app.use("/api/announcements", announcementRoutes); // 🚀 Cleanly mounted announcement router here
+app.use("/api/testimonies", testimonyRoutes);
 
 /**
  * Profile Image Upload Route (Cloudinary with local disk fallback)

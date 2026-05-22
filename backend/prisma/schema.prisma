@@ -57,7 +57,7 @@ model Visitor {
   middleName        String?
   contactNo         String?
   address           String?
-  // gender            Gender       @default(Male)
+  gender            Gender       @default(Male)
   email             String?      @unique
   
   // Updated fields to match frontend requirements
@@ -92,16 +92,15 @@ model Verse {
 model Testimony {
   id        Int      @id @default(autoincrement())
   quote     String   @db.Text
+  status    String   @default("pending")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // 🚀 Add these lines to create the relationship
-  memberId  Int?     
+  memberId  Int?
   member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  // Fallbacks for external/non-member testimonies (optional)
-  name      String?  
-  avatar    String?  
+  name      String?
+  avatar    String?
 }
 
 model Attendance {

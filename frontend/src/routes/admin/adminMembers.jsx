@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
+import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, 
   MapPin, CheckCircle, X, ChevronDown, Trash2, 
@@ -299,7 +300,10 @@ const AdminMembers = () => {
               <p className="text-sm text-gray-500 mt-1">Overall Members</p>
             </div>
           </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6 items-start">
 
+          {/* Left Column */}
+          <div>
           {/* Data Management Area */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
             <div className="p-5 border-b border-gray-100">
@@ -472,7 +476,15 @@ const AdminMembers = () => {
               )}
             </div>
           </div>
+          </div>
+
+          {/* Right Column */}
+          <div>
+            <TestimonyApprovalSidebar showToast={showToast} />
+          </div>
+
         </div>
+      </div>
       </div>
 
       {/* Add Member Modal */}
