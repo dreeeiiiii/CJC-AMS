@@ -131,7 +131,7 @@ function App() {
 
         {/* Protected Member Dashboard */}
         <Route
-          path="/homepage"
+          path="/member"
           element={
             <ProtectedRoute adminOnly={false}>
               <MemberPage />

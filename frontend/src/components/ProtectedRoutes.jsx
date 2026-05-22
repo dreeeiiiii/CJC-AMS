@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   // 3. Handle Admin Route Protection
   // If the route requires an admin, but the logged-in user isn't one
   if (adminOnly && userRole !== "ADMIN") {
-    return <Navigate to="/homepage" replace />;
+    return <Navigate to="/member" replace />;
   }
 
   // 4. Handle Member Route Protection (Optional but Recommended)

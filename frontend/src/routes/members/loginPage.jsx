@@ -15,19 +15,10 @@ export const Login = () => {
 
     const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-    // Helper function to manage user storage and route directly to the user homepage
     const handleAuthSuccess = (token, user) => {
         localStorage.setItem("token", token);
-        
-        const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
-        const mergedUser = existingUser.email === user.email
-            ? { ...user, ...existingUser }
-            : user;
-            
-        localStorage.setItem("user", JSON.stringify(mergedUser));
-
-        // 🚀 Admin routing removed. Regular members always land here now.
-        navigate('/homepage');
+        localStorage.setItem("user", JSON.stringify(user));
+        navigate('/member');
     };
 
     const handleLogin = async (e) => {

@@ -120,7 +120,7 @@ const Navbar = () => {
               <>
                 <li className="relative group">
                   <button
-                    onClick={() => handleNavigate("/homepage")}
+                    onClick={() => handleNavigate("/member")}
                     className="relative group"
                   >
                     Dashboard
@@ -195,7 +195,7 @@ const Navbar = () => {
                   <>
                     <li>
                       <button
-                        onClick={() => { handleNavigate("/homepage"); setMobileMenuOpen(false); }}
+                        onClick={() => { handleNavigate("/member"); setMobileMenuOpen(false); }}
                         className="block w-full text-left py-2"
                       >
                         Dashboard

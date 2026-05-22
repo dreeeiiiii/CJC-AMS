@@ -1,6 +1,7 @@
 import express from "express";
 // Rule: Use 'import type' for interfaces/types
 import type { Request, Response } from "express";
+import type { AuthRequest } from "./middleware/auth.js";
 
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -13,6 +14,8 @@ import fs from "fs"; // 🚀 Added to safely verify and create directories
 // Rule: Add .js extensions to local relative imports
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import prisma from "./db.js";
+import { protect } from "./middleware/auth.js";
+import { uploadToCloudinary } from "./config/cloudinary.js";
 
 // Import your routes with .js extensions
 import authRoutes from "./routes/authRoutes.js";
@@ -50,20 +53,8 @@ app.use(bodyParser.json());
 // Serve the uploads folder dynamically using the absolute path
 app.use('/uploads', express.static(uploadDir));
 
-// --- Multer Configuration: Profiles ---
-const profileStorage = multer.diskStorage({
-  destination: function (_req, _file, cb) {
-    cb(null, uploadDir); // 🚀 Targets our auto-verified absolute directory path
-  },
-  filename: function (_req, file, cb) {
-    // Prefixed unused arguments with underscores to clear ts(6133) warnings
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + ext);
-  }
-});
-
-const uploadProfile = multer({ storage: profileStorage });
+// --- Multer Configuration: Profiles (memory storage for Cloudinary upload) ---
+const uploadProfile = multer({ storage: multer.memoryStorage() });
 
 
 // --- Swagger Documentation ---
@@ -78,32 +69,36 @@ app.use("/api/visitors", visitorRoutes);
 app.use("/api/announcements", announcementRoutes); // 🚀 Cleanly mounted announcement router here
 
 /**
- * Profile Image Upload Route
+ * Profile Image Upload Route (Cloudinary with local disk fallback)
  */
-app.post('/api/upload-profile', uploadProfile.single('profileImage'), async (req: Request, res: Response): Promise<any> => {
+app.post('/api/upload-profile', protect as any, uploadProfile.single('profileImage'), async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image uploaded" });
     }
 
-    const userId = req.body.userId;
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // 🚀 Cast userId to an Int to match your schema.prisma 'id Int @id' type constraint
-    const parsedUserId = parseInt(userId, 10);
-    if (isNaN(parsedUserId)) {
-      return res.status(400).json({ error: "Invalid User ID format. Must be a valid integer." });
+    const userId = (req.user as any).id;
+    let imageUrl: string;
+
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      const result = await uploadToCloudinary(req.file.buffer, 'profiles');
+      imageUrl = (result as any).secure_url;
+    } else {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(req.file.originalname);
+      const filename = 'profile-' + uniqueSuffix + ext;
+      const filepath = path.join(uploadDir, filename);
+      fs.writeFileSync(filepath, req.file.buffer);
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+      imageUrl = `${baseUrl}/uploads/${filename}`;
     }
 
-    // Construct the URL. Use your environment variable in production
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
-
-    // Save the URL to your PostgreSQL database using Prisma
     const updatedMember = await prisma.member.update({
-      where: { id: parsedUserId },
+      where: { id: userId },
       data: { profileImage: imageUrl }
     });
 

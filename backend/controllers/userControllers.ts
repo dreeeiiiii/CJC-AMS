@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../db.js';
+import type { AuthRequest } from '../middleware/auth.js';
 
 // 📌 Get all users (Includes 'status' for your dashboard logic)
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -140,6 +141,55 @@ export const deleteUsers = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Get authenticated user's own profile
+export const getMyProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = (req.user as any).id;
+    const user = await prisma.member.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Update authenticated user's own profile
+export const updateMyProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = (req.user as any).id;
+    const { firstName, middleName, lastName, email, contactNo, address } = req.body;
+
+    const updatedUser = await prisma.member.update({
+      where: { id: userId },
+      data: {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        contactNo,
+        address,
+      },
+    });
+
+    res.status(200).json(updatedUser);
   } catch (error: any) {
     if (error.code === 'P2025') {
       return res.status(404).json({ message: 'User not found' });

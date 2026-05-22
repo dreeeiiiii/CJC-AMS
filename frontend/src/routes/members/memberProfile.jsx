@@ -3,6 +3,7 @@ import { Pencil, X, Download, User, Camera, Check, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import MemberLayout from "../../components/MemberLayout";
+import { fetchMyProfile, updateMyProfile } from "../../api/userApi";
 
 const MemberProfile = () => {
   const [editMode, setEditMode] = useState(false);
@@ -30,23 +31,48 @@ const MemberProfile = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      const initialData = {
-        firstName: parsed.firstName || "",
-        middleName: parsed.middleName || "",
-        lastName: parsed.lastName || "",
-        email: parsed.email || "",
-        contact: parsed.contactNo || parsed.contact || "",
-        address: parsed.address || "",
-        id: parsed.id || "CJC-2024-001",
-        profileImage: parsed.profileImage || null, // This is now a URL string
-        role: parsed.role || "MEMBER"
-      };
-      setUserData(initialData);
-      setEditForm(initialData);
-    }
+    const loadProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const serverUser = await fetchMyProfile();
+        const profileData = {
+          firstName: serverUser.firstName || "",
+          middleName: serverUser.middleName || "",
+          lastName: serverUser.lastName || "",
+          email: serverUser.email || "",
+          contact: serverUser.contactNo || serverUser.contact || "",
+          address: serverUser.address || "",
+          id: serverUser.id || "CJC-2024-001",
+          profileImage: serverUser.profileImage || null,
+          role: serverUser.role || "MEMBER"
+        };
+        setUserData(profileData);
+        setEditForm(profileData);
+        localStorage.setItem("user", JSON.stringify(serverUser));
+      } catch {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          const initialData = {
+            firstName: parsed.firstName || "",
+            middleName: parsed.middleName || "",
+            lastName: parsed.lastName || "",
+            email: parsed.email || "",
+            contact: parsed.contactNo || parsed.contact || "",
+            address: parsed.address || "",
+            id: parsed.id || "CJC-2024-001",
+            profileImage: parsed.profileImage || null,
+            role: parsed.role || "MEMBER"
+          };
+          setUserData(initialData);
+          setEditForm(initialData);
+        }
+      }
+    };
+
+    loadProfile();
   }, []);
 
   const handleEditToggle = () => {
@@ -55,14 +81,22 @@ const MemberProfile = () => {
     setSaved(false);
   };
 
-  const handleSave = () => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    // Only update text data here, image is handled separately
-    const updatedUser = { ...storedUser, ...editForm };
-    
-    setUserData(updatedUser);
-    setEditForm(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+  const handleSave = async () => {
+    const prevUserData = { ...userData };
+
+    const mergedData = {
+      firstName: editForm.firstName,
+      middleName: editForm.middleName,
+      lastName: editForm.lastName,
+      email: editForm.email,
+      contactNo: editForm.contact,
+      address: editForm.address,
+    };
+
+    const optimisticData = { ...userData, ...editForm };
+    setUserData(optimisticData);
+    setEditForm(optimisticData);
+    window.dispatchEvent(new Event("userDataUpdated"));
 
     setSaved(true);
     setTimeout(() => {
@@ -70,7 +104,23 @@ const MemberProfile = () => {
       setSaved(false);
     }, 1200);
 
-    window.dispatchEvent(new Event("userDataUpdated"));
+    try {
+      const serverUser = await updateMyProfile(mergedData);
+      const syncedData = {
+        ...optimisticData,
+        contact: serverUser.contactNo || serverUser.contact || optimisticData.contact,
+        profileImage: serverUser.profileImage || optimisticData.profileImage,
+      };
+      setUserData(syncedData);
+      setEditForm(syncedData);
+      localStorage.setItem("user", JSON.stringify(serverUser));
+      window.dispatchEvent(new Event("userDataUpdated"));
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      setUserData(prevUserData);
+      setEditForm(prevUserData);
+      window.dispatchEvent(new Event("userDataUpdated"));
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -87,40 +137,40 @@ const MemberProfile = () => {
 
   const handleSaveImage = async () => {
     if (!selectedFile) return;
+    const prevImage = userData.profileImage;
     setIsUploading(true);
 
     const formData = new FormData();
     formData.append("profileImage", selectedFile);
-    formData.append("userId", userData.id);
 
     try {
-      // Send image to backend
-      const response = await fetch("http://localhost:5000/api/upload-profile", {
+      const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/upload-profile`, {
         method: "POST",
-        // headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }, // Uncomment if using auth tokens
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       if (!response.ok) throw new Error("Failed to upload image");
 
       const data = await response.json();
-      const newImageUrl = data.imageUrl; 
+      const newImageUrl = data.imageUrl;
 
-      // Update local storage with the new URL (Not the base64 string)
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const updatedUser = { ...storedUser, profileImage: newImageUrl };
-      
       setUserData(prev => ({ ...prev, profileImage: newImageUrl }));
       setEditForm(prev => ({ ...prev, profileImage: newImageUrl }));
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      
+
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      localStorage.setItem("user", JSON.stringify({ ...storedUser, profileImage: newImageUrl }));
+
       setPendingImage(null);
       setSelectedFile(null);
       window.dispatchEvent(new Event("userDataUpdated"));
-      
+
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image. Please try again.");
+      setUserData(prev => ({ ...prev, profileImage: prevImage }));
+      setEditForm(prev => ({ ...prev, profileImage: prevImage }));
     } finally {
       setIsUploading(false);
     }

@@ -57,7 +57,7 @@ model Visitor {
   middleName        String?
   contactNo         String?
   address           String?
-  gender            Gender       @default(Male)
+  // gender            Gender       @default(Male)
   email             String?      @unique
   
   // Updated fields to match frontend requirements

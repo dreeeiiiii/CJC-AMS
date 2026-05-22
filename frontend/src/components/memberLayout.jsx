@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, Home, Bell, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { fetchMyProfile } from "../api/userApi";
 
 const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   const navigate = useNavigate();
@@ -16,26 +17,35 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   });
 
   useEffect(() => {
-    const syncUser = () => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-
-          let nameToDisplay = parsedUser.fullName;
-
-          if (!nameToDisplay && parsedUser.firstName) {
-            const mInitial = parsedUser.middleName ? `${parsedUser.middleName.charAt(0)}.` : "";
-            nameToDisplay = `${parsedUser.firstName} ${mInitial} ${parsedUser.lastName}`.replace(/\s+/g, ' ');
+    const syncUser = async () => {
+      try {
+        const serverUser = await fetchMyProfile();
+        const mInitial = serverUser.middleName ? ` ${serverUser.middleName.charAt(0)}.` : "";
+        const nameToDisplay = `${serverUser.firstName}${mInitial} ${serverUser.lastName}`.replace(/\s+/g, ' ');
+        setUserData({
+          fullName: nameToDisplay || "User",
+          role: serverUser.role || "VISITOR",
+          profileImage: serverUser.profileImage || null
+        });
+        localStorage.setItem("user", JSON.stringify(serverUser));
+      } catch {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            let nameToDisplay = parsedUser.fullName;
+            if (!nameToDisplay && parsedUser.firstName) {
+              const mInitial = parsedUser.middleName ? `${parsedUser.middleName.charAt(0)}.` : "";
+              nameToDisplay = `${parsedUser.firstName} ${mInitial} ${parsedUser.lastName}`.replace(/\s+/g, ' ');
+            }
+            setUserData({
+              fullName: nameToDisplay || "User",
+              role: parsedUser.role || "VISITOR",
+              profileImage: parsedUser.profileImage || null 
+            });
+          } catch (error) {
+            console.error("Error parsing user data:", error);
           }
-
-          setUserData({
-            fullName: nameToDisplay || "User",
-            role: parsedUser.role || "VISITOR",
-            profileImage: parsedUser.profileImage || null 
-          });
-        } catch (error) {
-          console.error("Error parsing user data:", error);
         }
       }
     };
@@ -47,7 +57,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   }, []);
 
   const navItems = [
-    { id: "home", label: "Home", icon: Home, path: "/homepage" },
+    { id: "home", label: "Home", icon: Home, path: "/member" },
     { id: "announcements", label: "Announcements", icon: Bell, path: "/member/announcements" },
     { id: "profile", label: "Profile", icon: User, path: "/member/profile" },
   ];
