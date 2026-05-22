@@ -4,7 +4,7 @@ import Footer from '../../components/footer'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, 
   MapPin, CheckCircle, X, ChevronDown, Trash2, 
-  AlertCircle, Loader2, Download 
+  AlertCircle, Loader2, Download, Undo2
 } from 'lucide-react'
 
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
@@ -41,8 +41,12 @@ const AdminMembers = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState([])
+  const [pendingDeleteIds, setPendingDeleteIds] = useState([])
   const [toast, setToast] = useState(null)
   const [toastType, setToastType] = useState('success')
+  const [toastAction, setToastAction] = useState(null)
+  const deleteTimeoutRef = useRef(null)
+  const deletedMembersRef = useRef([])
 
   // --- Filter and Sort State ---
   const [statusFilter, setStatusFilter] = useState('All')
@@ -97,10 +101,23 @@ const AdminMembers = () => {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const showToast = useCallback((message, type = 'success') => {
+  useEffect(() => {
+    return () => {
+      clearTimeout(deleteTimeoutRef.current)
+    }
+  }, [])
+
+  const dismissToast = useCallback(() => {
+    setToast(null)
+    setToastType('success')
+    setToastAction(null)
+  }, [])
+
+  const showToast = useCallback((message, type = 'success', action = null) => {
     setToast(message)
     setToastType(type)
-    setTimeout(() => setToast(null), 3000)
+    setToastAction(action)
+    setTimeout(() => setToast(null), 5000)
   }, [])
 
   // 📌 Combined Filter and Sort Logic
@@ -166,19 +183,42 @@ const AdminMembers = () => {
     setFormErrors({})
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedMembers.length === 0) return
-    if (!window.confirm(`Are you sure you want to delete ${selectedMembers.length} members?`)) return;
-    try {
-      await Promise.all(selectedMembers.map(id => 
-        fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
-      ));
-      showToast(`${selectedMembers.length} member(s) deleted.`, 'error');
-      setSelectedMembers([]);
-      fetchMembers();
-    } catch (error) {
-      showToast("Error deleting members", "error");
+    const ids = [...selectedMembers]
+    const removed = members.filter(m => ids.includes(m.id))
+
+    setSelectedMembers([])
+    setPendingDeleteIds(ids)
+    deletedMembersRef.current = removed
+
+    clearTimeout(deleteTimeoutRef.current)
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        await Promise.all(ids.map(id =>
+          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
+        ))
+        setMembers(prev => prev.filter(m => !ids.includes(m.id)))
+        setPendingDeleteIds([])
+        deletedMembersRef.current = []
+        dismissToast()
+        showToast(`${ids.length} member(s) deleted successfully.`, 'success');
+      } catch (error) {
+        setPendingDeleteIds([])
+        deletedMembersRef.current = []
+        dismissToast()
+        showToast('Failed to delete members.', 'error')
+      }
+    }, 5000)
+
+    const handleUndo = () => {
+      clearTimeout(deleteTimeoutRef.current)
+      setPendingDeleteIds([])
+      deletedMembersRef.current = []
+      dismissToast()
     }
+
+    showToast(`${ids.length} member(s) deleted`, 'error', { label: 'Undo', onClick: handleUndo })
   }
 
   const handleExportCSV = () => {
@@ -335,9 +375,12 @@ const AdminMembers = () => {
               </div>
 
               {selectedMembers.length > 0 && (
-                <div className="mt-3 flex items-center gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
-                  <span className="text-sm text-[#4A558F] font-medium">{selectedMembers.length} selected</span>
-                  <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors">
+                <div className="mt-3 flex items-center justify-between gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-[#4A558F] font-medium">{selectedMembers.length} selected</span>
+                    <button onClick={() => setSelectedMembers([])} className="text-xs text-gray-500 hover:underline">Clear Selection</button>
+                  </div>
+                  <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors font-medium">
                     <Trash2 size={14} /> Delete Selected
                   </button>
                 </div>
@@ -376,19 +419,35 @@ const AdminMembers = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMembers.map((member) => (
-                      <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    {filteredMembers.map((member, index) => {
+                      const isPendingDelete = pendingDeleteIds.includes(member.id)
+                      return (
+                      <tr
+                        key={member.id}
+                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                          isPendingDelete
+                            ? 'bg-red-50'
+                            : index % 2 === 0
+                              ? 'bg-white'
+                              : 'bg-gray-50/50'
+                        }`}
+                      >
                         <td className="py-3 px-5">
                           <input
                             type="checkbox"
                             className="rounded border-gray-300"
                             checked={selectedMembers.includes(member.id)}
                             onChange={() => toggleSelect(member.id)}
+                            disabled={isPendingDelete}
                           />
                         </td>
-                        <td className="py-3 px-4 text-gray-700">{member.firstName}</td>
+                        <td className="py-3 px-4">
+                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName}</span>
+                        </td>
                         <td className="py-3 px-4 text-gray-700">{member.middleName || '-'}</td>
-                        <td className="py-3 px-4 text-gray-700">{member.lastName}</td>
+                        <td className="py-3 px-4">
+                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.lastName}</span>
+                        </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                             member.status === 'Old Member' ? 'bg-[#D9DFF2] text-[#4A558F]' : 'bg-green-100 text-green-700'
@@ -396,11 +455,18 @@ const AdminMembers = () => {
                             <CheckCircle size={12} /> {member.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-500">
-                          {new Date(member.createdAt).toLocaleDateString()}
+                        <td className="py-3 px-4">
+                          <span className="text-gray-500">{new Date(member.createdAt).toLocaleDateString()}</span>
+                          {isPendingDelete && (
+                            <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                              <Loader2 size={12} className="animate-spin" />
+                              Deleting...
+                            </div>
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
@@ -475,9 +541,20 @@ const AdminMembers = () => {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-            {toastType === 'success' ? <CheckCircle size={18} /> : <X size={18} />}
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
+            toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+          }`}>
+            {toastType === 'success' ? <CheckCircle size={18} /> : <Loader2 size={18} className="animate-spin" />}
             {toast}
+            {toastAction && (
+              <button
+                onClick={toastAction.onClick}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors font-bold"
+              >
+                <Undo2 size={14} />
+                {toastAction.label}
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
 import { 
   Search, Filter, Download, Plus, ArrowLeft, User, 
   Building2, Calendar, CheckCircle, X, ChevronDown, 
-  Loader2, AlertCircle, Clock, Trash2 
+  Loader2, AlertCircle, Clock, Trash2, Undo2
 } from 'lucide-react'
 
 const API_URL = 'http://localhost:5000/api/visitors';
@@ -49,8 +49,12 @@ const AdminVisitors = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedVisitors, setSelectedVisitors] = useState([])
+  const [pendingDeleteIds, setPendingDeleteIds] = useState([])
   const [toast, setToast] = useState(null)
   const [toastType, setToastType] = useState('success')
+  const [toastAction, setToastAction] = useState(null)
+  const deleteTimeoutRef = useRef(null)
+  const deletedVisitorsRef = useRef([])
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -72,10 +76,17 @@ const AdminVisitors = () => {
     };
   }, []);
 
-  const showToast = useCallback((message, type = 'success') => {
+  const dismissToast = useCallback(() => {
+    setToast(null)
+    setToastType('success')
+    setToastAction(null)
+  }, [])
+
+  const showToast = useCallback((message, type = 'success', action = null) => {
     setToast(message)
     setToastType(type)
-    setTimeout(() => setToast(null), 3000)
+    setToastAction(action)
+    setTimeout(() => setToast(null), 5000)
   }, [])
 
   const fetchData = useCallback(async () => {
@@ -103,6 +114,12 @@ const AdminVisitors = () => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(deleteTimeoutRef.current)
+    }
+  }, [])
 
   // --- Search Logic ---
   const filteredVisitors = useMemo(() => {
@@ -155,6 +172,42 @@ const AdminVisitors = () => {
 
   const toggleSelect = (id) => {
     setSelectedVisitors(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedVisitors.length === 0) return
+    const ids = [...selectedVisitors]
+    const removed = visitors.filter(v => ids.includes(v.id))
+
+    setSelectedVisitors([])
+    setPendingDeleteIds(ids)
+    deletedVisitorsRef.current = removed
+
+    clearTimeout(deleteTimeoutRef.current)
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        await axios.delete(API_URL, { ...getAuthHeaders(), data: { ids } })
+        setVisitors(prev => prev.filter(v => !ids.includes(v.id)))
+        setPendingDeleteIds([])
+        deletedVisitorsRef.current = []
+        dismissToast()
+        showToast(`${ids.length} visitor(s) deleted successfully.`, 'success');
+      } catch (error) {
+        setPendingDeleteIds([])
+        deletedVisitorsRef.current = []
+        dismissToast()
+        showToast('Failed to delete visitors. Restored.', 'error')
+      }
+    }, 5000)
+
+    const handleUndo = () => {
+      clearTimeout(deleteTimeoutRef.current)
+      setPendingDeleteIds([])
+      deletedVisitorsRef.current = []
+      dismissToast()
+    }
+
+    showToast(`${ids.length} visitor(s) deleted`, 'error', { label: 'Undo', onClick: handleUndo })
   }
 
   // --- Export Function ---
@@ -261,12 +314,12 @@ const AdminVisitors = () => {
               </div>
 
               {selectedVisitors.length > 0 && (
-                <div className="mt-3 flex items-center justify-between bg-[#D9DFF2]/50 rounded-lg px-4 py-2">
+                <div className="mt-3 flex items-center justify-between bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-[#4A558F] font-medium">{selectedVisitors.length} selected</span>
                     <button onClick={() => setSelectedVisitors([])} className="text-xs text-gray-500 hover:underline">Clear Selection</button>
                   </div>
-                  <button className="text-red-600 hover:text-red-700 flex items-center gap-1 text-sm font-medium">
+                  <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors font-medium">
                     <Trash2 size={14} /> Delete Selected
                   </button>
                 </div>
@@ -303,11 +356,17 @@ const AdminVisitors = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredVisitors.map((visitor, index) => (
+                    {filteredVisitors.map((visitor, index) => {
+                      const isPendingDelete = pendingDeleteIds.includes(visitor.id)
+                      return (
                       <tr
                         key={visitor.id}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                          isPendingDelete
+                            ? 'bg-red-50'
+                            : index % 2 === 0
+                              ? 'bg-white'
+                              : 'bg-gray-50/50'
                         }`}
                       >
                         <td className="py-3 px-5">
@@ -316,11 +375,12 @@ const AdminVisitors = () => {
                             className="rounded border-gray-300"
                             checked={selectedVisitors.includes(visitor.id)}
                             onChange={() => toggleSelect(visitor.id)}
+                            disabled={isPendingDelete}
                           />
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-700 font-medium">
+                            <span className={`font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>
                               {visitor.firstName} {visitor.lastName || visitor.fullName}
                             </span>
                             {visitor.isFirstTime && (
@@ -346,13 +406,21 @@ const AdminVisitors = () => {
                             <Calendar size={14} className="text-gray-400" />
                             {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
                           </div>
+                          {isPendingDelete ? (
+                            <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                              <Loader2 size={12} className="animate-spin" />
+                              Deleting...
+                            </div>
+                          ) : (
                           <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
                             <Clock size={12} />
                             {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
@@ -414,8 +482,17 @@ const AdminVisitors = () => {
           <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
             toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}>
-            {toastType === 'success' ? <CheckCircle size={18} /> : <X size={18} />}
+            {toastType === 'success' ? <CheckCircle size={18} /> : <Loader2 size={18} className="animate-spin" />}
             {toast}
+            {toastAction && (
+              <button
+                onClick={toastAction.onClick}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors font-bold"
+              >
+                <Undo2 size={14} />
+                {toastAction.label}
+              </button>
+            )}
           </div>
         </div>
       )}
