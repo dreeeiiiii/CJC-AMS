@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Loader2, MessageSquareQuote } from "lucide-react";
 import MemberLayout from "../../components/MemberLayout";
+import ShareStoryModal from "../../components/ShareStoryModal";
 
 const MemberPage = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [testimonials, setTestimonials] = useState([]);
   const [verse, setVerse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showStoryModal, setShowStoryModal] = useState(false);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -143,10 +145,8 @@ const MemberPage = () => {
                 "No testimonies have been shared yet. How has God worked in your life lately?"
               </p>
 
-              <a
-                href="https://forms.gle/75P6vqRV255yVNZ36"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => setShowStoryModal(true)}
                 className="
                   mt-6 px-6 py-2 bg-white text-[#3B4B89]
                   rounded-full font-semibold text-sm
@@ -158,11 +158,15 @@ const MemberPage = () => {
                 "
               >
                 Share My Story
-              </a>
+              </button>
             </div>
           )}
         </div>
       </section>
+      <ShareStoryModal
+        isOpen={showStoryModal}
+        onClose={() => setShowStoryModal(false)}
+      />
     </MemberLayout>
   );
 };
