@@ -4,7 +4,8 @@ import path from "path";
 import { 
   getAnnouncements, 
   createAnnouncement, 
-  deleteAnnouncement 
+  deleteAnnouncement,
+  updateAnnouncement
 } from "../controllers/announcementController.js";
 
 const router = express.Router();
@@ -25,6 +26,7 @@ const upload = multer({ storage: storage });
 // Bind paths to controllers
 router.get("/", getAnnouncements);
 router.post("/", upload.single("image"), createAnnouncement);
+router.put("/:id", updateAnnouncement);
 router.delete("/:id", deleteAnnouncement);
 
 export default router;
