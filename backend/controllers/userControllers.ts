@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 
-// 📌 Get all users (Includes 'status' for your dashboard logic)
+// 📌 Get all users (Includes 'status' and 'profileImage')
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await prisma.member.findMany({
@@ -17,7 +17,8 @@ export const getAllUsers = async (req: Request, res: Response) => {
         gender: true,
         contactNo: true,
         address: true,
-        status: true, // Added
+        status: true,
+        profileImage: true, // Added to ensure visibility across lists
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' } // Shows newest members first
@@ -46,61 +47,111 @@ export const getUsersById = async (req: Request, res: Response) => {
   }
 };
 
-// 📌 Create new user (Handles Admin-added members)
+// 📌 Create new user (Admin Member + Signup Auth Flow)
 export const createUsers = async (req: Request, res: Response) => {
-  const { 
-    firstName, 
-    lastName, 
-    middleInitial, // Mapped from frontend 
-    email, 
-    password, 
-    contactNo, 
-    address, 
-    gender, 
-    role, 
-    status 
+  const {
+    firstName,
+    lastName,
+    middleInitial,
+    middleName,
+    email,
+    password,
+    contactNo,
+    address,
+    gender,
+    role,
+    status,
+    profileImage,
+    mode
   } = req.body;
 
   try {
-    // 1. Handle Mandatory Email: If admin didn't provide one, generate a unique temp email
-    const finalEmail = email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Date.now()}@cjc.temp`;
-    
-    // Check if email exists
-    const existingUser = await prisma.member.findUnique({ where: { email: finalEmail } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use' });
+    console.log('mode', mode)
+    // Validate required profile fields
+    if (!firstName || !lastName || !gender ||!email) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // 2. Handle Mandatory Password: Default password for new members
-    const finalPassword = password || "CJC12345";
-    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+    // -----------------------------
+    // 🟦 ADMIN MODE (PROFILE ONLY)
+    // -----------------------------
+      
+    if (mode === "admin") {
+      const memberDefaultPwd = await bcrypt.hash('newmember', 10);
+      const newMember = await prisma.member.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          password: memberDefaultPwd,
+          middleName: middleName || null,
+          contactNo: contactNo || "",
+          address: address || "",
+          gender,
+          status: status || "New Member",
+          profileImage: profileImage || null,
+        },
+      });
 
-    const newUser = await prisma.member.create({
-      data: {
-        firstName,
-        lastName,
-        middleName: middleInitial || null, // Map frontend 'middleInitial' to 'middleName'
-        email: finalEmail,
-        password: hashedPassword,
-        contactNo,
-        address,
-        gender, // Ensure this is "Male" or "Female"
-        status: status || 'New Member',
-        role: role || 'MEMBER',
-      },
-    });
+      // TODO
+      // send email to user "account created with password"
+      // sample implementation
+      // https://gemini.google.com/app/7a693ce7f054e278
 
-    res.status(201).json(newUser);
+      
+
+      return res.status(201).json(newMember);
+    }
+
+    // -----------------------------
+    // 🟩 SIGNUP MODE (AUTH + PROFILE)
+    // -----------------------------
+    if (mode === "signup") {
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password required" });
+      }
+
+      const existingAccount = await prisma.userAccount.findUnique({
+        where: { email },
+      });
+
+      if (existingAccount) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      
+      const newMember = await prisma.member.create({
+        data: {
+          firstName,
+          lastName,
+          password: hashedPassword,
+          email,
+          middleName: middleName || null,
+          contactNo: contactNo || "",
+          address: address || "",
+          gender,
+          status: status || "New Member",
+        }
+      });
+
+      return res.status(201).json(newMember);
+    }
+
+    return res.status(400).json({ message: "Invalid mode" });
+
   } catch (error: any) {
-    console.error("Create User Error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("CREATE USER ERROR:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// 📌 Update user
+
+// 📌 Update user (Admin Dashboard endpoint)
 export const updateUsers = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { firstName, lastName, middleName, contactNo, address, gender, role, password, status } = req.body;
+  const { firstName, lastName, middleName, contactNo, address, gender, role, password, status, profileImage } = req.body;
 
   try {
     const updateData: any = {
@@ -111,7 +162,8 @@ export const updateUsers = async (req: Request, res: Response) => {
       address,
       gender,
       role,
-      status, // Added
+      status,
+      profileImage, // Persistent update directly inside your DB instance
     };
 
     if (password) {
@@ -168,7 +220,7 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 📌 Update authenticated user's own profile
+// 📌 Update authenticated user's own profile text information 
 export const updateMyProfile = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -177,6 +229,7 @@ export const updateMyProfile = async (req: AuthRequest, res: Response) => {
     const userId = (req.user as any).id;
     const { firstName, middleName, lastName, email, contactNo, address } = req.body;
 
+    // Writes directly to SQL layer via Prisma Client engine interface
     const updatedUser = await prisma.member.update({
       where: { id: userId },
       data: {
@@ -198,7 +251,40 @@ export const updateMyProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 📌 Search members (Optimized for the Autocomplete UI)
+// 📌 NEW: Save Profile Upload image metadata explicitly to the database
+// Connect this function directly to your `POST /api/upload-profile` route path!
+export const uploadProfileImageController = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = (req.user as any).id;
+
+    // Assuming you are handling the file saving via a middleware engine like multer,
+    // and passing the public path URL layout payload here:
+    const { profileImage } = req.body; 
+
+    if (!profileImage) {
+      return res.status(400).json({ message: "Profile image URL metadata path missing" });
+    }
+
+    const updatedUser = await prisma.member.update({
+      where: { id: userId },
+      data: {
+        profileImage: profileImage,
+      },
+    });
+
+    res.status(200).json({ 
+      message: "Image synced to database successfully", 
+      imageUrl: updatedUser.profileImage 
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Search members
 export const searchMembers = async (req: Request, res: Response) => {
   const { q } = req.query;
   if (!q) return res.json([]);

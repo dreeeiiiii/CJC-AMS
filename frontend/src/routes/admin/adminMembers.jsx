@@ -61,9 +61,11 @@ const AdminMembers = () => {
     middleInitial: '',
     lastName: '',
     contactNo: '',
+    email: '',
     address: '',
     gender: '',
     status: 'New Member',
+    mode: 'admin'
   })
   const [formErrors, setFormErrors] = useState({})
 
@@ -152,6 +154,7 @@ const AdminMembers = () => {
     if (!formData.firstName.trim()) errors.firstName = 'First name is required'
     if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
     if (!formData.contactNo.trim()) errors.contactNo = 'Contact number is required'
+    if (!formData.email.trim()) errors.email = 'Email is required'
     if (!formData.gender) errors.gender = 'Please select a gender'
     setFormErrors(errors)
     return Object.keys(errors).length === 0
@@ -180,7 +183,7 @@ const AdminMembers = () => {
   }
 
   const resetForm = () => {
-    setFormData({ firstName: '', middleInitial: '', lastName: '', contactNo: '', address: '', gender: '', status: 'New Member' })
+    setFormData({ firstName: '', middleInitial: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member' })
     setFormErrors({})
   }
 
@@ -228,11 +231,12 @@ const AdminMembers = () => {
       return;
     }
     showToast('Generating CSV file...', 'success')
-    const headers = ["First Name", "Middle Name", "Last Name", "Contact No", "Gender", "Status", "Address", "Date Registered"];
+    const headers = ["First Name", "Middle Name", "Last Name", "Email","Contact No", "Gender", "Status", "Address", "Date Registered"];
     const rows = filteredMembers.map(m => [
       `"${m.firstName}"`,
       `"${m.middleName || ''}"`,
       `"${m.lastName}"`,
+      `"${m.email || ''}"`,
       `"${m.contactNo || ''}"`,
       `"${m.gender || ''}"`,
       `"${m.status}"`,
@@ -418,6 +422,7 @@ const AdminMembers = () => {
                       <th className="py-3 px-4 text-gray-600 font-medium">First Name</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Middle Name</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Last Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Email</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Member Since</th>
                     </tr>
@@ -451,6 +456,9 @@ const AdminMembers = () => {
                         <td className="py-3 px-4 text-gray-700">{member.middleName || '-'}</td>
                         <td className="py-3 px-4">
                           <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.lastName}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.email}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -504,9 +512,10 @@ const AdminMembers = () => {
                 <FloatingLabelInput label="Middle Initial" name="middleInitial" value={formData.middleInitial} onChange={handleInputChange} placeholder="D" maxLength={1} />
               </div>
               <FloatingLabelInput label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Dela Cruz" error={formErrors.lastName} />
+              <FloatingLabelInput label="Email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email...." error={formErrors.email} />
               <FloatingLabelInput label="Contact No." name="contactNo" value={formData.contactNo} onChange={handleInputChange} type="tel" placeholder="09XXXXXXXXX" error={formErrors.contactNo} icon={Phone} />
               <FloatingLabelInput label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main St, City" icon={MapPin} />
-
+            
               <div className="relative mt-4">
                 <label className="block text-sm text-gray-600 mb-2 font-medium">Gender</label>
                 <div className="flex gap-4">

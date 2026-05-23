@@ -70,6 +70,9 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    window.dispatchEvent(new Event("userDataUpdated"));
     setShowLogoutConfirm(false);
     navigate("/login");
   };

@@ -11,6 +11,23 @@ const formatFullName = (user: any) => {
   return `${user.firstName}${middle} ${user.lastName}`;
 };
 
+const formatAuthUser = (user: any) => {
+  const role = user.role ? String(user.role).toUpperCase() : "MEMBER";
+
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    middleName: user.middleName,
+    fullName: formatFullName(user),
+    email: user.email,
+    role,
+    contactNo: user.contactNo,
+    address: user.address,
+    profileImage: user.profileImage,
+  };
+};
+
 // 📌 Helper function to handle token signing
 const generateToken = (user: any) => {
   const secret = process.env.JWT_TOKEN_SECRET;
@@ -95,102 +112,57 @@ export const createUsersAccount = async (req: Request, res: Response) => {
 };
 
 // 📌 1. Dedicated Admin Login Route
-export const adminLogin = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
+  // 1. Validation
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required" });
   }
 
   try {
+    // 2. Fetch User
     const user = await prisma.member.findUnique({ where: { email } });
     
+    // Generic error message for security (don't reveal if email exists)
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // 3. Verify Password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Explicit Role Check: Must be ADMIN
+    // 4. Normalize Role
     const userRole = user.role ? user.role.toUpperCase() : "MEMBER";
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ 
-        message: "Access Denied: You do not have administrative permissions." 
-      });
-    }
 
+    // 5. Generate Token (Ensure your generateToken function embeds the role)
     const token = generateToken(user);
 
+    // 6. Construct Dynamically Scoped User Profile
+    // Admins get a smaller payload, Members get full profile details
+    const userProfile = {
+      ...formatAuthUser(user),
+      ...(userRole !== "MEMBER" && {
+        middleName: undefined,
+        contactNo: undefined,
+        address: undefined,
+        profileImage: undefined,
+      }),
+    };
+
+    // 7. Unified Response
     return res.status(200).json({
-      message: "Admin authentication successful",
+      message: "Login successful",
       token,
-      user: { 
-        id: user.id, 
-        firstName: user.firstName,   
-        lastName: user.lastName,
-        email: user.email, 
-        role: userRole 
-      }
+      user: userProfile,
     });
 
   } catch (error: any) {
-    console.error("Admin Login Error:", error);
-    return res.status(500).json({ error: "Internal server error during admin login" });
-  }
-};
-
-// 📌 2. Dedicated Regular Member Login Route
-export const memberLogin = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
-  try {
-    const user = await prisma.member.findUnique({ where: { email } });
-    
-    if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    // Explicit Role Check: Must be MEMBER
-    const userRole = user.role ? user.role.toUpperCase() : "MEMBER";
-    if (userRole !== "MEMBER") {
-      return res.status(403).json({ 
-        message: "Access Denied: Please use the Admin Portal to sign in with this account." 
-      });
-    }
-
-    const token = generateToken(user);
-
-    return res.status(200).json({
-      message: "Member login successful",
-      token,
-      user: { 
-        id: user.id, 
-        firstName: user.firstName,   
-        middleName: user.middleName, 
-        lastName: user.lastName,
-        email: user.email, 
-        contactNo: user.contactNo,   
-        address: user.address,
-        profileImage: user.profileImage,
-        role: userRole 
-      }
-    });
-
-  } catch (error: any) {
-    console.error("Member Login Error:", error);
-    return res.status(500).json({ error: "Internal server error during member login" });
+    console.error("Login Error:", error);
+    return res.status(500).json({ error: "Internal server error during authentication" });
   }
 };
 
@@ -208,16 +180,11 @@ export const verifyUser = async (req: AuthRequest, res: Response) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ 
+    return res.status(200).json({ 
       authenticated: true, 
-      user: {
-        id: user.id,
-        fullName: formatFullName(user),
-        email: user.email,
-        role: (user as any).role
-      } 
+      user: formatAuthUser(user)
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };

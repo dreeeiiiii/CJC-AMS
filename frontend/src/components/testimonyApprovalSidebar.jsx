@@ -38,7 +38,8 @@ const TestimonyApprovalSidebar = ({ showToast }) => {
         headers: { Authorization: `Bearer ${token}` },
       })
       setTestimonies(res.data)
-    } catch {
+    } catch (error) {
+      console.error("Fetch Error:", error.response?.data || error.message)
       // silent fail — sidebar just stays empty
     } finally {
       setLoading(false)
@@ -59,8 +60,9 @@ const TestimonyApprovalSidebar = ({ showToast }) => {
       )
       setTestimonies((prev) => prev.filter((t) => t._id || t.id !== id))
       showToast?.('Testimony approved', 'success')
-    } catch {
-      showToast?.('Failed to approve testimony', 'error')
+    } catch (error) {
+      console.error("Approval Error:", error.response?.data || error.message)
+      showToast?.(error.response?.data?.message || 'Failed to approve testimony', 'error')
     }
   }
 
@@ -74,8 +76,9 @@ const TestimonyApprovalSidebar = ({ showToast }) => {
       )
       setTestimonies((prev) => prev.filter((t) => t._id || t.id !== id))
       showToast?.('Testimony rejected', 'error')
-    } catch {
-      showToast?.('Failed to reject testimony', 'error')
+    } catch (error) {
+      console.error("Rejection Error:", error.response?.data || error.message)
+      showToast?.(error.response?.data?.message || 'Failed to reject testimony', 'error')
     }
   }
 

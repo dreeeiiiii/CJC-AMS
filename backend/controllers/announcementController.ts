@@ -1,78 +1,107 @@
 import type { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
-import prisma from "../db.js"; // Adjust relative path to your db.js config
+import prisma from "../db.js";
 
+const formatDate = () => {
+  return new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "2-digit",
+    year: "numeric",
+  });
+};
+
+/**
+ * GET ALL ANNOUNCEMENTS
+ */
 export const getAnnouncements = async (req: Request, res: Response): Promise<any> => {
   try {
     const announcements = await prisma.announcement.findMany({
       orderBy: { createdAt: "desc" },
     });
+
     return res.status(200).json(announcements);
   } catch (error: any) {
     console.error("Fetch Announcements Error:", error);
-    return res.status(500).json({ error: error.message || "Failed to retrieve announcements" });
+    return res.status(500).json({
+      error: error.message || "Failed to retrieve announcements",
+    });
   }
 };
 
+/**
+ * CREATE ANNOUNCEMENT
+ */
 export const createAnnouncement = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { content } = req.body;
+    const { title, content, category, author, link } = req.body;
 
-    if (!content || content.trim() === "") {
-      return res.status(400).json({ error: "Announcement content body cannot be empty" });
+    // validation
+    if (!title || !content) {
+      return res.status(400).json({
+        error: "Title and content are required",
+      });
     }
 
     let imageUrl: string | null = null;
+
     if (req.file) {
-      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+      const baseUrl =
+        process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
       imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
     }
 
     const newAnnouncement = await prisma.announcement.create({
       data: {
-        content: content,
+        title: title.trim(),
+        content: content.trim(),
+        category: category || "General",
+        author: author || "CJCRSG Phils. Inc.",
+        link: link || null,
         image: imageUrl,
+        timestamp: formatDate(),
       },
     });
 
     return res.status(201).json(newAnnouncement);
   } catch (error: any) {
     console.error("Create Announcement Error:", error);
-    return res.status(500).json({ error: error.message || "Failed to create announcement" });
+    return res.status(500).json({
+      error: error.message || "Failed to create announcement",
+    });
   }
 };
 
+/**
+ * DELETE ANNOUNCEMENT
+ */
 export const deleteAnnouncement = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
 
-    // 🚀 Type guard: Ensures 'id' is explicitly a single string before passing to parseInt
     if (!id || typeof id !== "string") {
-      return res.status(400).json({ error: "Announcement ID parameter is missing or invalid" });
+      return res.status(400).json({ error: "Invalid ID parameter" });
     }
 
     const parsedId = parseInt(id, 10);
-
     if (isNaN(parsedId)) {
       return res.status(400).json({ error: "Invalid announcement ID format" });
     }
 
-    // Find the record first to check for an associated image file to unlink
     const announcement = await prisma.announcement.findUnique({
       where: { id: parsedId },
     });
 
     if (!announcement) {
-      return res.status(404).json({ error: "Announcement record not found" });
+      return res.status(404).json({ error: "Announcement not found" });
     }
 
-    // Clean up disk storage: Delete the image file from public/uploads if it exists
+    // delete image file if exists
     if (announcement.image) {
       const filename = announcement.image.split("/uploads/")[1];
       if (filename) {
-        // Construct path back to public/uploads
         const filePath = path.join(process.cwd(), "public", "uploads", filename);
+
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
@@ -83,25 +112,27 @@ export const deleteAnnouncement = async (req: Request, res: Response): Promise<a
       where: { id: parsedId },
     });
 
-    return res.status(200).json({ message: "Announcement and associated file deleted successfully" });
+    return res.status(200).json({
+      message: "Announcement deleted successfully",
+    });
   } catch (error: any) {
     console.error("Delete Announcement Error:", error);
-    return res.status(500).json({ error: error.message || "Failed to delete announcement" });
+    return res.status(500).json({
+      error: error.message || "Failed to delete announcement",
+    });
   }
 };
 
 /**
- * 🚀 PUT /api/announcements/:id
- * Updates the text content of an existing announcement.
+ * UPDATE ANNOUNCEMENT
  */
 export const updateAnnouncement = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { content } = req.body;
+    const { title, content, category, author, link } = req.body;
 
-    // Type Guard for parameters
     if (!id || typeof id !== "string") {
-      return res.status(400).json({ error: "Announcement ID parameter is missing or invalid" });
+      return res.status(400).json({ error: "Invalid ID parameter" });
     }
 
     const parsedId = parseInt(id, 10);
@@ -109,29 +140,30 @@ export const updateAnnouncement = async (req: Request, res: Response): Promise<a
       return res.status(400).json({ error: "Invalid announcement ID format" });
     }
 
-    // Payload verification
-    if (!content || content.trim() === "") {
-      return res.status(400).json({ error: "Announcement content body cannot be empty" });
-    }
-
-    // Verify record exists before committing updates
     const existing = await prisma.announcement.findUnique({
-      where: { id: parsedId }
+      where: { id: parsedId },
     });
 
     if (!existing) {
-      return res.status(404).json({ error: "Announcement record not found" });
+      return res.status(404).json({ error: "Announcement not found" });
     }
 
-    // Update operation using Prisma Client
     const updatedAnnouncement = await prisma.announcement.update({
       where: { id: parsedId },
-      data: { content: content.trim() }
+      data: {
+        title: title?.trim() ?? existing.title,
+        content: content?.trim() ?? existing.content,
+        category: category ?? existing.category,
+        author: author ?? existing.author,
+        link: link ?? existing.link,
+      },
     });
 
     return res.status(200).json(updatedAnnouncement);
   } catch (error: any) {
     console.error("Update Announcement Error:", error);
-    return res.status(500).json({ error: error.message || "Failed to update announcement" });
+    return res.status(500).json({
+      error: error.message || "Failed to update announcement",
+    });
   }
 };

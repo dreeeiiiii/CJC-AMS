@@ -42,7 +42,7 @@ export const createVisitor = async (req: Request<{}, {}, CreateVisitorDTO>, res:
       contactNo, 
       address,
       dateOfVisit, 
-      // purposeOfVisit is optional and can be added later
+      purposeOfVisit 
     } = req.body;
 
     const nameParts = (fullName || "").trim().split(' ');
@@ -60,7 +60,7 @@ export const createVisitor = async (req: Request<{}, {}, CreateVisitorDTO>, res:
         gender: gender || Gender.Male,
         category: invitedBy ? Category.Invited : Category.WalkIn,
         visitedAt: dateOfVisit ? new Date(dateOfVisit) : new Date(),
-        // purposeOfVisit: purposeOfVisit || null,
+        purposeOfVisit: purposeOfVisit || null,
       },
     });
 

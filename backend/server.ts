@@ -45,10 +45,11 @@ if (!fs.existsSync(uploadDir)) {
 // --- Middleware ---
 app.use(cors({
   origin: "http://localhost:5173", // Allow your frontend
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 }));
+
 app.use(bodyParser.json());
 
 // Serve the uploads folder dynamically using the absolute path

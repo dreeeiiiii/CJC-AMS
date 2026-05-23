@@ -174,7 +174,7 @@ const VisitorDetailModal = ({ visitor, onClose, onDelete, onEdit }) => {
                 </p>
                 {visitor.purposeOfVisit ? (
                   <p className="text-sm text-gray-600 leading-relaxed italic">
-                    "{visitor.purposeOfVisit}"
+                    {visitor.purposeOfVisit}
                   </p>
                 ) : (
                   <p className="text-xs text-gray-400 italic">No purpose provided.</p>

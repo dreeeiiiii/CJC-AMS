@@ -16,7 +16,6 @@ import Members from './routes/admin/adminMembers';
 // Ensure this path is correct and the component is exported correctly
 import ProtectedRoute from './components/ProtectedRoutes'; 
 import ErrorPage from './components/ErrorPage';
-import AdminLogin from './routes/admin/adminLogin';
 
 const Home = () => {
   return (
@@ -90,7 +89,6 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<AdminLogin />} />
         <Route path="/messageReset" element={<MessageReset />} />
         <Route path="/verifyReset" element={<VerifyReset />} />
         <Route path="/resetPassword" element={<ResetPassword />} />

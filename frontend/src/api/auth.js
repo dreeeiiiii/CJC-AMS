@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// 🚀 DYNAMIC ROUTING: Switches automatically depending on what device you use!
+const getBackendUrl = () => {
+  const hostname = window.location.hostname; // Reads the browser address bar
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000'; // For your laptop
+  }
+  
+  return 'http://192.168.68.104:5000'; // For your mobile phone
+};
+
+const API_URL = getBackendUrl();
 
 export const registerUser = async (name, email, password) => {
   try {

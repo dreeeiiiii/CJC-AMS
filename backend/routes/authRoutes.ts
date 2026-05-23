@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { 
   createUsersAccount, 
-  memberLogin,
-  adminLogin,    
+  login,
   verifyUser 
 } from "../controllers/authControllers.js";
 import { protect } from "../middleware/auth.js";
@@ -14,8 +13,8 @@ const router = Router();
 router.post("/register", createUsersAccount);
 
 // --- Login Routes ---
-router.post("/memberLogin", memberLogin);
-router.post("/adminLogin", adminLogin);
+router.post("/login", login);
+
 
 // --- External Auth ---
 router.post("/google", googleLogin);
