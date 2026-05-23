@@ -57,7 +57,6 @@ export const createUsers = async (req: Request, res: Response) => {
     email,
     password,
     contactNo,
-    contact,
     address,
     gender,
     role,
@@ -67,83 +66,83 @@ export const createUsers = async (req: Request, res: Response) => {
   } = req.body;
 
   try {
+    console.log('mode', mode)
+    // Validate required profile fields
+    if (!firstName || !lastName || !gender ||!email) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
     // -----------------------------
     // 🟦 ADMIN MODE (PROFILE ONLY)
     // -----------------------------
+      
     if (mode === "admin") {
+      const memberDefaultPwd = await bcrypt.hash('newmember', 10);
       const newMember = await prisma.member.create({
         data: {
           firstName,
           lastName,
-          middleName: middleName || middleInitial || null,
-          contactNo: contactNo || contact,
-          address,
+          email,
+          password: memberDefaultPwd,
+          middleName: middleName || null,
+          contactNo: contactNo || "",
+          address: address || "",
           gender,
           status: status || "New Member",
           profileImage: profileImage || null,
         },
       });
 
+      // TODO
+      // send email to user "account created with password"
+      // sample implementation
+      // https://gemini.google.com/app/7a693ce7f054e278
+
+      
+
       return res.status(201).json(newMember);
     }
 
     // -----------------------------
-    // 🟩 SIGNUP MODE (AUTH + MEMBER)
+    // 🟩 SIGNUP MODE (AUTH + PROFILE)
     // -----------------------------
     if (mode === "signup") {
       if (!email || !password) {
-        return res.status(400).json({
-          message: "Email and password required"
-        });
+        return res.status(400).json({ message: "Email and password required" });
       }
 
-      // CHECK EMAIL IN AUTH TABLE (NOT MEMBER)
       const existingAccount = await prisma.userAccount.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (existingAccount) {
-        return res.status(400).json({
-          message: "Email already in use"
-        });
+        return res.status(400).json({ message: "Email already in use" });
       }
 
-      // CREATE MEMBER FIRST
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      
       const newMember = await prisma.member.create({
         data: {
           firstName,
           lastName,
-          middleName: middleName || middleInitial || null,
-          contactNo: contactNo || contact,
-          address,
+          password: hashedPassword,
+          email,
+          middleName: middleName || null,
+          contactNo: contactNo || "",
+          address: address || "",
           gender,
           status: status || "New Member",
-          profileImage: profileImage || null,
-        },
-      });
-
-      // CREATE USER ACCOUNT LINKED TO MEMBER
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      await prisma.userAccount.create({
-        data: {
-          email,
-          password: hashedPassword,
-          role: role || "MEMBER",
-          memberId: newMember.id
-        },
+        }
       });
 
       return res.status(201).json(newMember);
     }
 
-    return res.status(400).json({
-      message: "Invalid mode"
-    });
+    return res.status(400).json({ message: "Invalid mode" });
 
   } catch (error: any) {
-    console.error(error);
+    console.error("CREATE USER ERROR:", error);
     return res.status(500).json({ error: error.message });
   }
 };

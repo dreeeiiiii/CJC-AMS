@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 interface DecodedToken {
-  id: number; // Changed to number to match Prisma Int ID
+  id: number; 
   email: string;
   role: string;
   iat?: number;

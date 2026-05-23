@@ -38,7 +38,9 @@ model Member {
   firstName    String
   lastName     String
   middleName   String?
-
+  email        String   @unique
+  password     String
+  role         Role     @default(MEMBER)
   contactNo    String
   address      String
   gender       Gender
@@ -50,7 +52,7 @@ model Member {
   updatedAt    DateTime @updatedAt
 
   // relations
-  account      UserAccount?  // 👈 auth separated properly
+  account      UserAccount?  
   attendances  Attendance[]
   testimonies  Testimony?
 }
@@ -103,8 +105,13 @@ model Visitor {
 
 model Announcement {
   id        Int      @id @default(autoincrement())
-  content   String   @db.Text
+  title     String
+  content   String
   image     String?
+  timestamp String
+  category  String   @default("General")
+  author    String   @default("CJCRSG Phils. Inc.")
+  link      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
