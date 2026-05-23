@@ -59,6 +59,7 @@ model Visitor {
   address           String?
   gender            Gender       @default(Male)
   email             String?      @unique
+  purposeOfVisit    String?
   
   // Updated fields to match frontend requirements
   category          Category     @default(WalkIn)

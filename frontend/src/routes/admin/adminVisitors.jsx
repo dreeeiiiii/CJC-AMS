@@ -5,11 +5,12 @@ import Footer from '../../components/footer'
 import { 
   Search, Filter, Download, Plus, ArrowLeft, User, 
   Building2, Calendar, CheckCircle, X, ChevronDown, 
-  Loader2, AlertCircle, Clock, Trash2, Undo2
+  Loader2, AlertCircle, Clock, Trash2, Undo2, FileText
 } from 'lucide-react'
 
 const API_URL = 'http://localhost:5000/api/visitors';
 
+// ─── Floating Label Input ───────────────────────────────────────────────────
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', error, icon: Icon, ...props }) => (
   <div className="relative mt-4">
     <input
@@ -37,6 +38,179 @@ const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', error
   </div>
 )
 
+// ─── Floating Label Textarea ─────────────────────────────────────────────────
+const FloatingLabelTextarea = ({ label, name, value, onChange, error, icon: Icon }) => (
+  <div className="relative mt-4">
+    <textarea
+      name={name}
+      id={name}
+      value={value}
+      onChange={onChange}
+      placeholder=" "
+      rows={3}
+      className={`peer w-full border-2 rounded-xl px-4 pt-6 pb-2 focus:outline-none transition-colors text-sm resize-none ${
+        error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#4A558F]'
+      }`}
+    />
+    <label
+      htmlFor={name}
+      className={`absolute left-4 top-4 text-sm text-gray-400 transition-all duration-200 peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-[#4A558F] peer-not-placeholder-shown:top-1.5 peer-not-placeholder-shown:text-xs`}
+    >
+      {Icon && <Icon size={14} className="inline mr-1" />}
+      {label}
+    </label>
+    {error && <p className="text-xs text-red-500 mt-1 ml-1">{error}</p>}
+  </div>
+)
+
+// ─── Visitor Detail Modal ────────────────────────────────────────────────────
+const VisitorDetailModal = ({ visitor, onClose, onDelete, onEdit }) => {
+  if (!visitor) return null
+
+  const fullName = visitor.firstName
+    ? `${visitor.firstName} ${visitor.lastName || ''}`.trim()
+    : visitor.fullName || 'Unknown'
+
+  const initials = fullName
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+
+  const church = visitor.churchAffiliation || visitor.originalChurch || '—'
+  const visitDate = new Date(visitor.visitedAt || visitor.dateOfAttendance || Date.now())
+  const visitDateStr = visitDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const visitTimeStr = visitDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+        {/* Header */}
+        <div className="bg-[#1a2a5e] p-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#b8c8e8] to-[#6a85c0] flex items-center justify-center text-white text-lg font-semibold border-2 border-white/25 flex-shrink-0">
+              {initials}
+            </div>
+            <div>
+              <p className="text-white font-semibold text-base">{fullName}</p>
+              <p className="text-white/60 text-xs mt-0.5">🏛 {church}</p>
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                {visitor.isFirstTime && (
+                  <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-green-400/20 text-green-200">
+                    ★ First Time Visitor
+                  </span>
+                )}
+                <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-white/10 text-white/70">
+                  {visitor.invitedBy ? 'Invited' : 'Walk-in'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+
+          {/* Visitor Information */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
+              Visitor Information
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Full Name</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{fullName}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Original Church</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{church}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Invited By</p>
+                <p className={`text-sm font-semibold ${visitor.invitedBy ? 'text-[#1a2a5e]' : 'text-gray-400 italic'}`}>
+                  {visitor.invitedBy || 'Walk-in'}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Category</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">
+                  {visitor.invitedBy ? 'Invited' : 'Walk-in'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Visit Details */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
+              Visit Details
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
+                  <Calendar size={10} /> Date of Visit
+                </p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{visitDateStr}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
+                  <Clock size={10} /> Time
+                </p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{visitTimeStr}</p>
+              </div>
+
+              {/* Purpose of Visit — full width */}
+              <div className="col-span-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-2 flex items-center gap-1">
+                  <FileText size={10} /> Purpose of Visit
+                </p>
+                {visitor.purposeOfVisit ? (
+                  <p className="text-sm text-gray-600 leading-relaxed italic">
+                    "{visitor.purposeOfVisit}"
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">No purpose provided.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => onDelete(visitor)}
+            className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
+          >
+            Remove Visitor
+          </button>
+          <button
+            onClick={() => onEdit(visitor)}
+            className="px-4 py-2 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors"
+          >
+            Edit Visitor
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const AdminVisitors = () => {
   // --- Data State ---
   const [visitors, setVisitors] = useState([])
@@ -47,7 +221,8 @@ const AdminVisitors = () => {
   // --- UI State ---
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [showModal, setShowModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [selectedVisitor, setSelectedVisitor] = useState(null)  
   const [selectedVisitors, setSelectedVisitors] = useState([])
   const [pendingDeleteIds, setPendingDeleteIds] = useState([])
   const [toast, setToast] = useState(null)
@@ -61,6 +236,7 @@ const AdminVisitors = () => {
     originalChurch: '',
     invitedBy: '',
     dateOfVisit: new Date().toISOString().split('T')[0],
+    purposeOfVisit: '',        
   })
   const [formErrors, setFormErrors] = useState({})
 
@@ -72,7 +248,6 @@ const AdminVisitors = () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      withCredentials: true
     };
   }, []);
 
@@ -82,14 +257,21 @@ const AdminVisitors = () => {
     setToastAction(null)
   }, [])
 
+  const toastTimeoutRef = useRef(null)
+
   const showToast = useCallback((message, type = 'success', action = null) => {
+    clearTimeout(toastTimeoutRef.current)
+
     setToast(message)
     setToastType(type)
     setToastAction(action)
-    setTimeout(() => setToast(null), 5000)
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null)
+    }, 5000)
   }, [])
 
-  const fetchData = useCallback(async () => {
+  const fetchVisitors = useCallback(async () => {
     try {
       setIsLoading(true)
       const config = getAuthHeaders();
@@ -106,9 +288,7 @@ const AdminVisitors = () => {
     }
   }, [getAuthHeaders, showToast])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchVisitors() }, [fetchVisitors])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
@@ -116,9 +296,7 @@ const AdminVisitors = () => {
   }, [searchTerm])
 
   useEffect(() => {
-    return () => {
-      clearTimeout(deleteTimeoutRef.current)
-    }
+    return () => { clearTimeout(deleteTimeoutRef.current) }
   }, [])
 
   // --- Search Logic ---
@@ -131,7 +309,7 @@ const AdminVisitors = () => {
     })
   }, [visitors, debouncedSearch])
 
-  // --- Logic Functions ---
+  // --- Form Handlers ---
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -151,9 +329,9 @@ const AdminVisitors = () => {
     try {
       await axios.post(API_URL, formData, getAuthHeaders())
       showToast('Visitor saved successfully!')
-      setShowModal(false)
+      setShowAddModal(false)
       resetForm()
-      fetchData()
+      fetchVisitors()
     } catch (error) {
       showToast('Error saving visitor.', 'error')
     } finally {
@@ -162,16 +340,90 @@ const AdminVisitors = () => {
   }
 
   const resetForm = () => {
-    setFormData({ fullName: '', originalChurch: '', invitedBy: '', dateOfVisit: new Date().toISOString().split('T')[0] })
+    setFormData({
+      fullName: '',
+      originalChurch: '',
+      invitedBy: '',
+      dateOfVisit: new Date().toISOString().split('T')[0],
+      purposeOfVisit: '',
+    })
     setFormErrors({})
   }
 
+  // --- Row Click → Detail Modal ---
+  const handleRowClick = (visitor, e) => {
+    // Don't open modal when clicking on the checkbox
+    if (e.target.type === 'checkbox') return
+    setSelectedVisitor(visitor)
+  }
+
+  // --- Detail Modal Actions ---
+  const handleDetailDelete = (visitor) => {
+    setSelectedVisitor(null)
+    const ids = [visitor.id]
+    const removed = [visitor]
+    setPendingDeleteIds(ids)
+    deletedVisitorsRef.current = removed
+
+    clearTimeout(deleteTimeoutRef.current)
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        await axios.delete(API_URL, { ...getAuthHeaders(), data: { ids } })
+        const statsRes = await axios.get(`${API_URL}/stats`, getAuthHeaders())
+        setStats(statsRes.data)
+        setVisitors(prev => prev.filter(v => !ids.includes(v.id)))
+        setPendingDeleteIds([])
+        deletedVisitorsRef.current = []
+        dismissToast()
+        showToast(`${ids.length} visitor(s) deleted successfully.`, 'success');
+      } catch (error) {
+        setPendingDeleteIds([])
+        deletedVisitorsRef.current = []
+        dismissToast()
+        showToast('Failed to delete visitor.', 'error')
+      }
+    }, 5000)
+
+    const handleUndo = () => {
+      clearTimeout(deleteTimeoutRef.current)
+      setPendingDeleteIds([])
+      deletedVisitorsRef.current = []
+      dismissToast()
+    }
+
+    showToast(`Visitor deleted`, 'error', { label: 'Undo', onClick: handleUndo })
+  }
+
+  const handleDetailEdit = (visitor) => {
+    // Pre-fill the add/edit form with the visitor's data and open it
+    setFormData({
+      fullName: visitor.firstName
+        ? `${visitor.firstName} ${visitor.lastName || ''}`.trim()
+        : visitor.fullName || '',
+      originalChurch: visitor.churchAffiliation || visitor.originalChurch || '',
+      invitedBy: visitor.invitedBy || '',
+      dateOfVisit: visitor.visitedAt
+        ? new Date(visitor.visitedAt).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+      purposeOfVisit: visitor.purposeOfVisit || '',
+    })
+    setSelectedVisitor(null)
+    setShowAddModal(true)
+  }
+
+  // --- Selection & Bulk Delete ---
   const toggleSelectAll = () => {
-    setSelectedVisitors(selectedVisitors.length === filteredVisitors.length ? [] : filteredVisitors.map(v => v.id))
+    setSelectedVisitors(
+      selectedVisitors.length === filteredVisitors.length
+        ? []
+        : filteredVisitors.map(v => v.id)
+    )
   }
 
   const toggleSelect = (id) => {
-    setSelectedVisitors(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    setSelectedVisitors(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
   }
 
   const handleBulkDelete = () => {
@@ -187,6 +439,8 @@ const AdminVisitors = () => {
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
         await axios.delete(API_URL, { ...getAuthHeaders(), data: { ids } })
+        const statsRes = await axios.get(`${API_URL}/stats`, getAuthHeaders())
+        setStats(statsRes.data)
         setVisitors(prev => prev.filter(v => !ids.includes(v.id)))
         setPendingDeleteIds([])
         deletedVisitorsRef.current = []
@@ -210,41 +464,34 @@ const AdminVisitors = () => {
     showToast(`${ids.length} visitor(s) deleted`, 'error', { label: 'Undo', onClick: handleUndo })
   }
 
-  // --- Export Function ---
-  const handleExport = () => {
+  // --- Export ---
+  const handleExportCSV = () => {
     if (filteredVisitors.length === 0) {
-      showToast('Nothing to export', 'error');
-      return;
+      showToast('Nothing to export', 'error')
+      return
     }
-
-    showToast('Generating CSV file...', 'success');
-
-    // 1. Create headers
-    const headers = ["Full Name", "Original Church", "Invited By", "Visit Date"];
-    
-    // 2. Map data to rows (handling commas in values by wrapping in quotes)
+    showToast('Generating CSV file...', 'success')
+    const headers = ["Full Name", "Original Church", "Invited By", "Visit Date", "Purpose of Visit"]
     const rows = filteredVisitors.map(v => [
       `"${v.firstName || ''} ${v.lastName || v.fullName || ''}"`,
       `"${v.churchAffiliation || v.originalChurch || ''}"`,
       `"${v.invitedBy || 'Walk-in'}"`,
-      `"${new Date(v.visitedAt || v.dateOfAttendance).toLocaleDateString()}"`
-    ]);
+      `"${new Date(v.visitedAt || v.dateOfAttendance).toLocaleDateString()}"`,
+      `"${v.purposeOfVisit || ''}"`,
+    ])
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `CJC_Visitors_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
-    // 3. Combine headers and rows
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-
-    // 4. Create a Blob and trigger the download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `CJC_Visitors_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <AdminNavbar />
@@ -257,7 +504,7 @@ const AdminVisitors = () => {
             <h2 className="text-4xl font-semibold text-[#4A558F]">CJC VISITORS</h2>
             <p className="text-gray-500 mt-2 text-sm">Manage the information of people who visit our church.</p>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => { resetForm(); setShowAddModal(true) }}
               className="mt-6 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-3 px-8 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto"
             >
               <Plus size={20} />
@@ -265,23 +512,23 @@ const AdminVisitors = () => {
             </button>
           </div>
 
-          {/* KPI Metrics Bar */}
+          {/* KPI Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{stats.week}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{isLoading ? '...' : stats.week}</p>
               <p className="text-sm text-gray-500 mt-1">Visitors This Week</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{stats.month}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{isLoading ? '...' : stats.month}</p>
               <p className="text-sm text-gray-500 mt-1">Visitors This Month</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
-              <p className="font-bold text-3xl text-[#4A558F]">{stats.total}</p>
+              <p className="font-bold text-3xl text-[#4A558F]">{isLoading ? '...' : stats.total}</p>
               <p className="text-sm text-gray-500 mt-1">Overall Visitors</p>
             </div>
           </div>
 
-          {/* Data Management Area */}
+          {/* Data Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -297,18 +544,14 @@ const AdminVisitors = () => {
                       className="w-full ml-2 focus:outline-none text-sm"
                     />
                   </div>
-
                   <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50">
-                    <Filter size={16} />
-                    Filter
+                    <Filter size={16} /> Filter
                   </button>
-
-                  <button 
-                    onClick={handleExport} 
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 active:scale-95 transition-all"
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 active:scale-95"
                   >
-                    <Download size={16} />
-                    Export
+                    <Download size={16} /> Export
                   </button>
                 </div>
               </div>
@@ -359,66 +602,66 @@ const AdminVisitors = () => {
                     {filteredVisitors.map((visitor, index) => {
                       const isPendingDelete = pendingDeleteIds.includes(visitor.id)
                       return (
-                      <tr
-                        key={visitor.id}
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          isPendingDelete
-                            ? 'bg-red-50'
-                            : index % 2 === 0
-                              ? 'bg-white'
-                              : 'bg-gray-50/50'
-                        }`}
-                      >
-                        <td className="py-3 px-5">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300"
-                            checked={selectedVisitors.includes(visitor.id)}
-                            onChange={() => toggleSelect(visitor.id)}
-                            disabled={isPendingDelete}
-                          />
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>
-                              {visitor.firstName} {visitor.lastName || visitor.fullName}
-                            </span>
-                            {visitor.isFirstTime && (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                First Time
+                        <tr
+                          key={visitor.id}
+                          onClick={(e) => !isPendingDelete && handleRowClick(visitor, e)}
+                          className={`border-b border-gray-100 transition-colors ${
+                            isPendingDelete
+                              ? 'bg-red-50'
+                              : index % 2 === 0
+                                ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
+                                : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
+                          }`}
+                        >
+                          <td className="py-3 px-5">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300"
+                              checked={selectedVisitors.includes(visitor.id)}
+                              onChange={() => toggleSelect(visitor.id)}
+                              disabled={isPendingDelete}
+                            />
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>
+                                {visitor.firstName} {visitor.lastName || visitor.fullName}
                               </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5 text-gray-600">
-                            <Building2 size={14} className="text-gray-400" />
-                            {visitor.churchAffiliation || visitor.originalChurch}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
-                            {visitor.invitedBy || 'Walk-in'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5 text-gray-600">
-                            <Calendar size={14} className="text-gray-400" />
-                            {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
-                          </div>
-                          {isPendingDelete ? (
-                            <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
-                              <Loader2 size={12} className="animate-spin" />
-                              Deleting...
+                              {visitor.isFirstTime && (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                  First Time
+                                </span>
+                              )}
                             </div>
-                          ) : (
-                          <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
-                            <Clock size={12} />
-                            {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5 text-gray-600">
+                              <Building2 size={14} className="text-gray-400" />
+                              {visitor.churchAffiliation || visitor.originalChurch}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
+                              {visitor.invitedBy || 'Walk-in'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5 text-gray-600">
+                              <Calendar size={14} className="text-gray-400" />
+                              {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
+                            </div>
+                            {isPendingDelete ? (
+                              <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                                <Loader2 size={12} className="animate-spin" /> Deleting...
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
+                                <Clock size={12} />
+                                {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
                       )
                     })}
                   </tbody>
@@ -429,13 +672,23 @@ const AdminVisitors = () => {
         </div>
       </div>
 
-      {/* Add Visitor Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {/* ── Visitor Detail Modal ─────────────────────────────────────────── */}
+      {selectedVisitor && (
+        <VisitorDetailModal
+          visitor={selectedVisitor}
+          onClose={() => setSelectedVisitor(null)}
+          onDelete={handleDetailDelete}
+          onEdit={handleDetailEdit}
+        />
+      )}
+
+      {/* ── Add / Edit Visitor Modal ─────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-4 p-5 border-b border-gray-100">
               <button
-                onClick={() => { setShowModal(false); resetForm() }}
+                onClick={() => { setShowAddModal(false); resetForm() }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft size={20} className="text-[#4A558F]" />
@@ -444,21 +697,49 @@ const AdminVisitors = () => {
             </div>
 
             <div className="p-5">
-              <FloatingLabelInput label="Full Name" name="fullName" value={formData.fullName} onChange={handleInputChange} error={formErrors.fullName} icon={User} />
-              
-              <div className="flex gap-4">
-                <div className="flex-[2]">
-                   <FloatingLabelInput label="Original Church" name="originalChurch" value={formData.originalChurch} onChange={handleInputChange} error={formErrors.originalChurch} icon={Building2} />
-                </div>
-              </div>
+              <FloatingLabelInput
+                label="Full Name"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                error={formErrors.fullName}
+                icon={User}
+              />
+              <FloatingLabelInput
+                label="Original Church"
+                name="originalChurch"
+                value={formData.originalChurch}
+                onChange={handleInputChange}
+                error={formErrors.originalChurch}
+                icon={Building2}
+              />
+              <FloatingLabelInput
+                label="Invited By (Optional)"
+                name="invitedBy"
+                value={formData.invitedBy}
+                onChange={handleInputChange}
+              />
+              <FloatingLabelInput
+                label="Date of Visit"
+                name="dateOfVisit"
+                value={formData.dateOfVisit}
+                onChange={handleInputChange}
+                type="date"
+                icon={Calendar}
+              />
 
-              <FloatingLabelInput label="Invited By (Optional)" name="invitedBy" value={formData.invitedBy} onChange={handleInputChange} />
-              <FloatingLabelInput label="Date of Visit" name="dateOfVisit" value={formData.dateOfVisit} onChange={handleInputChange} type="date" icon={Calendar} />
+              <FloatingLabelTextarea
+                label="Purpose of Visit (Optional)"
+                name="purposeOfVisit"
+                value={formData.purposeOfVisit}
+                onChange={handleInputChange}
+                icon={FileText}
+              />
 
               <div className="flex gap-3 mt-8">
                 <button
                   disabled={isSubmitting}
-                  onClick={() => { setShowModal(false); resetForm() }}
+                  onClick={() => { setShowAddModal(false); resetForm() }}
                   className="flex-1 bg-gray-100 text-gray-500 rounded-xl py-3 hover:bg-gray-200 transition-colors text-sm font-medium"
                 >
                   Cancel
@@ -468,7 +749,10 @@ const AdminVisitors = () => {
                   onClick={handleAddVisitor}
                   className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <><Plus size={18} /> Add Visitor</>}
+                  {isSubmitting
+                    ? <Loader2 size={18} className="animate-spin" />
+                    : <><Plus size={18} /> Save Visitor</>
+                  }
                 </button>
               </div>
             </div>
@@ -476,13 +760,16 @@ const AdminVisitors = () => {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* ── Toast ───────────────────────────────────────────────────────── */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
           <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
             toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}>
-            {toastType === 'success' ? <CheckCircle size={18} /> : <Loader2 size={18} className="animate-spin" />}
+            {toastType === 'success'
+              ? <CheckCircle size={18} />
+              : <Loader2 size={18} className="animate-spin" />
+            }
             {toast}
             {toastAction && (
               <button
@@ -512,4 +799,4 @@ const AdminVisitors = () => {
   )
 }
 
-export default AdminVisitors;
+export default AdminVisitors
