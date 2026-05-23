@@ -18,7 +18,7 @@ const MemberProfile = () => {
     contact: "",
     address: "",
     id: "N/A",
-    profileImage: null,
+    profileImage: null, 
     role: "MEMBER"
   });
 

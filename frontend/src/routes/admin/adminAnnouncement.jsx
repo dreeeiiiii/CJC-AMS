@@ -1,31 +1,79 @@
 import React, { useState, useRef, useEffect } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import { ImagePlus, Send, Calendar, Edit2, Trash2, Paperclip, X, Bold, Italic, Smile, Loader2 } from 'lucide-react'
+import {
+  ImagePlus,
+  Send,
+  Calendar,
+  Edit2,
+  Trash2,
+  Paperclip,
+  X,
+  Bold,
+  Italic,
+  Smile,
+  Loader2,
+  Type,
+  Tag,
+  User,
+  Link as LinkIcon
+} from 'lucide-react'
 
 const AdminAnnouncement = () => {
-  // Initialize with an empty array to pull live from database configuration
   const [announcements, setAnnouncements] = useState([])
+
+  // Create states
+  const [postTitle, setPostTitle] = useState('')
   const [postContent, setPostContent] = useState('')
+  const [postCategory, setPostCategory] = useState('General')
+  const [postAuthor, setPostAuthor] = useState('CJCRSG Phils. Inc.')
+  const [postLink, setPostLink] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
+
+  // Edit states
+  const [editingId, setEditingId] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [editAuthor, setEditAuthor] = useState('')
+  const [editLink, setEditLink] = useState('')
+
+  // UI states
   const [isLoading, setIsLoading] = useState(false)
   const [deleteModal, setDeleteModal] = useState(null)
-  const [editingId, setEditingId] = useState(null)
-  const [editContent, setEditContent] = useState('')
   const [loadingMore, setLoadingMore] = useState(false)
+  const [userName, setUserName] = useState('')
+
   const fileInputRef = useRef(null)
 
-  const maxChars = 280
-  const charCount = postContent.length
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  // Word count logic
+  const maxWords = 5000
+  const wordCount =
+    postContent.trim() === ''
+      ? 0
+      : postContent.trim().split(/\s+/).length
 
-  // 🚀 Fetch live announcements on mount
+  const API_URL =
+    import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
+  const token = localStorage.getItem('token')
+
+  // Fetch announcements
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        // Updated route layout to standard multi-resource API endpoints
-        const response = await fetch(`${API_URL}/api/announcements`)
+        const response = await fetch(
+          `${API_URL}/api/announcements`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            credentials: 'include',
+          }
+        )
+
         if (response.ok) {
           const data = await response.json()
           setAnnouncements(data)
@@ -34,15 +82,58 @@ const AdminAnnouncement = () => {
         console.error('Failed to load announcements:', error)
       }
     }
+
     fetchAnnouncements()
-  }, [])
+  }, [API_URL, token])
+
+  // Get current logged in user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/users/me`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            credentials: 'include',
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user')
+        }
+
+        const data = await response.json()
+
+        console.log(data)
+
+        setUserName(data.firstName || 'Admin')
+
+        setPostAuthor(
+          `${data.firstName || ''} ${data.lastName || ''}`.trim()
+        )
+      } catch (e) {
+        console.log(e)
+      }
+    }
+
+    getCurrentUser()
+  }, [API_URL, token])
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0]
+
     if (file) {
       setSelectedFile(file)
+
       const reader = new FileReader()
-      reader.onloadend = () => setImagePreview(reader.result)
+
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+
       reader.readAsDataURL(file)
     }
   }
@@ -50,31 +141,62 @@ const AdminAnnouncement = () => {
   const clearImage = () => {
     setSelectedFile(null)
     setImagePreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
-  // 🚀 Live creation with multi-part file payloads
   const handlePost = async () => {
-    if (!postContent.trim() && !selectedFile) return
+    if (
+      !postTitle.trim() ||
+      !postContent.trim() ||
+      wordCount > maxWords
+    ) {
+      return
+    }
 
     setIsLoading(true)
+
     try {
       const formData = new FormData()
+
+      formData.append('title', postTitle)
       formData.append('content', postContent)
+      formData.append('category', postCategory)
+      formData.append('author', postAuthor)
+
+      if (postLink.trim()) {
+        formData.append('link', postLink)
+      }
+
       if (selectedFile) {
         formData.append('image', selectedFile)
       }
 
-      // Updated target route architecture
-      const response = await fetch(`${API_URL}/api/announcements`, {
-        method: 'POST',
-        body: formData
-      })
+      const response = await fetch(
+        `${API_URL}/api/announcements`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: formData,
+        }
+      )
 
       if (response.ok) {
         const newPost = await response.json()
-        setAnnouncements(prev => [newPost, ...prev])
+
+        setAnnouncements((prev) => [newPost, ...prev])
+
+        // Reset form
+        setPostTitle('')
         setPostContent('')
+        setPostCategory('General')
+        setPostLink('')
+
         clearImage()
       }
     } catch (error) {
@@ -84,15 +206,24 @@ const AdminAnnouncement = () => {
     }
   }
 
-  // 🚀 Live delete tracking
   const handleDelete = async (id) => {
     try {
-      // Adjusted route layout for explicit parameter path queries
-      const response = await fetch(`${API_URL}/api/announcements/${id}`, {
-        method: 'DELETE'
-      })
+      const response = await fetch(
+        `${API_URL}/api/announcements/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+        }
+      )
+
       if (response.ok) {
-        setAnnouncements(prev => prev.filter(a => a.id !== id))
+        setAnnouncements((prev) =>
+          prev.filter((a) => a.id !== id)
+        )
+
         setDeleteModal(null)
       }
     } catch (error) {
@@ -101,30 +232,57 @@ const AdminAnnouncement = () => {
   }
 
   const handleEdit = (id) => {
-    const announcement = announcements.find(a => a.id === id)
+    const announcement = announcements.find(
+      (a) => a.id === id
+    )
+
     if (announcement) {
       setEditingId(id)
-      setEditContent(announcement.content)
+      setEditTitle(announcement.title || '')
+      setEditContent(announcement.content || '')
+      setEditCategory(announcement.category || 'General')
+      setEditAuthor(
+        announcement.author || 'CJCRSG Phils. Inc.'
+      )
+      setEditLink(announcement.link || '')
     }
   }
 
-  // 🚀 Live inline content updating
   const handleSaveEdit = async (id) => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      return
+    }
+
     try {
-      // Adjusted route layout for unified dynamic parameters
-      const response = await fetch(`${API_URL}/api/announcements/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent })
-      })
+      const response = await fetch(
+        `${API_URL}/api/announcements/${id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            title: editTitle,
+            content: editContent,
+            category: editCategory,
+            author: editAuthor,
+            link: editLink,
+          }),
+        }
+      )
 
       if (response.ok) {
         const updated = await response.json()
-        setAnnouncements(prev =>
-          prev.map(a => (a.id === id ? { ...a, content: updated.content } : a))
+
+        setAnnouncements((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, ...updated } : a
+          )
         )
+
         setEditingId(null)
-        setEditContent('')
       }
     } catch (error) {
       console.error('Error updating announcement:', error)
@@ -133,13 +291,27 @@ const AdminAnnouncement = () => {
 
   const handleLoadMore = async () => {
     setLoadingMore(true)
+
     try {
-      // Synced offset endpoint params alongside updated routes layout
-      const response = await fetch(`${API_URL}/api/announcements`)
+      const response = await fetch(
+        `${API_URL}/api/announcements`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+        }
+      )
+
       if (response.ok) {
         const moreData = await response.json()
+
         if (moreData.length > 0) {
-          setAnnouncements(prev => [...prev, ...moreData])
+          setAnnouncements((prev) => [
+            ...prev,
+            ...moreData,
+          ])
         }
       }
     } catch (error) {
@@ -151,8 +323,10 @@ const AdminAnnouncement = () => {
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Just now'
+
     const date = new Date(timestamp)
     const now = new Date()
+
     const diffMs = now - date
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMs / 3600000)
@@ -162,323 +336,443 @@ const AdminAnnouncement = () => {
     if (diffMins < 60) return `${diffMins}m ago`
     if (diffHours < 24) return `${diffHours}h ago`
     if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   const insertFormat = (syntax) => {
     const textarea = document.getElementById('postEditor')
+
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
+
       const text = postContent
       const selectedText = text.substring(start, end)
+
       let wrapper = ''
+
       switch (syntax) {
         case 'bold':
           wrapper = `**${selectedText || 'bold text'}**`
           break
+
         case 'italic':
           wrapper = `*${selectedText || 'italic text'}*`
           break
+
         case 'emoji':
           wrapper = '😊'
           break
+
         default:
           break
       }
-      const newText = text.substring(0, start) + wrapper + text.substring(end)
+
+      const newText =
+        text.substring(0, start) +
+        wrapper +
+        text.substring(end)
+
       setPostContent(newText)
-      
-      // UX Fix: Refocus textarea after inserting syntax wrappers
+
       setTimeout(() => {
         textarea.focus()
-        textarea.setSelectionRange(start + wrapper.length, start + wrapper.length)
+        textarea.setSelectionRange(
+          start + wrapper.length,
+          start + wrapper.length
+        )
       }, 0)
     }
   }
+    return (
+      <>
+        <AdminNavbar />
 
-  return (
-    <>
-      <AdminNavbar />
+        <div className="min-h-screen bg-gradient-to-b from-[#D9DFF2]/40 to-white font-montserrat">
+          <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
 
-      <div className="min-h-screen bg-gradient-to-b from-[#D9DFF2]/40 to-white font-montserrat">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+            {/* Left Column - Sticky Hero */}
+            <div className="lg:w-1/3 lg:sticky lg:top-24 lg:self-start">
+              <div className="flex flex-col gap-6">
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                  <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, {userName}!</h2>
+                  <p className="text-gray-500 text-sm mt-2">Create and manage announcements for the community.</p>
+                  <button className="mt-4 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full justify-center">
+                    <Calendar size={18} />
+                    View Events
+                  </button>
+                </div>
 
-          {/* Left Column - Sticky Hero */}
-          <div className="lg:w-1/3 lg:sticky lg:top-24 lg:self-start">
-            <div className="flex flex-col gap-6">
-              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, Admin Gwy!</h2>
-                <p className="text-gray-500 text-sm mt-2">Create and manage announcements for the community.</p>
-                <button className="mt-4 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full justify-center">
-                  <Calendar size={18} />
-                  View Events
-                </button>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-600 mb-4">Announcement Stats</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Total Posts</span>
-                    <span className="font-semibold text-[#4A558F]">{announcements.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">This Week</span>
-                    <span className="font-semibold text-[#4A558F]">2</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">With Images</span>
-                    <span className="font-semibold text-[#4A558F]">
-                      {announcements.filter(a => a.image).length}
-                    </span>
+                {/* Quick Stats */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-4">Announcement Stats</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Total Posts</span>
+                      <span className="font-semibold text-[#4A558F]">{announcements.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">This Week</span>
+                      <span className="font-semibold text-[#4A558F]">2</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">With Images</span>
+                      <span className="font-semibold text-[#4A558F]">
+                        {announcements.filter(a => a.image).length}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column - Feed */}
-          <div className="lg:w-2/3 space-y-6">
+            {/* Right Column - Feed */}
+            <div className="lg:w-2/3 space-y-6">
 
-            {/* Create Post Card */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-semibold text-[#4A558F] mb-4">Create Announcement</h3>
+              {/* Create Post Card */}
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <h3 className="text-lg font-semibold text-[#4A558F] mb-4">Create Announcement</h3>
 
-              {/* Formatting Toolbar */}
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => insertFormat('bold')}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
-                  title="Bold"
-                >
-                  <Bold size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormat('italic')}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
-                  title="Italic"
-                >
-                  <Italic size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormat('emoji')}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
-                  title="Add Emoji"
-                >
-                  <Smile size={16} />
-                </button>
-              </div>
+                {/* Metadata Inputs (Title, Category, Author, Link) */}
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 focus-within:border-[#4A558F] transition-colors">
+                    <Type size={16} className="text-gray-400 mr-2" />
+                    <input
+                      type="text"
+                      placeholder="Announcement Title *"
+                      value={postTitle}
+                      onChange={(e) => setPostTitle(e.target.value)}
+                      className="w-full focus:outline-none text-sm font-medium"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1 flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 focus-within:border-[#4A558F] transition-colors">
+                      <Tag size={16} className="text-gray-400 mr-2" />
+                      <select
+                        value={postCategory}
+                        onChange={(e) => setPostCategory(e.target.value)}
+                        className="w-full focus:outline-none text-sm text-gray-600 bg-transparent"
+                      >
+                        <option value="General">General</option>
+                        <option value="Event">Event</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="Update">Update</option>
+                      </select>
+                    </div>
+                    <div className="flex-1 flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 focus-within:border-[#4A558F] transition-colors">
+                      <User size={16} className="text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        placeholder="Author"
+                        value={postAuthor}
+                        onChange={(e) => setPostAuthor(e.target.value)}
+                        className="w-full focus:outline-none text-sm"
+                      />
+                    </div>
+                  </div>
 
-              <textarea
-                id="postEditor"
-                value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                placeholder="Write something..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
-                rows={4}
-                maxLength={maxChars}
-              />
+                  <div className="flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 focus-within:border-[#4A558F] transition-colors">
+                    <LinkIcon size={16} className="text-gray-400 mr-2" />
+                    <input
+                      type="url"
+                      placeholder="External Link (Optional)"
+                      value={postLink}
+                      onChange={(e) => setPostLink(e.target.value)}
+                      className="w-full focus:outline-none text-sm"
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-between mt-2">
-                <span className={`text-xs ${charCount > maxChars * 0.9 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                  {charCount}/{maxChars}
-                </span>
-              </div>
-
-              {/* Image Preview */}
-              {imagePreview && (
-                <div className="mt-3 relative inline-block">
-                  <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl" />
+                {/* Formatting Toolbar */}
+                <div className="flex items-center gap-2 mb-2">
                   <button
-                    onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
+                    type="button"
+                    onClick={() => insertFormat('bold')}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    title="Bold"
                   >
-                    <X size={14} className="text-gray-600" />
+                    <Bold size={16} />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormat('italic')}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    title="Italic"
+                  >
+                    <Italic size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormat('emoji')}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    title="Add Emoji"
+                  >
+                    <Smile size={16} />
+                  </button>
+                </div>
+
+                <textarea
+                  id="postEditor"
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  placeholder="Write the announcement content... *"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
+                  rows={8}
+                />
+
+                <div className="flex items-center justify-between mt-2">
+                  <span className={`text-xs ${wordCount > maxWords ? 'text-red-600 font-bold' : wordCount > maxWords * 0.9 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                    {wordCount}/{maxWords} words
+                  </span>
+                </div>
+
+                {/* Image Preview */}
+                {imagePreview && (
+                  <div className="mt-3 relative inline-block">
+                    <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl" />
+                    <button
+                      onClick={clearImage}
+                      className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={14} className="text-gray-600" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-[#4A558F] transition-colors text-sm">
+                      <ImagePlus size={18} />
+                      <span>Add Image</span>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                    {selectedFile && (
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Paperclip size={12} />
+                        {selectedFile.name}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={handlePost}
+                    disabled={isLoading || !postTitle.trim() || !postContent.trim() || wordCount > maxWords}
+                    className="bg-[#4A558F] text-white rounded-xl py-2 px-6 hover:bg-[#3a4575] transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Send size={18} />
+                    )}
+                    Post
+                  </button>
+                </div>
+              </div>
+
+              {/* Announcement Feed */}
+              {announcements.length === 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm p-12 border border-gray-100 text-center">
+                  <div className="text-6xl mb-4">📢</div>
+                  <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No updates yet!</h3>
+                  <p className="text-gray-500 text-sm">Create your first announcement to keep the community informed.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {announcements.map((announcement) => (
+                    <div key={announcement.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <div className="p-5">
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <img src="/LOGO.png" alt="Logo" className="w-10 h-10 rounded-full" />
+                            <div>
+                              <h4 className="font-semibold text-[#4A558F] text-sm">{announcement.author || 'Church of Jesus Christ'}</h4>
+                              <p className="text-xs text-gray-400">
+                                {formatTimestamp(announcement.createdAt || announcement.timestamp)} 
+                                {announcement.category && ` • ${announcement.category}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        {editingId === announcement.id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              placeholder="Title"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#4A558F] text-sm font-semibold"
+                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editCategory}
+                                onChange={(e) => setEditCategory(e.target.value)}
+                                placeholder="Category"
+                                className="w-1/2 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#4A558F] text-sm"
+                              />
+                              <input
+                                type="text"
+                                value={editAuthor}
+                                onChange={(e) => setEditAuthor(e.target.value)}
+                                placeholder="Author"
+                                className="w-1/2 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#4A558F] text-sm"
+                              />
+                            </div>
+                            <textarea
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
+                              rows={8}
+                            />
+                            <input
+                              type="url"
+                              value={editLink}
+                              onChange={(e) => setEditLink(e.target.value)}
+                              placeholder="Link"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:border-[#4A558F] text-sm"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveEdit(announcement.id)}
+                                disabled={!editTitle.trim() || !editContent.trim()}
+                                className="bg-[#4A558F] text-white text-sm rounded-lg px-4 py-1.5 hover:bg-[#3a4575] transition-colors disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingId(null)}
+                                className="bg-gray-200 text-gray-600 text-sm rounded-lg px-4 py-1.5 hover:bg-gray-300 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {announcement.title && (
+                              <h3 className="text-lg font-bold text-gray-900 mb-2">{announcement.title}</h3>
+                            )}
+                            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap mb-3">{announcement.content}</p>
+                            
+                            {announcement.link && (
+                              <a 
+                                href={announcement.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-[#4A558F] hover:underline font-medium"
+                              >
+                                <LinkIcon size={14} />
+                                Learn More / View Link
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Image Attachment */}
+                        {announcement.image && (
+                          <div className="mt-4">
+                            <img
+                              src={announcement.image}
+                              alt={announcement.title || "Announcement"}
+                              className="w-full h-auto max-h-80 object-cover rounded-xl"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => handleEdit(announcement.id)}
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteModal(announcement.id)}
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-[#4A558F] transition-colors text-sm">
-                    <ImagePlus size={18} />
-                    <span>Add Image</span>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                  {selectedFile && (
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Paperclip size={12} />
-                      {selectedFile.name}
-                    </span>
-                  )}
+              {/* Load More */}
+              {announcements.length > 0 && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 text-sm text-[#4A558F] hover:text-[#3a4575] transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Load More
+                      </>
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={handlePost}
-                  disabled={isLoading || (!postContent.trim() && !selectedFile)}
-                  className="bg-[#4A558F] text-white rounded-xl py-2 px-6 hover:bg-[#3a4575] transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Send size={18} />
-                  )}
-                  Post
-                </button>
-              </div>
-            </div>
-
-            {/* Announcement Feed */}
-            {announcements.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm p-12 border border-gray-100 text-center">
-                <div className="text-6xl mb-4">📢</div>
-                <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No updates yet!</h3>
-                <p className="text-gray-500 text-sm">Create your first announcement to keep the community informed.</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {announcements.map((announcement) => (
-                  <div key={announcement.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-5">
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <img src="/LOGO.png" alt="Logo" className="w-10 h-10 rounded-full" />
-                          <div>
-                            <h4 className="font-semibold text-[#4A558F] text-sm">Church of Jesus Christ</h4>
-                            <p className="text-xs text-gray-400">{formatTimestamp(announcement.createdAt || announcement.timestamp)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      {editingId === announcement.id ? (
-                        <div className="space-y-3">
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors resize-none text-sm"
-                            rows={4}
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleSaveEdit(announcement.id)}
-                              className="bg-[#4A558F] text-white text-sm rounded-lg px-4 py-1.5 hover:bg-[#3a4575] transition-colors"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="bg-gray-200 text-gray-600 text-sm rounded-lg px-4 py-1.5 hover:bg-gray-300 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{announcement.content}</p>
-                      )}
-
-                      {/* Image Attachment */}
-                      {announcement.image && (
-                        <div className="mt-4">
-                          <img
-                            src={announcement.image}
-                            alt="Announcement"
-                            className="w-full h-auto max-h-80 object-cover rounded-xl"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => handleEdit(announcement.id)}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
-                      >
-                        <Edit2 size={14} />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeleteModal(announcement.id)}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Load More */}
-            {announcements.length > 0 && (
-              <div className="flex justify-center">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="flex items-center gap-2 text-sm text-[#4A558F] hover:text-[#3a4575] transition-colors disabled:opacity-50"
-                >
-                  {loadingMore ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      Load More
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {deleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={24} className="text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Announcement?</h3>
-            <p className="text-sm text-gray-500 mb-6">This action cannot be undone. Are you sure you want to delete this post?</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setDeleteModal(null)}
-                className="px-5 py-2 rounded-xl bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteModal)}
-                className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors text-sm"
-              >
-                Delete
-              </button>
+              )}
             </div>
           </div>
         </div>
-      )}
 
-      <Footer />
-    </>
-  )
-}
+        {/* Delete Confirmation Modal */}
+        {deleteModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Announcement?</h3>
+              <p className="text-sm text-gray-500 mb-6">This action cannot be undone. Are you sure you want to delete this post?</p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setDeleteModal(null)}
+                  className="px-5 py-2 rounded-xl bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteModal)}
+                  className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors text-sm"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-export default AdminAnnouncement
+        <Footer />
+      </>
+    )
+  }
+
+  export default AdminAnnouncement
