@@ -6,7 +6,8 @@ import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 
   CalendarCheck, ChevronRight, CheckCircle, User, ArrowLeft, 
-  QrCode, Camera, X, Check, RefreshCw
+  QrCode, Camera, X, Check, RefreshCw, Trash2, AlertCircle,
+  Loader2, Undo2
 } from 'lucide-react'
 
 const AdminPage = () => {
@@ -28,6 +29,13 @@ const AdminPage = () => {
     monthlyAttendance: 0,
     ratio: { old: 0, new: 0, oldPercentage: 0, newPercentage: 0 }
   })
+
+  const [selectedRecords, setSelectedRecords] = useState([])
+  const [pendingDeleteIds, setPendingDeleteIds] = useState([])
+  const [toastType, setToastType] = useState('success')
+  const [toastAction, setToastAction] = useState(null)
+  const deleteTimeoutRef = useRef(null)
+  const deletedRecordsRef = useRef([])
 
   const inputRef = useRef(null)
 
@@ -61,6 +69,7 @@ const AdminPage = () => {
 
   useEffect(() => {
     fetchDashboardData()
+    return () => clearTimeout(deleteTimeoutRef.current)
   }, [])
 
   // --- QR SCANNER LOGIC (UPDATED & PATCHED) ---
@@ -190,9 +199,22 @@ const AdminPage = () => {
     setShowDropdown(false)
   }
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
+  const dismissToast = () => {
+    setToast(null)
+    setToastType('success')
+    setToastAction(null)
+  }
+
+  const showToast = (message, type = 'success', action = null) => {
+    setToast(message)
+    setToastType(type)
+    setToastAction(action)
+    const duration = action ? 5000 : 3000
+    setTimeout(() => {
+      setToast(null)
+      setToastType('success')
+      setToastAction(null)
+    }, duration)
   }
 
   const closeModal = () => {
@@ -200,6 +222,62 @@ const AdminPage = () => {
     setSearchTerm('')
     setSelectedMember(null)
     setShowScanner(false)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedRecords.length === attendanceRecords.length) {
+      setSelectedRecords([])
+    } else {
+      setSelectedRecords(attendanceRecords.map(r => r.id))
+    }
+  }
+
+  const toggleSelect = (id) => {
+    setSelectedRecords(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedRecords.length === 0) return
+    const ids = [...selectedRecords]
+    const removed = attendanceRecords.filter(r => ids.includes(r.id))
+
+    setSelectedRecords([])
+    setPendingDeleteIds(ids)
+    deletedRecordsRef.current = removed
+
+    clearTimeout(deleteTimeoutRef.current)
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('token')
+        await Promise.all(ids.map(id =>
+          fetch(`${API_BASE_URL}/api/attendance/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ))
+        setPendingDeleteIds([])
+        deletedRecordsRef.current = []
+        dismissToast()
+        showToast(`${ids.length} record(s) deleted successfully.`, 'success')
+        fetchDashboardData()
+      } catch (error) {
+        setPendingDeleteIds([])
+        deletedRecordsRef.current = []
+        dismissToast()
+        showToast('Failed to delete records.', 'error')
+      }
+    }, 5000)
+
+    const handleUndo = () => {
+      clearTimeout(deleteTimeoutRef.current)
+      setPendingDeleteIds([])
+      deletedRecordsRef.current = []
+      dismissToast()
+    }
+
+    showToast(`${ids.length} record(s) deleted`, 'error', { label: 'Undo', onClick: handleUndo })
   }
 
   const getStatusStyles = (status) => {
@@ -310,10 +388,30 @@ const AdminPage = () => {
             </button>
           </div>
 
+          {selectedRecords.length > 0 && (
+            <div className="mb-4 flex items-center justify-between gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[#4A558F] font-medium">{selectedRecords.length} selected</span>
+                <button onClick={() => setSelectedRecords([])} className="text-xs text-gray-500 hover:underline">Clear Selection</button>
+              </div>
+              <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors font-medium">
+                <Trash2 size={14} /> Delete Selected
+              </button>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
+                  <th className="py-3 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                      checked={attendanceRecords.length > 0 && selectedRecords.length === attendanceRecords.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
@@ -322,21 +420,44 @@ const AdminPage = () => {
               </thead>
               <tbody>
                 {attendanceRecords.length > 0 ? (
-                  attendanceRecords.map((row) => (
-                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 text-gray-700 font-medium">{row.name}</td>
+                  attendanceRecords.map((row) => {
+                    const isPendingDelete = pendingDeleteIds.includes(row.id)
+                    return (
+                    <tr key={row.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${isPendingDelete ? 'bg-red-50' : ''}`}>
+                      <td className="py-3 px-4">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                          checked={selectedRecords.includes(row.id)}
+                          onChange={() => toggleSelect(row.id)}
+                          disabled={isPendingDelete}
+                        />
+                      </td>
+                      <td className={`py-3 px-4 font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>{row.name}</td>
                       <td className="py-3 px-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusStyles(row.status)}`}>
                           {row.status}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-500">{row.date}</td>
-                      <td className="py-3 px-4 text-gray-500">{row.time}</td>
+                      <td className="py-3 px-4 text-gray-500">
+                        {row.time}
+                        {isPendingDelete && (
+                          <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                            <Loader2 size={12} className="animate-spin" />
+                            Deleting...
+                          </div>
+                        )}
+                      </td>
                     </tr>
-                  ))
+                    )
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="4" className="py-10 text-center text-gray-400">No activity recorded today.</td>
+                    <td colSpan="5" className="py-10 text-center text-gray-400">
+                      <AlertCircle size={48} className="text-gray-300 mx-auto mb-3" />
+                      No activity recorded today.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -450,10 +571,19 @@ const AdminPage = () => {
       {toast && (
         <div className="fixed bottom-6 right-6 z-[60] animate-slide-up">
           <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl text-sm font-medium ${
-            toast.type === 'success' ? 'bg-gray-900 text-white border-l-4 border-green-500' : 'bg-red-600 text-white'
+            toastType === 'success' ? 'bg-gray-900 text-white border-l-4 border-green-500' : 'bg-red-600 text-white'
           }`}>
-            {toast.type === 'success' ? <CheckCircle size={18} className="text-green-400" /> : <X size={18} />}
-            {toast.message}
+            {toastType === 'success' ? <CheckCircle size={18} className="text-green-400" /> : <Loader2 size={18} className="animate-spin" />}
+            {toast}
+            {toastAction && (
+              <button
+                onClick={toastAction.onClick}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors font-bold"
+              >
+                <Undo2 size={14} />
+                {toastAction.label}
+              </button>
+            )}
           </div>
         </div>
       )}

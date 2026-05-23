@@ -225,6 +225,7 @@ const AdminVisitors = () => {
   const [selectedVisitor, setSelectedVisitor] = useState(null)  
   const [selectedVisitors, setSelectedVisitors] = useState([])
   const [pendingDeleteIds, setPendingDeleteIds] = useState([])
+  const [editingVisitorId, setEditingVisitorId] = useState(null)
   const [toast, setToast] = useState(null)
   const [toastType, setToastType] = useState('success')
   const [toastAction, setToastAction] = useState(null)
@@ -316,7 +317,7 @@ const AdminVisitors = () => {
     if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }))
   }
 
-  const handleAddVisitor = async () => {
+  const handleSaveVisitor = async () => {
     if (!formData.fullName.trim() || !formData.originalChurch.trim()) {
       setFormErrors({ 
         fullName: !formData.fullName.trim() ? 'Required' : '',
@@ -327,11 +328,19 @@ const AdminVisitors = () => {
 
     setIsSubmitting(true)
     try {
-      await axios.post(API_URL, formData, getAuthHeaders())
-      showToast('Visitor saved successfully!')
+      if (editingVisitorId) {
+        const res = await axios.put(`${API_URL}/${editingVisitorId}`, formData, getAuthHeaders())
+        setVisitors(prev => prev.map(v => v.id === editingVisitorId ? res.data : v))
+        showToast('Visitor updated successfully!')
+      } else {
+        const res = await axios.post(API_URL, formData, getAuthHeaders())
+        setVisitors(prev => [res.data, ...prev])
+        showToast('Visitor saved successfully!')
+      }
+      const statsRes = await axios.get(`${API_URL}/stats`, getAuthHeaders())
+      setStats(statsRes.data)
       setShowAddModal(false)
       resetForm()
-      fetchVisitors()
     } catch (error) {
       showToast('Error saving visitor.', 'error')
     } finally {
@@ -340,6 +349,7 @@ const AdminVisitors = () => {
   }
 
   const resetForm = () => {
+    setEditingVisitorId(null)
     setFormData({
       fullName: '',
       originalChurch: '',
@@ -395,7 +405,7 @@ const AdminVisitors = () => {
   }
 
   const handleDetailEdit = (visitor) => {
-    // Pre-fill the add/edit form with the visitor's data and open it
+    setEditingVisitorId(visitor.id)
     setFormData({
       fullName: visitor.firstName
         ? `${visitor.firstName} ${visitor.lastName || ''}`.trim()
@@ -693,7 +703,7 @@ const AdminVisitors = () => {
               >
                 <ArrowLeft size={20} className="text-[#4A558F]" />
               </button>
-              <h3 className="text-lg font-semibold text-[#4A558F]">Add New Visitor</h3>
+              <h3 className="text-lg font-semibold text-[#4A558F]">{editingVisitorId ? 'Edit Visitor' : 'Add New Visitor'}</h3>
             </div>
 
             <div className="p-5">
@@ -746,12 +756,14 @@ const AdminVisitors = () => {
                 </button>
                 <button
                   disabled={isSubmitting}
-                  onClick={handleAddVisitor}
+                  onClick={handleSaveVisitor}
                   className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2"
                 >
                   {isSubmitting
                     ? <Loader2 size={18} className="animate-spin" />
-                    : <><Plus size={18} /> Save Visitor</>
+                    : editingVisitorId
+                      ? <><FileText size={18} /> Update Visitor</>
+                      : <><Plus size={18} /> Save Visitor</>
                   }
                 </button>
               </div>

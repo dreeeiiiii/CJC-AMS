@@ -10,10 +10,26 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const [userData, setUserData] = useState({
-    fullName: "Guest User",
-    role: "VISITOR",
-    profileImage: null
+  const [userData, setUserData] = useState(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        let nameToDisplay = parsed.fullName;
+        if (!nameToDisplay && parsed.firstName) {
+          const mInitial = parsed.middleName ? `${parsed.middleName.charAt(0)}.` : "";
+          nameToDisplay = `${parsed.firstName} ${mInitial} ${parsed.lastName}`.replace(/\s+/g, ' ');
+        }
+        return {
+          fullName: nameToDisplay || "User",
+          role: parsed.role || "VISITOR",
+          profileImage: parsed.profileImage || null,
+        };
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+    return { fullName: "Guest User", role: "VISITOR", profileImage: null };
   });
 
   useEffect(() => {

@@ -158,6 +158,26 @@ export const getAttendanceStats = async (req: Request, res: Response) => {
 };
 
 /**
+ * DELETE /api/attendance/:id
+ * Deletes a single attendance record
+ */
+export const deleteAttendance = async (req: AuthRequest, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        const existing = await prisma.attendance.findUnique({ where: { id } });
+
+        if (!existing) {
+            return res.status(404).json({ message: "Attendance record not found" });
+        }
+
+        await prisma.attendance.delete({ where: { id } });
+        res.json({ message: "Attendance record deleted successfully" });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
  * GET /api/attendance/export
  */
 export const exportAttendance = async (req: Request, res: Response) => {

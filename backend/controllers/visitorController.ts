@@ -2,13 +2,12 @@ import type { Request, Response } from 'express';
 // 1. Import your existing configured prisma instance
 import prisma from '../db.js'; 
 // 2. Import only the Enums and Types from the client
-import { Gender, Category } from '@prisma/client';
+import { Category } from '@prisma/client';
 
 interface CreateVisitorDTO {
   fullName: string;
   originalChurch: string;
   invitedBy?: string;
-  gender?: Gender; 
   contactNo?: string;
   address?: string;
   dateOfVisit?: string; 
@@ -38,7 +37,6 @@ export const createVisitor = async (req: Request<{}, {}, CreateVisitorDTO>, res:
       fullName, 
       originalChurch, 
       invitedBy,
-      gender, 
       contactNo, 
       address,
       dateOfVisit, 
@@ -57,9 +55,8 @@ export const createVisitor = async (req: Request<{}, {}, CreateVisitorDTO>, res:
         invitedBy: invitedBy || null,
         contactNo: contactNo || null,
         address: address || null,
-        gender: gender || Gender.Male,
         category: invitedBy ? Category.Invited : Category.WalkIn,
-        visitedAt: dateOfVisit ? new Date(dateOfVisit) : new Date(),
+        visitedAt: dateOfVisit ? new Date(dateOfVisit + 'T00:00:00Z') : new Date(),
         purposeOfVisit: purposeOfVisit || null,
       },
     });
@@ -67,6 +64,50 @@ export const createVisitor = async (req: Request<{}, {}, CreateVisitorDTO>, res:
     res.status(201).json(newVisitor);
   } catch (error: any) {
     res.status(500).json({ message: "Error saving visitor", error: error.message });
+  }
+};
+
+/**
+ * 📌 Update a visitor
+ */
+export const updateVisitor = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      fullName,
+      originalChurch,
+      invitedBy,
+      contactNo,
+      address,
+      dateOfVisit,
+      purposeOfVisit,
+    } = req.body;
+
+    const nameParts = (fullName || "").trim().split(' ');
+    const firstName: string = nameParts[0] || "Guest";
+    const lastName: string = nameParts.length > 1 ? nameParts.slice(1).join(' ') : "Visitor";
+
+    const updated = await prisma.visitor.update({
+      where: { id: Number(id) },
+      data: {
+        firstName,
+        lastName,
+        churchAffiliation: originalChurch || null,
+        invitedBy: invitedBy || null,
+        contactNo: contactNo || null,
+        address: address || null,
+        category: invitedBy ? Category.Invited : Category.WalkIn,
+        purposeOfVisit: purposeOfVisit ?? null,
+      ...(dateOfVisit && { visitedAt: new Date(dateOfVisit + 'T00:00:00Z') }),
+      },
+    });
+
+    res.status(200).json(updated);
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: "Visitor not found" });
+    }
+    res.status(500).json({ message: "Error updating visitor", error: error.message });
   }
 };
 
@@ -99,13 +140,17 @@ export const deleteVisitors = async (req: Request, res: Response) => {
 export const getVisitorStats = async (_req: Request, res: Response) => {
   try {
     const now = new Date();
+    const weekStart = new Date(Date.UTC(
+      now.getUTCFullYear(), 
+      now.getUTCMonth(), 
+      now.getUTCDate() - now.getUTCDay()  // Sunday = 0
+    ));
 
-    // Reset time to midnight for accurate day-based filtering
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    monthStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(Date.UTC(
+      now.getUTCFullYear(), 
+      now.getUTCMonth(), 
+      1
+    ));
 
     const [total, week, month] = await Promise.all([
       prisma.visitor.count(),
