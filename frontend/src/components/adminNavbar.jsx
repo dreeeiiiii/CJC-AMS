@@ -32,6 +32,9 @@ const AdminNavbar = () => {
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 200));
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    window.dispatchEvent(new Event("userDataUpdated"));
     setIsLoggedIn(false);
     setShowLogoutConfirm(false);
     navigate("/login");

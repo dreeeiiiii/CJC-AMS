@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from "../../components/adminNavbar"
 import Footer from '../../components/footer'
-// 1. Import the Scanner library
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 
   CalendarCheck, ChevronRight, CheckCircle, User, ArrowLeft, 
-  QrCode, Camera, X, Check 
+  QrCode, Camera, X, Check, RefreshCw
 } from 'lucide-react'
 
 const AdminPage = () => {
@@ -33,7 +32,7 @@ const AdminPage = () => {
   const inputRef = useRef(null)
 
   // --- API Configuration ---
-  const API_BASE_URL = "http://localhost:5000"
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
   const getAuthHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
   })
@@ -64,39 +63,65 @@ const AdminPage = () => {
     fetchDashboardData()
   }, [])
 
-  // --- QR SCANNER LOGIC ---
+  // --- QR SCANNER LOGIC (UPDATED & PATCHED) ---
+  // --- DEBUGGING QR SCANNER LOGIC ---
   useEffect(() => {
     let scanner = null;
+    let timeoutId = null;
 
     if (showScanner) {
-      // Initialize scanner on the 'reader' div
-      scanner = new Html5QrcodeScanner("reader", { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true
-      });
-
-      const onScanSuccess = async (decodedText) => {
+      timeoutId = setTimeout(() => {
         try {
-          // Send scanned ID directly to API
-          await axios.post(
-            `${API_BASE_URL}/api/attendance`, 
-            { memberId: decodedText }, 
-            getAuthHeader()
-          )
-          
-          showToast('Attendance Recorded via QR!')
-          closeModal();
-          fetchDashboardData();
-        } catch (error) {
-          showToast(error.response?.data?.message || 'Invalid QR Code', 'error')
-        }
-      };
+          scanner = new Html5QrcodeScanner("reader", { 
+            fps: 15, 
+            qrbox: { width: 220, height: 220 },
+            rememberLastUsedCamera: true,
+            aspectRatio: 1.0
+          });
 
-      scanner.render(onScanSuccess, (err) => { /* Ignore constant scanning errors */ });
+          const onScanSuccess = async (decodedText) => {
+            // 1. ALERT IMMEDIATELY TO PROVE THE CAMERA READ SOMETHING
+            alert(`RAW QR CODE DETECTED!\nContent: "${decodedText}"`);
+            
+            try {
+              const cleanId = decodedText.trim();
+              alert(`Step 2: Cleaned ID is "${cleanId}"\nIs it NaN? ${isNaN(Number(cleanId))}`);
+
+              if (isNaN(Number(cleanId))) {
+                showToast('Invalid QR payload format', 'error');
+                return;
+              }
+
+              alert(`Step 3: Sending to API -> ID: ${Number(cleanId)}`);
+
+              const response = await axios.post(
+                `${API_BASE_URL}/api/attendance`, 
+                { memberId: Number(cleanId) }, 
+                getAuthHeader()
+              );
+              
+              alert(`Step 4: API SUCCESS!\n${JSON.stringify(response.data)}`);
+              showToast('Attendance Recorded via QR!');
+              closeModal();
+              fetchDashboardData();
+            } catch (error) {
+              alert(`API ERROR:\nStatus: ${error.response?.status}\nMessage: ${error.response?.data?.message || error.message}`);
+              showToast(error.response?.data?.message || 'Invalid QR Code', 'error');
+            }
+          };
+
+          scanner.render(onScanSuccess, (err) => { 
+            // Optional: Uncomment the line below if you want to see if the library is throwing constant loop errors
+            // console.log("Scanning loop error:", err);
+          });
+        } catch (initErr) {
+          alert(`SCANNER INITIALIZATION CRASH:\n${initErr.message}`);
+        }
+      }, 100);
     }
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       if (scanner) {
         scanner.clear().catch(error => console.error("Scanner cleanup failed", error));
       }
@@ -324,13 +349,15 @@ const AdminPage = () => {
 
       {/* --- ATTENDANCE MODAL --- */}
       {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-gray-50/50">
-              <button onClick={closeModal} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat transition-opacity duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+            <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-[#F8F9FD]">
+              <button onClick={closeModal} className="p-2 hover:bg-gray-200/80 rounded-xl transition-colors">
                 <ArrowLeft size={20} className="text-[#4A558F]" />
               </button>
-              <h3 className="text-lg font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-wider">Record Attendance</h3>
+              <h3 className="text-base font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-widest">
+                {showScanner ? "Scan QR Code" : "Record Attendance"}
+              </h3>
             </div>
 
             <div className="p-6">
@@ -347,19 +374,19 @@ const AdminPage = () => {
                       }}
                       onFocus={() => setShowDropdown(true)}
                       placeholder="Search Member Name..."
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#4A558F] transition-colors text-sm"
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:border-[#4A558F] transition-colors text-sm"
                     />
 
                     {showDropdown && filteredMembers.length > 0 && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                         {filteredMembers.map((member) => (
                           <div
                             key={member.id}
                             onClick={() => selectMember(member)}
-                            className="px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm text-gray-700 flex justify-between items-center"
+                            className="px-4 py-3 cursor-pointer hover:bg-[#F8F9FD] text-sm text-gray-700 flex justify-between items-center transition-colors"
                           >
                             <span className="font-medium">{member.firstName} {member.lastName}</span>
-                            <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">{member.role}</span>
+                            <span className="text-[10px] bg-[#D9DFF2] px-2 py-0.5 rounded font-semibold text-[#4A558F]">{member.role}</span>
                           </div>
                         ))}
                       </div>
@@ -370,26 +397,48 @@ const AdminPage = () => {
                     onClick={handleAddAttendance}
                     disabled={!selectedMember}
                     className={`w-full mt-6 rounded-xl py-3.5 transition-all shadow-md text-sm font-bold uppercase tracking-widest ${
-                      selectedMember ? 'bg-[#4A558F] text-white hover:bg-[#3a4575]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      selectedMember ? 'bg-[#4A558F] text-white hover:bg-[#3a4575] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     Confirm Attendance
                   </button>
 
+                  <div className="relative my-6 flex py-1 items-center font-medium">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="flex-shrink mx-4 text-xs text-gray-400 uppercase tracking-wider">OR</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+
                   <button
                     onClick={() => setShowScanner(true)}
-                    className="w-full mt-4 text-sm text-[#4A558F] font-medium flex items-center justify-center gap-2 hover:underline"
+                    className="w-full py-3.5 bg-[#D9DFF2] text-[#4A558F] font-bold text-sm rounded-xl flex items-center justify-center gap-2.5 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-sm uppercase tracking-wider active:scale-[0.98]"
                   >
-                    <QrCode size={16} /> Scan QR code
+                    <QrCode size={18} /> Use Camera Scanner
                   </button>
                 </>
               ) : (
-                <div className="text-center">
-                  <div className="bg-gray-900 rounded-xl min-h-[300px] flex items-center justify-center mb-4 relative overflow-hidden">
-                    <div id="reader" className="w-full"></div>
+                <div className="flex flex-col items-center">
+                  {/* Styled QR Window Chassis */}
+                  <div className="w-full bg-[#111827] rounded-2xl p-4 shadow-inner relative border border-gray-800 mb-5 overflow-hidden group">
+                    
+                    {/* Laser scanning targeting overlay animation */}
+                    <div className="absolute inset-x-4 top-4 bottom-4 pointer-events-none z-10">
+                      <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-[#4A558F] rounded-tl"></div>
+                      <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-[#4A558F] rounded-tr"></div>
+                      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-[#4A558F] rounded-bl"></div>
+                      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-[#4A558F] rounded-br"></div>
+                      <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#4A558F] to-transparent absolute top-1/2 left-0 animate-scanner-line opacity-80"></div>
+                    </div>
+
+                    {/* Target scan destination node mount container */}
+                    <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
                   </div>
-                  <button onClick={() => setShowScanner(false)} className="w-full bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors">
-                    Back to Search
+
+                  <button 
+                    onClick={() => setShowScanner(false)} 
+                    className="w-full bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft size={16} /> Back to Search
                   </button>
                 </div>
               )}
@@ -411,23 +460,66 @@ const AdminPage = () => {
 
       <style>{`
         @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes scan-move { 0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; } }
         
-        /* Scanner UI cleanup to match design */
-        #reader { border: none !important; }
-        #reader__scan_region { background: #111827 !important; }
-        #reader__dashboard_section_csr button {
+        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-scanner-line { animation: scan-move 2.5s ease-in-out infinite; }
+        
+        #reader, #reader * {
+          font-family: 'Montserrat', sans-serif !important;
+        }
+
+        /* Target Library Injected Elements explicitly */
+        #reader { 
+          border: none !important; 
+          background: transparent !important;
+        }
+        #reader__scan_region { 
+          background: transparent !important; 
+          display: flex !important;
+          justify-content: center !important;
+        }
+        #reader__scan_region video {
+          border-radius: 12px !important;
+          object-fit: cover !important;
+        }
+        
+        /* Control Dashboard Panel Layout Buttons */
+        #reader__dashboard_section_csr button, 
+        #reader__dashboard_section_swaplink {
           background: #4A558F !important;
           color: white !important;
           border: none !important;
-          padding: 8px 16px !important;
-          border-radius: 8px !important;
-          font-family: inherit !important;
+          padding: 10px 20px !important;
+          border-radius: 10px !important;
           font-size: 12px !important;
           text-transform: uppercase !important;
-          font-weight: bold !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.05em !important;
+          transition: all 0.2s ease !important;
+          cursor: pointer !important;
+          margin-top: 12px !important;
+          box-shadow: 0 2px 4px rgba(74, 85, 143, 0.2) !important;
         }
-        #reader img { display: none; }
+        #reader__dashboard_section_csr button:hover {
+          background: #3a4575 !important;
+          transform: translateY(-1px) !important;
+        }
+        
+        /* Dropdowns selection adjustments inside the camera selector UI */
+        #reader__dashboard_section_csr select {
+          padding: 8px 12px !important;
+          border-radius: 8px !important;
+          border: 2px solid #E5E7EB !important;
+          background-color: white !important;
+          font-size: 13px !important;
+          color: #374151 !important;
+          outline: none !important;
+        }
+        #reader__dashboard_section_csr select:focus {
+          border-color: #4A558F !important;
+        }
+        #reader img { display: none !important; }
       `}</style>
     </>
   )

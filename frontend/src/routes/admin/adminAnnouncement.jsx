@@ -18,13 +18,14 @@ const AdminAnnouncement = () => {
 
   const maxChars = 280
   const charCount = postContent.length
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
   // 🚀 Fetch live announcements on mount
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
         // Updated route layout to standard multi-resource API endpoints
-        const response = await fetch('/api/announcements/routes')
+        const response = await fetch(`${API_URL}/api/announcements`)
         if (response.ok) {
           const data = await response.json()
           setAnnouncements(data)
@@ -65,7 +66,7 @@ const AdminAnnouncement = () => {
       }
 
       // Updated target route architecture
-      const response = await fetch('/api/announcements/routes', {
+      const response = await fetch(`${API_URL}/api/announcements`, {
         method: 'POST',
         body: formData
       })
@@ -87,7 +88,7 @@ const AdminAnnouncement = () => {
   const handleDelete = async (id) => {
     try {
       // Adjusted route layout for explicit parameter path queries
-      const response = await fetch(`/api/announcements/routes?id=${id}`, {
+      const response = await fetch(`${API_URL}/api/announcements/${id}`, {
         method: 'DELETE'
       })
       if (response.ok) {
@@ -111,7 +112,7 @@ const AdminAnnouncement = () => {
   const handleSaveEdit = async (id) => {
     try {
       // Adjusted route layout for unified dynamic parameters
-      const response = await fetch(`/api/announcements/routes?id=${id}`, {
+      const response = await fetch(`${API_URL}/api/announcements/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editContent })
@@ -134,7 +135,7 @@ const AdminAnnouncement = () => {
     setLoadingMore(true)
     try {
       // Synced offset endpoint params alongside updated routes layout
-      const response = await fetch(`/api/announcements/routes?offset=${announcements.length}`)
+      const response = await fetch(`${API_URL}/api/announcements`)
       if (response.ok) {
         const moreData = await response.json()
         if (moreData.length > 0) {

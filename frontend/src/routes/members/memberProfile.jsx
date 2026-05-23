@@ -25,9 +25,9 @@ const MemberProfile = () => {
   const [editForm, setEditForm] = useState({ ...userData });
   const [saved, setSaved] = useState(false);
   
-  // New states for image handling
-  const [pendingImage, setPendingImage] = useState(null); // Base64 for UI preview only
-  const [selectedFile, setSelectedFile] = useState(null); // The actual file to upload
+  // States for database-backed file streams
+  const [pendingImage, setPendingImage] = useState(null); // Base64 for local client rendering path
+  const [selectedFile, setSelectedFile] = useState(null); // The raw binary Blob file object 
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -93,6 +93,7 @@ const MemberProfile = () => {
       address: editForm.address,
     };
 
+    // Optimistic UI updates
     const optimisticData = { ...userData, ...editForm };
     setUserData(optimisticData);
     setEditForm(optimisticData);
@@ -108,7 +109,12 @@ const MemberProfile = () => {
       const serverUser = await updateMyProfile(mergedData);
       const syncedData = {
         ...optimisticData,
+        firstName: serverUser.firstName || optimisticData.firstName,
+        middleName: serverUser.middleName || optimisticData.middleName,
+        lastName: serverUser.lastName || optimisticData.lastName,
+        email: serverUser.email || optimisticData.email,
         contact: serverUser.contactNo || serverUser.contact || optimisticData.contact,
+        address: serverUser.address || optimisticData.address,
         profileImage: serverUser.profileImage || optimisticData.profileImage,
       };
       setUserData(syncedData);
@@ -116,7 +122,7 @@ const MemberProfile = () => {
       localStorage.setItem("user", JSON.stringify(serverUser));
       window.dispatchEvent(new Event("userDataUpdated"));
     } catch (err) {
-      console.error("Failed to save profile:", err);
+      console.error("Failed to save profile fields securely:", err);
       setUserData(prevUserData);
       setEditForm(prevUserData);
       window.dispatchEvent(new Event("userDataUpdated"));
@@ -126,10 +132,10 @@ const MemberProfile = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file); // Store file for backend
+      setSelectedFile(file); 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPendingImage(reader.result); // Store preview for UI
+        setPendingImage(reader.result); 
       };
       reader.readAsDataURL(file);
     }
@@ -152,13 +158,19 @@ const MemberProfile = () => {
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to upload image");
+      if (!response.ok) throw new Error("Failed to upload image link to server");
 
       const data = await response.json();
-      const newImageUrl = data.imageUrl;
+      const newImageUrl = data.imageUrl; // Direct link parsed out from destination disk or cloud infrastructure
 
-      setUserData(prev => ({ ...prev, profileImage: newImageUrl }));
-      setEditForm(prev => ({ ...prev, profileImage: newImageUrl }));
+      const updatedProfileState = {
+        ...userData,
+        profileImage: newImageUrl
+      };
+
+      // Forces persistent synchronization across all browser layers
+      setUserData(updatedProfileState);
+      setEditForm(updatedProfileState);
 
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem("user", JSON.stringify({ ...storedUser, profileImage: newImageUrl }));
@@ -168,7 +180,7 @@ const MemberProfile = () => {
       window.dispatchEvent(new Event("userDataUpdated"));
 
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Error linking image metadata profile upload:", error);
       setUserData(prev => ({ ...prev, profileImage: prevImage }));
       setEditForm(prev => ({ ...prev, profileImage: prevImage }));
     } finally {
@@ -247,7 +259,7 @@ const MemberProfile = () => {
                     className="px-4 py-1.5 bg-[#3B4B89] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1 disabled:opacity-70"
                   >
                     {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
-                    {isUploading ? "Saving..." : "Save"}
+                    {isUploading ? "Saving..." : "Save Photo"}
                   </button>
                   <button 
                     onClick={handleCancelImage} 
