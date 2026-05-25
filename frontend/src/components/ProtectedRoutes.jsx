@@ -66,7 +66,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && authState.role !== "ADMIN") {
-    return <Navigate to="/member" replace />;
+    return <Navigate to="/member/home" replace />;
   }
 
   if (!adminOnly && authState.role === "ADMIN") {

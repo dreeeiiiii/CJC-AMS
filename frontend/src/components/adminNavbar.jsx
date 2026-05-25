@@ -129,6 +129,12 @@ const AdminNavbar = () => {
               </button>
             </li>
             <li className="relative group">
+              <button onClick={() => handleNavigate("/admin/attendance")}>
+                Attendance
+                <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
+              </button>
+            </li>
+            <li className="relative group">
               <button onClick={() => handleNavigate("/admin/announcements")}>
                 Announcements
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
@@ -146,7 +152,6 @@ const AdminNavbar = () => {
                 <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-[#364687] transition-all duration-300 group-hover:w-full"></span>
               </button>
             </li>
-
             <li className="relative">
               <button
                 onClick={() => setadminDropdownOpen(!adminDropdownOpen)}
@@ -207,6 +212,17 @@ const AdminNavbar = () => {
                     className="block w-full text-left py-2 hover:text-blue-600 transition"
                   >
                     Dashboard
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      handleNavigate("/admin/attendance");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 hover:text-blue-600 transition"
+                  >
+                    Attendance
                   </button>
                 </li>
                 <li>

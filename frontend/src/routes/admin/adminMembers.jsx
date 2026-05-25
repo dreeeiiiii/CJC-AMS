@@ -5,7 +5,7 @@ import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, 
   MapPin, CheckCircle, X, ChevronDown, Trash2, 
-  AlertCircle, Loader2, Download, Undo2
+  AlertCircle, Loader2, Download, Undo2, Calendar,
 } from 'lucide-react'
 
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
@@ -35,6 +35,148 @@ const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', place
   </div>
 )
 
+const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
+  if (!member) return null
+
+  const fullName = `${member.firstName} ${member.lastName}`.trim()
+  const initials = (member.firstName?.[0] || '') + (member.lastName?.[0] || '')
+  const memberSince = member.createdAt
+    ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—'
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+        {/* Header */}
+        <div className="bg-[#1a2a5e] p-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#b8c8e8] to-[#6a85c0] flex items-center justify-center text-white text-lg font-semibold border-2 border-white/25 flex-shrink-0 overflow-hidden">
+              {member.profileImage ? (
+                <img src={member.profileImage} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+            </div>
+            <div>
+              <p className="text-white font-semibold text-base">{fullName}</p>
+              <p className="text-white/60 text-xs mt-0.5">{member.email || 'No email'}</p>
+              <div className="flex gap-2 mt-1.5">
+                <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full ${
+                  member.status === 'Old Member'
+                    ? 'bg-white/10 text-white/70'
+                    : 'bg-green-400/20 text-green-200'
+                }`}>
+                  {member.status === 'Old Member' ? '◉ Old Member' : '✦ New Member'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+
+          {/* Personal Information */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
+              Personal Information
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">First Name</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.firstName}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Last Name</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.lastName}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Middle Name</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.middleName || '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Gender</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.gender || '—'}</p>
+              </div>
+              <div className="col-span-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
+                  <MapPin size={10} /> Address
+                </p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.address || '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
+                  <Phone size={10} /> Contact No.
+                </p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.contactNo || '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
+                  <Calendar size={10} /> Member Since
+                </p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{memberSince}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance Summary */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
+              Attendance Summary
+            </p>
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Total</p>
+                <p className="text-xl font-bold text-[#1a2a5e]">{member.totalAttendance ?? 0}</p>
+                <p className="text-[10px] text-gray-400">sessions</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">This Month</p>
+                <p className="text-xl font-bold text-[#1a2a5e]">{member.monthlyAttendance ?? 0}</p>
+                <p className="text-[10px] text-gray-400">sessions</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Testimonies</p>
+                <p className="text-xl font-bold text-[#1a2a5e]">{member.testimonyCount ?? 0}</p>
+                <p className="text-[10px] text-gray-400">submitted</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => onDelete(member)}
+            className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
+          >
+            Remove Member
+          </button>
+          <button
+            onClick={() => onEdit(member)}
+            className="px-4 py-2 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors"
+          >
+            Edit Member
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const AdminMembers = () => {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +190,8 @@ const AdminMembers = () => {
   const [toastAction, setToastAction] = useState(null)
   const deleteTimeoutRef = useRef(null)
   const deletedMembersRef = useRef([])
+  const [selectedMember, setSelectedMember] = useState(null)
+  const [editingMemberId, setEditingMemberId] = useState(null)
 
   // --- Filter and Sort State ---
   const [statusFilter, setStatusFilter] = useState('All')
@@ -163,19 +307,22 @@ const AdminMembers = () => {
   const handleAddMember = async () => {
     if (!validateForm()) return
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
-        method: 'POST',
+      const url = editingMemberId
+        ? `http://localhost:5000/api/users/${editingMemberId}`
+        : 'http://localhost:5000/api/users'
+      const response = await fetch(url, {
+        method: editingMemberId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
-        showToast('Member added successfully!');
+        showToast(editingMemberId ? 'Member updated successfully!' : 'Member added successfully!');
         resetForm();
         setShowModal(false);
         fetchMembers();
       } else {
         const err = await response.json();
-        showToast(err.message || "Error adding member", "error");
+        showToast(err.message || "Error saving member", "error");
       }
     } catch (error) {
       showToast("Server error", "error");
@@ -183,6 +330,7 @@ const AdminMembers = () => {
   }
 
   const resetForm = () => {
+    setEditingMemberId(null)
     setFormData({ firstName: '', middleInitial: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member' })
     setFormErrors({})
   }
@@ -267,6 +415,62 @@ const AdminMembers = () => {
     setSelectedMembers(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     )
+  }
+
+  const handleRowClick = (member, e) => {
+    if (e.target.type === 'checkbox') return
+    setSelectedMember(member)
+  }
+
+  const handleDetailDelete = (member) => {
+    setSelectedMember(null)
+    const ids = [member.id]
+    const removed = [member]
+    setPendingDeleteIds(ids)
+    deletedMembersRef.current = removed
+
+    clearTimeout(deleteTimeoutRef.current)
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        await fetch(`http://localhost:5000/api/users/${member.id}`, { method: 'DELETE' })
+        setMembers(prev => prev.filter(m => m.id !== member.id))
+        setPendingDeleteIds([])
+        deletedMembersRef.current = []
+        dismissToast()
+        showToast(`1 member(s) deleted successfully.`, 'success');
+      } catch (error) {
+        setPendingDeleteIds([])
+        deletedMembersRef.current = []
+        dismissToast()
+        showToast('Failed to delete member.', 'error')
+      }
+    }, 5000)
+
+    const handleUndo = () => {
+      clearTimeout(deleteTimeoutRef.current)
+      setPendingDeleteIds([])
+      deletedMembersRef.current = []
+      dismissToast()
+    }
+
+    showToast(`Member deleted`, 'error', { label: 'Undo', onClick: handleUndo })
+  }
+
+  const handleDetailEdit = (member) => {
+    setEditingMemberId(member.id)
+    setFormData({
+      firstName: member.firstName || '',
+      middleInitial: member.middleName || '',
+      lastName: member.lastName || '',
+      email: member.email || '',
+      contactNo: member.contactNo || '',
+      address: member.address || '',
+      gender: member.gender || '',
+      status: member.status || 'New Member',
+      mode: 'admin',
+    })
+    setSelectedMember(null)
+    setShowModal(true)
   }
 
   return (
@@ -433,12 +637,13 @@ const AdminMembers = () => {
                       return (
                       <tr
                         key={member.id}
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                        onClick={(e) => !isPendingDelete && handleRowClick(member, e)}
+                        className={`border-b border-gray-100 transition-colors ${
                           isPendingDelete
                             ? 'bg-red-50'
                             : index % 2 === 0
-                              ? 'bg-white'
-                              : 'bg-gray-50/50'
+                              ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
+                              : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
                         }`}
                       >
                         <td className="py-3 px-5">
@@ -495,6 +700,16 @@ const AdminMembers = () => {
       </div>
       </div>
 
+      {/* ── Member Detail Modal ─────────────────────────────────────────── */}
+      {selectedMember && (
+        <MemberDetailModal
+          member={selectedMember}
+          onClose={() => setSelectedMember(null)}
+          onDelete={handleDetailDelete}
+          onEdit={handleDetailEdit}
+        />
+      )}
+
       {/* Add Member Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -503,7 +718,7 @@ const AdminMembers = () => {
               <button onClick={() => { setShowModal(false); resetForm() }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <ArrowLeft size={20} className="text-[#4A558F]" />
               </button>
-              <h3 className="text-lg font-semibold text-[#4A558F]">Add New Member</h3>
+              <h3 className="text-lg font-semibold text-[#4A558F]">{editingMemberId ? 'Edit Member' : 'Add New Member'}</h3>
             </div>
 
             <div className="p-5">
@@ -551,7 +766,7 @@ const AdminMembers = () => {
               <div className="flex gap-3 mt-8">
                 <button onClick={() => { setShowModal(false); resetForm() }} className="flex-1 bg-gray-200 text-gray-600 rounded-xl py-3 hover:bg-gray-300 transition-colors text-sm font-medium">Cancel</button>
                 <button onClick={handleAddMember} className="flex-1 bg-[#4A558F] text-white rounded-xl py-3 hover:bg-[#3a4575] transition-colors shadow-md text-sm font-medium flex items-center justify-center gap-2">
-                  <Plus size={18} /> Add Member
+                  <Plus size={18} /> {editingMemberId ? 'Update Member' : 'Add Member'}
                 </button>
               </div>
             </div>

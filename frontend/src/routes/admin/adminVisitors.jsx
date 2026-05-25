@@ -221,6 +221,10 @@ const AdminVisitors = () => {
   // --- UI State ---
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('All')
+  const [sortBy, setSortBy] = useState('newest')
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  const filterRef = useRef(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedVisitor, setSelectedVisitor] = useState(null)  
   const [selectedVisitors, setSelectedVisitors] = useState([])
@@ -292,6 +296,16 @@ const AdminVisitors = () => {
   useEffect(() => { fetchVisitors() }, [fetchVisitors])
 
   useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
@@ -300,15 +314,29 @@ const AdminVisitors = () => {
     return () => { clearTimeout(deleteTimeoutRef.current) }
   }, [])
 
-  // --- Search Logic ---
+  // --- Filter & Sort Logic ---
   const filteredVisitors = useMemo(() => {
     const search = debouncedSearch.toLowerCase()
-    return visitors.filter(v => {
-      const name = `${v.firstName || ''} ${v.lastName || v.fullName || ''}`.toLowerCase()
-      const church = (v.churchAffiliation || v.originalChurch || '').toLowerCase()
-      return name.includes(search) || church.includes(search)
-    })
-  }, [visitors, debouncedSearch])
+    return visitors
+      .filter(v => {
+        const name = `${v.firstName || ''} ${v.lastName || v.fullName || ''}`.toLowerCase()
+        const church = (v.churchAffiliation || v.originalChurch || '').toLowerCase()
+        const matchesSearch = name.includes(search) || church.includes(search)
+        const category = v.invitedBy ? 'Invited' : 'Walk-In'
+        const matchesCategory = categoryFilter === 'All' || category === categoryFilter
+        return matchesSearch && matchesCategory
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') {
+          const aName = `${a.firstName || ''} ${a.lastName || ''}`.toLowerCase()
+          const bName = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase()
+          return aName.localeCompare(bName)
+        }
+        if (sortBy === 'newest') return new Date(b.visitedAt) - new Date(a.visitedAt)
+        if (sortBy === 'oldest') return new Date(a.visitedAt) - new Date(b.visitedAt)
+        return 0
+      })
+  }, [visitors, debouncedSearch, categoryFilter, sortBy])
 
   // --- Form Handlers ---
   const handleInputChange = (e) => {
@@ -554,12 +582,47 @@ const AdminVisitors = () => {
                       className="w-full ml-2 focus:outline-none text-sm"
                     />
                   </div>
-                  <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50">
-                    <Filter size={16} /> Filter
-                  </button>
+                  <div className="relative" ref={filterRef}>
+                    <button
+                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"                    >
+                      <Filter size={16} /> Filter & Sort
+                      <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showFilterDropdown && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Category</div>
+                        {['All', 'Invited', 'Walk-In'].map((opt) => (
+                          <button
+                            key={opt}
+                            onClick={() => { setCategoryFilter(opt); setShowFilterDropdown(false) }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${categoryFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                        <div className="my-1 border-t border-gray-100"></div>
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+                        {[
+                          { label: 'Name', val: 'name' },
+                          { label: 'Newest Visit', val: 'newest' },
+                          { label: 'Oldest Visit', val: 'oldest' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.val}
+                            onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 active:scale-95"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
                   >
                     <Download size={16} /> Export
                   </button>

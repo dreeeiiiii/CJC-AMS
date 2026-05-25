@@ -243,9 +243,9 @@ const MemberAnnouncements = () => {
             </div>
           ) : (
             <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-              <p className="text-gray-500 text-lg font-medium">
-                No announcements found matching your search.
-              </p>
+              <div className="text-6xl mb-4">📢</div>
+              <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No announcements found</h3>
+              <p className="text-gray-500 text-sm">We couldn't find any announcements matching your search.</p>
             </div>
           )}
         </div>

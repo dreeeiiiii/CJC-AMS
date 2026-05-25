@@ -49,7 +49,7 @@ export const Login = () => {
         if (user?.role === "ADMIN") {
             navigate('/admin/home');
         } else {
-            navigate('/member');
+            navigate('/member/home');
         }
     };
 

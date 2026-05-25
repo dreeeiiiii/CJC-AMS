@@ -3,6 +3,7 @@ import {
   recordAttendance, 
   getRecentActivity, 
   getAttendanceStats,
+  getAllAttendance,
   exportAttendance,
   deleteAttendance 
 } from "../controllers/attendanceController.js";
@@ -14,6 +15,7 @@ const router = Router();
 router.post("/", protect, adminOnly, recordAttendance);
 router.get("/recent", protect, adminOnly, getRecentActivity);
 router.get("/stats", protect, adminOnly, getAttendanceStats);
+router.get("/", protect, adminOnly, getAllAttendance);
 router.get("/export", protect, adminOnly, exportAttendance);
 router.delete("/:id", protect, adminOnly, deleteAttendance);
 

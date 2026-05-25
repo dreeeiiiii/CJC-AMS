@@ -43,7 +43,7 @@ const AdminAnnouncement = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [deleteModal, setDeleteModal] = useState(null)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [userName, setUserName] = useState('')
+  const [userName, setUserName] = useState('Admin')
 
   const fileInputRef = useRef(null)
 
@@ -70,7 +70,6 @@ const AdminAnnouncement = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            credentials: 'include',
           }
         )
 
@@ -97,7 +96,6 @@ const AdminAnnouncement = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            credentials: 'include',
           }
         )
 
@@ -181,7 +179,6 @@ const AdminAnnouncement = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          credentials: 'include',
           body: formData,
         }
       )
@@ -215,7 +212,6 @@ const AdminAnnouncement = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          credentials: 'include',
         }
       )
 
@@ -262,7 +258,6 @@ const AdminAnnouncement = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          credentials: 'include',
           body: JSON.stringify({
             title: editTitle,
             content: editContent,
@@ -300,7 +295,6 @@ const AdminAnnouncement = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          credentials: 'include',
         }
       )
 
@@ -400,7 +394,7 @@ const AdminAnnouncement = () => {
             <div className="lg:w-1/3 lg:sticky lg:top-24 lg:self-start">
               <div className="flex flex-col gap-6">
                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                  <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, {userName}!</h2>
+                  <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, Admin {userName}!</h2>
                   <p className="text-gray-500 text-sm mt-2">Create and manage announcements for the community.</p>
                   <button className="mt-4 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full justify-center">
                     <Calendar size={18} />

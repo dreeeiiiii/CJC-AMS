@@ -158,6 +158,63 @@ export const getAttendanceStats = async (req: Request, res: Response) => {
 };
 
 /**
+ * GET /api/attendance
+ * Returns all attendance records (no limit)
+ */
+export const getAllAttendance = async (req: Request, res: Response) => {
+    try {
+        const records = await prisma.attendance.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                member: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        category: true,
+                        createdAt: true
+                    }
+                },
+                visitor: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        category: true
+                    }
+                }
+            }
+        });
+
+        const formatted = records.map(record => {
+            const firstName = record.member?.firstName || record.visitor?.firstName || "Unknown";
+            const lastName = record.member?.lastName || record.visitor?.lastName || "User";
+
+            let category = "General";
+            if (record.member?.category) {
+                category = record.member.category;
+            } else if (record.visitor) {
+                category = "Visitor";
+            }
+
+            return {
+                id: record.id,
+                name: `${firstName} ${lastName}`,
+                category,
+                date: record.createdAt.toISOString().split('T')[0],
+                time: record.createdAt.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })
+            };
+        });
+
+        res.json(formatted);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
  * DELETE /api/attendance/:id
  * Deletes a single attendance record
  */

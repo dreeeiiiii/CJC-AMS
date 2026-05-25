@@ -26,8 +26,7 @@ enum Category {
 
 enum AccountStatus {
   ACTIVE
-  DISABLED
-  PENDING
+  INACTIVE
 }
 
 // -------------------- MEMBER PROFILE (NO AUTH HERE) --------------------
@@ -46,6 +45,7 @@ model Member {
   gender       Gender
 
   status       String   @default("New Member")
+  category     String   @default("General")
   profileImage String?
 
   createdAt    DateTime @default(now())

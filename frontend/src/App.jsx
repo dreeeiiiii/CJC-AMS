@@ -13,7 +13,7 @@ import MemberAnnouncements from './routes/members/memberAnnouncement';
 import Visitors from './routes/admin/adminVisitors';
 import Announcements from './routes/admin/adminAnnouncement';
 import Members from './routes/admin/adminMembers';
-// Ensure this path is correct and the component is exported correctly
+import Attendance from './routes/admin/adminAttendance';
 import ProtectedRoute from './components/ProtectedRoutes'; 
 import ErrorPage from './components/ErrorPage';
 
@@ -126,10 +126,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/attendance"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <Attendance />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected Member Dashboard */}
         <Route
-          path="/member"
+          path="/member/home"
           element={
             <ProtectedRoute adminOnly={false}>
               <MemberPage />

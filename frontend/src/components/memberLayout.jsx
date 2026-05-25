@@ -73,7 +73,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   }, []);
 
   const navItems = [
-    { id: "home", label: "Home", icon: Home, path: "/member" },
+    { id: "home", label: "Home", icon: Home, path: "/member/home" },
     { id: "announcements", label: "Announcements", icon: Bell, path: "/member/announcements" },
     { id: "profile", label: "Profile", icon: User, path: "/member/profile" },
   ];
@@ -205,20 +205,28 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
         )}
       </AnimatePresence>
 
-      <aside className="hidden md:flex flex-col w-[22%] lg:w-[20%] fixed left-0 top-16 bottom-0 bg-[#F0F0F5] p-6 border-r border-gray-200">
+      <aside className="hidden md:flex flex-col flex-shrink-0 w-[22%] lg:w-[20%] fixed left-0 top-16 bottom-0 bg-[#F0F0F5] p-6 border-r border-gray-200">
         <div className="flex flex-col items-center text-center mb-10">
           <ProfileAvatar sizeClass="w-24 h-24 mb-4" />
           <p className="font-bold text-[#3B4B89] text-lg leading-tight">{userData.fullName}</p>
           <span className="text-xs font-semibold text-gray-400 mt-2 uppercase tracking-widest">{displayRole}</span>
         </div>
-        <nav className="space-y-2">
-          {navItems.map((item) => (
-            <button key={item.id} onClick={() => handleNavClick(item.id, item.path)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${activeNav === item.id ? "bg-[#3B4B89] text-white shadow-md" : "text-gray-600 hover:bg-white/50"}`}>
-              <item.icon size={20} />
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        {navItems.map((item) => (
+          <button 
+            key={item.id} 
+            onClick={() => handleNavClick(item.id, item.path)} 
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition whitespace-nowrap overflow-hidden ${
+              activeNav === item.id 
+                ? "bg-[#3B4B89] text-white shadow-md" 
+                : "text-gray-600 hover:bg-white/50"
+            }`}
+          >
+            <span className="flex-shrink-0">
+              <item.icon size={18} />
+            </span>
+            <span className="truncate">{item.label}</span>
+          </button>
+        ))}
       </aside>
 
       <main className="md:ml-[22%] lg:ml-[20%] pt-16 min-h-screen transition-all">
