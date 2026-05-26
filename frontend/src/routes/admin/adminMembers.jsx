@@ -687,7 +687,7 @@ const AdminMembers = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-gray-500">{new Date(member.createdAt).toLocaleDateString()}</span>
+                          <span className="text-gray-500">{new Date(member.joinDate).toLocaleDateString()}</span>
                           {isPendingDelete && (
                             <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
                               <Loader2 size={12} className="animate-spin" />

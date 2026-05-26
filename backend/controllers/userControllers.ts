@@ -154,13 +154,14 @@ export const createUsers = async (req: Request, res: Response) => {
 // 📌 Update user (Admin Dashboard endpoint)
 export const updateUsers = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { firstName, lastName, middleName, contactNo, address, gender, role, password, status, profileImage, joinDate } = req.body;
+  const { firstName, lastName, middleName, email, contactNo, address, gender, role, password, status, profileImage, joinDate } = req.body;
 
   try {
     const updateData: any = {
       firstName,
       lastName,
       middleName,
+      email,
       contactNo,
       address,
       gender,
@@ -329,6 +330,49 @@ export const uploadProfileImageController = async (req: AuthRequest, res: Respon
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Change password for authenticated user
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current password and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const user = await prisma.member.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.member.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
   }
 };
 

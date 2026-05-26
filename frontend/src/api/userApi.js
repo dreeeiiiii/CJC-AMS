@@ -16,6 +16,11 @@ export const updateMyProfile = async (data) => {
   return res.data;
 };
 
+export const changePassword = async (currentPassword, newPassword) => {
+  const res = await axios.put(`${API_URL}/api/users/me/password`, { currentPassword, newPassword }, authHeader());
+  return res.data;
+};
+
 export const uploadProfileImage = async (file) => {
   const formData = new FormData();
   formData.append('profileImage', file);

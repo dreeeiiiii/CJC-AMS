@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, Users } from "lucide-react";
+import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import AdminNavbar from "../../components/adminNavbar";
 import Footer from "../../components/footer";
-import { fetchMyProfile, updateMyProfile } from "../../api/userApi";
+import { fetchMyProfile, updateMyProfile, changePassword } from "../../api/userApi";
 
 const AdminProfile = () => {
   const [editMode, setEditMode] = useState(false);
@@ -33,6 +33,12 @@ const AdminProfile = () => {
   const [pendingImage, setPendingImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
+  const [showPassword, setShowPassword] = useState({ current: false, new: false, confirm: false });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -243,13 +249,22 @@ const AdminProfile = () => {
         </h1>
 
         <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-[30px] p-6 md:p-10 lg:p-12 shadow-sm relative">
-          <button
-            onClick={handleEditToggle}
-            className="absolute top-6 right-6 flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition shadow-sm z-10"
-          >
-            <Pencil size={14} />
-            Edit
-          </button>
+          <div className="absolute top-6 right-6 flex gap-2 z-10">
+            <button
+              onClick={() => setShowChangePassword(true)}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition shadow-sm"
+            >
+              <Lock size={14} />
+              Change Password
+            </button>
+            <button
+              onClick={handleEditToggle}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition shadow-sm"
+            >
+              <Pencil size={14} />
+              Edit
+            </button>
+          </div>
 
           {/* Profile Header */}
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
@@ -449,6 +464,122 @@ const AdminProfile = () => {
                   }`}
                 >
                   {saved ? "Saved!" : "Save Changes"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {showChangePassword && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => { setShowChangePassword(false); setPasswordError(""); setPasswordSuccess(""); setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" }); }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800">Change Password</h3>
+                <button
+                  onClick={() => { setShowChangePassword(false); setPasswordError(""); setPasswordSuccess(""); setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" }); }}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {passwordError && (
+                  <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                    {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+                    {passwordSuccess}
+                  </div>
+                )}
+
+                {[
+                  { label: "Current Password", key: "currentPassword", showKey: "current" },
+                  { label: "New Password", key: "newPassword", showKey: "new" },
+                  { label: "Confirm New Password", key: "confirmNewPassword", showKey: "confirm" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword[field.showKey] ? "text" : "password"}
+                        placeholder={field.label}
+                        value={passwordForm[field.key]}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, [field.key]: e.target.value })}
+                        className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword({ ...showPassword, [field.showKey]: !showPassword[field.showKey] })}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword[field.showKey] ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <button
+                  onClick={async () => {
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmNewPassword) {
+                      setPasswordError("All fields are required");
+                      return;
+                    }
+                    if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+                      setPasswordError("New passwords do not match");
+                      return;
+                    }
+                    if (passwordForm.newPassword.length < 6) {
+                      setPasswordError("New password must be at least 6 characters");
+                      return;
+                    }
+                    setIsChangingPassword(true);
+                    try {
+                      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+                      setPasswordSuccess("Password changed successfully");
+                      setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
+                      setTimeout(() => {
+                        setShowChangePassword(false);
+                        setPasswordSuccess("");
+                      }, 1500);
+                    } catch (err) {
+                      setPasswordError(err.response?.data?.message || "Failed to change password");
+                    } finally {
+                      setIsChangingPassword(false);
+                    }
+                  }}
+                  disabled={isChangingPassword}
+                  className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-[#364687] hover:bg-[#2d3a6a] transition disabled:opacity-70 flex items-center gap-2"
+                >
+                  {isChangingPassword ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {isChangingPassword ? "Changing..." : "Change Password"}
+                </button>
+                <button
+                  onClick={() => { setShowChangePassword(false); setPasswordError(""); setPasswordSuccess(""); setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" }); }}
+                  className="px-5 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+                >
+                  Cancel
                 </button>
               </div>
             </motion.div>
