@@ -39,6 +39,12 @@ const AdminAnnouncement = () => {
   const [editAuthor, setEditAuthor] = useState('')
   const [editLink, setEditLink] = useState('')
 
+  // Pagination states
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [stats, setStats] = useState({ total: 0, thisWeek: 0, withImages: 0 })
+  const ITEMS_PER_PAGE = 5
+
   // UI states
   const [isLoading, setIsLoading] = useState(false)
   const [deleteModal, setDeleteModal] = useState(null)
@@ -64,7 +70,7 @@ const AdminAnnouncement = () => {
     const fetchAnnouncements = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/api/announcements`,
+          `${API_URL}/api/announcements?page=1&limit=${ITEMS_PER_PAGE}`,
           {
             method: 'GET',
             headers: {
@@ -75,7 +81,10 @@ const AdminAnnouncement = () => {
 
         if (response.ok) {
           const data = await response.json()
-          setAnnouncements(data)
+          setAnnouncements(data.data || [])
+          setHasMore(data.hasMore !== false)
+          setStats(data.stats || { total: 0, thisWeek: 0, withImages: 0 })
+          setPage(1)
         }
       } catch (error) {
         console.error('Failed to load announcements:', error)
@@ -187,6 +196,11 @@ const AdminAnnouncement = () => {
         const newPost = await response.json()
 
         setAnnouncements((prev) => [newPost, ...prev])
+        setStats((prev) => ({
+          total: prev.total + 1,
+          thisWeek: prev.thisWeek + 1,
+          withImages: newPost.image ? prev.withImages + 1 : prev.withImages,
+        }))
 
         // Reset form
         setPostTitle('')
@@ -216,9 +230,16 @@ const AdminAnnouncement = () => {
       )
 
       if (response.ok) {
+        const deleted = announcements.find((a) => a.id === id)
+
         setAnnouncements((prev) =>
           prev.filter((a) => a.id !== id)
         )
+        setStats((prev) => ({
+          total: Math.max(0, prev.total - 1),
+          thisWeek: Math.max(0, prev.thisWeek - 1),
+          withImages: deleted?.image ? Math.max(0, prev.withImages - 1) : prev.withImages,
+        }))
 
         setDeleteModal(null)
       }
@@ -286,10 +307,11 @@ const AdminAnnouncement = () => {
 
   const handleLoadMore = async () => {
     setLoadingMore(true)
+    const nextPage = page + 1
 
     try {
       const response = await fetch(
-        `${API_URL}/api/announcements`,
+        `${API_URL}/api/announcements?page=${nextPage}&limit=${ITEMS_PER_PAGE}`,
         {
           method: 'GET',
           headers: {
@@ -299,14 +321,19 @@ const AdminAnnouncement = () => {
       )
 
       if (response.ok) {
-        const moreData = await response.json()
+        const result = await response.json()
 
-        if (moreData.length > 0) {
-          setAnnouncements((prev) => [
-            ...prev,
-            ...moreData,
-          ])
-        }
+        setAnnouncements((prev) => {
+          const existingIds = new Set(prev.map((a) => a.id))
+          const newItems = (result.data || []).filter(
+            (a) => !existingIds.has(a.id)
+          )
+          return [...prev, ...newItems]
+        })
+
+        setHasMore(result.hasMore !== false)
+        setStats(result.stats || { total: 0, thisWeek: 0, withImages: 0 })
+        setPage(nextPage)
       }
     } catch (error) {
       console.error('Error loading more entries:', error)
@@ -405,20 +432,18 @@ const AdminAnnouncement = () => {
                 {/* Quick Stats */}
                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-600 mb-4">Announcement Stats</h3>
-                  <div className="space-y-3">
+                    <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Total Posts</span>
-                      <span className="font-semibold text-[#4A558F]">{announcements.length}</span>
+                      <span className="font-semibold text-[#4A558F]">{stats.total}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">This Week</span>
-                      <span className="font-semibold text-[#4A558F]">2</span>
+                      <span className="font-semibold text-[#4A558F]">{stats.thisWeek}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">With Images</span>
-                      <span className="font-semibold text-[#4A558F]">
-                        {announcements.filter(a => a.image).length}
-                      </span>
+                      <span className="font-semibold text-[#4A558F]">{stats.withImages}</span>
                     </div>
                   </div>
                 </div>
@@ -714,21 +739,25 @@ const AdminAnnouncement = () => {
 
               {/* Load More */}
               {announcements.length > 0 && (
-                <div className="flex justify-center">
+                <div className="flex justify-center pt-2">
                   <button
                     onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="flex items-center gap-2 text-sm text-[#4A558F] hover:text-[#3a4575] transition-colors disabled:opacity-50"
+                    disabled={loadingMore || !hasMore}
+                    className={`flex items-center gap-2 px-8 py-3 rounded-xl border-2 text-sm font-semibold shadow-sm transition-all duration-300 ${
+                      hasMore
+                        ? 'border-[#D9DFF2] text-[#4A558F] bg-white hover:bg-[#D9DFF2] hover:border-[#4A558F]'
+                        : 'border-gray-200 text-gray-400 bg-gray-50 cursor-default'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {loadingMore ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" />
+                        <Loader2 size={18} className="animate-spin" />
                         Loading...
                       </>
+                    ) : hasMore ? (
+                      'Load More Announcements'
                     ) : (
-                      <>
-                        Load More
-                      </>
+                      'All announcements loaded'
                     )}
                   </button>
                 </div>
@@ -739,7 +768,7 @@ const AdminAnnouncement = () => {
 
         {/* Delete Confirmation Modal */}
         {deleteModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
             <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={24} className="text-red-600" />

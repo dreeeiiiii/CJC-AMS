@@ -16,11 +16,39 @@ const formatDate = () => {
  */
 export const getAnnouncements = async (req: Request, res: Response): Promise<any> => {
   try {
-    const announcements = await prisma.announcement.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 5, 1), 50);
+    const skip = (page - 1) * limit;
 
-    return res.status(200).json(announcements);
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const [announcements, total, thisWeekCount, withImagesCount] = await Promise.all([
+      prisma.announcement.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.announcement.count(),
+      prisma.announcement.count({
+        where: { createdAt: { gte: startOfWeek } },
+      }),
+      prisma.announcement.count({
+        where: { image: { not: null } },
+      }),
+    ]);
+
+    return res.status(200).json({
+      data: announcements,
+      hasMore: skip + announcements.length < total,
+      stats: {
+        total,
+        thisWeek: thisWeekCount,
+        withImages: withImagesCount,
+      },
+    });
   } catch (error: any) {
     console.error("Fetch Announcements Error:", error);
     return res.status(500).json({
