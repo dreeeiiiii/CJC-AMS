@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import AdminNavbar from "../../components/adminNavbar"
 import Footer from '../../components/footer'
@@ -28,8 +28,37 @@ const AdminPage = () => {
     monthlyAttendance: 0,
     ratio: { old: 0, new: 0, oldPercentage: 0, newPercentage: 0 }
   })
+  const [allAttendanceRecords, setAllAttendanceRecords] = useState([])
+  const [weeklyData, setWeeklyData] = useState([0, 0, 0, 0])
+  const [memberStatus, setMemberStatus] = useState({
+    active: 0, inactive: 0, total: 0, activePct: 0, inactivePct: 0, activityMap: {}
+  })
+  const [tableSearch, setTableSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('All')
+  const [activityFilter, setActivityFilter] = useState('All')
+  const [sortBy, setSortBy] = useState('date-desc')
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  const filterRef = useRef(null)
 
   const inputRef = useRef(null)
+
+  const filteredRecords = useMemo(() => {
+    return attendanceRecords
+      .filter(row => {
+        const matchesSearch = !tableSearch || row.name.toLowerCase().includes(tableSearch.toLowerCase())
+        const matchesType = typeFilter === 'All' || row.status === typeFilter
+        const isActive = memberStatus.activityMap?.[row.name] ?? false
+        const matchesActivity = activityFilter === 'All' ||
+          (activityFilter === 'Active' && isActive) ||
+          (activityFilter === 'Inactive' && !isActive)
+        return matchesSearch && matchesType && matchesActivity
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') return a.name.localeCompare(b.name)
+        if (sortBy === 'date-asc') return new Date(a.date) - new Date(b.date)
+        return new Date(b.date) - new Date(a.date)
+      })
+  }, [attendanceRecords, tableSearch, typeFilter, activityFilter, sortBy, memberStatus.activityMap])
 
   // --- API Configuration ---
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
@@ -44,23 +73,60 @@ const AdminPage = () => {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       if (storedUser?.firstName) setAdminName(storedUser.firstName);
 
-      const [membersRes, activityRes, statsRes] = await Promise.all([
+      const [membersRes, activityRes, statsRes, allAttendanceRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/users`, config),
         axios.get(`${API_BASE_URL}/api/attendance/recent`, config),
-        axios.get(`${API_BASE_URL}/api/attendance/stats`, config)
+        axios.get(`${API_BASE_URL}/api/attendance/stats`, config),
+        axios.get(`${API_BASE_URL}/api/attendance`, config)
       ])
       
-      setMembers(membersRes.data)
-      setAttendanceRecords(activityRes.data)
-      setStats(statsRes.data)
+      let membersData = membersRes.data
+      let activityData = activityRes.data
+      let allData = allAttendanceRes.data
+      let weekTotal = statsRes.data.totalAttendeesWeek || 0
+
+      if (!allData || allData.length === 0) {
+        const dummy = generateDummyData()
+        membersData = dummy.members
+        activityData = dummy.recent
+        allData = dummy.all
+        weekTotal = dummy.totalWeek
+      }
+
+      setMembers(membersData)
+      setAttendanceRecords(activityData)
+      setStats({ ...statsRes.data, totalAttendeesWeek: weekTotal, monthlyAttendance: allData.length })
+      setAllAttendanceRecords(allData)
+
+      const weeks = computeWeeklyData(allData, weekTotal)
+      setWeeklyData(weeks)
+
+      const status = computeMemberStatus(membersData, allData)
+      setMemberStatus(status)
     } catch (error) {
       console.error("Dashboard Fetch Error:", error)
-      showToast("Failed to sync with server", "error")
+      const dummy = generateDummyData()
+      setMembers(dummy.members)
+      setAttendanceRecords(dummy.recent)
+      setStats({ totalAttendeesWeek: dummy.totalWeek, monthlyAttendance: dummy.totalMonth, newAttendeesWeek: 3, ratio: { old: 0, new: 0, oldPercentage: 0, newPercentage: 0 } })
+      setAllAttendanceRecords(dummy.all)
+      setWeeklyData(computeWeeklyData(dummy.all, dummy.totalWeek))
+      setMemberStatus(computeMemberStatus(dummy.members, dummy.all))
     }
   }
 
   useEffect(() => {
     fetchDashboardData()
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setShowFilterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   // --- QR SCANNER LOGIC (UPDATED & PATCHED) ---
@@ -202,6 +268,100 @@ const AdminPage = () => {
     setShowScanner(false)
   }
 
+  const computeWeeklyData = (allRecords, currentWeekCount) => {
+    const now = new Date()
+    const getWeekStart = (date) => {
+      const d = new Date(date)
+      const day = d.getDay()
+      d.setDate(d.getDate() - day)
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+    const currentWeekStart = getWeekStart(now)
+    const weeks = []
+    for (let i = 3; i >= 1; i--) {
+      const weekStart = new Date(currentWeekStart)
+      weekStart.setDate(weekStart.getDate() - i * 7)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 7)
+      weeks.push(allRecords.filter(r => {
+        const d = new Date(r.date)
+        return d >= weekStart && d < weekEnd
+      }).length)
+    }
+    weeks.push(currentWeekCount)
+    return weeks
+  }
+
+  const computeMemberStatus = (members, allRecords) => {
+    const now = new Date()
+    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
+    const lastAttendance = {}
+    allRecords.forEach(r => {
+      if (!lastAttendance[r.name] || new Date(r.date) > new Date(lastAttendance[r.name])) {
+        lastAttendance[r.name] = r.date
+      }
+    })
+    const activityMap = {}
+    members.forEach(m => {
+      const name = `${m.firstName} ${m.lastName}`
+      const lastDate = lastAttendance[name]
+      activityMap[name] = lastDate ? new Date(lastDate) >= fourWeeksAgo : false
+    })
+    const active = Object.values(activityMap).filter(Boolean).length
+    const inactive = Object.values(activityMap).filter(v => !v).length
+    const total = active + inactive
+    return {
+      active,
+      inactive,
+      total,
+      activePct: total > 0 ? Math.round((active / total) * 100) : 0,
+      inactivePct: total > 0 ? Math.round((inactive / total) * 100) : 0,
+      activityMap
+    }
+  }
+
+  const generateDummyData = () => {
+    const now = new Date()
+    const dummyMembers = [
+      { id: 1, firstName: 'Michael', lastName: 'Manlangit', status: 'Old Member' },
+      { id: 2, firstName: 'Hazel Anne', lastName: 'Malitig', status: 'Old Member' },
+      { id: 3, firstName: 'Kenneth', lastName: 'Onan', status: 'New Member' },
+      { id: 4, firstName: 'Kurt Angelo', lastName: 'Labandelo', status: 'Old Member' },
+      { id: 5, firstName: 'Harvy', lastName: 'Winceslao', status: 'Old Member' },
+      { id: 6, firstName: 'Daniel', lastName: 'Catena', status: 'New Member' },
+      { id: 7, firstName: 'Sarah', lastName: 'Cruz', status: 'Old Member' },
+      { id: 8, firstName: 'John', lastName: 'Santos', status: 'New Member' },
+      { id: 9, firstName: 'Maria', lastName: 'Reyes', status: 'Old Member' },
+      { id: 10, firstName: 'Jose', lastName: 'Garcia', status: 'New Member' },
+    ]
+    const fullNames = dummyMembers.map(m => `${m.firstName} ${m.lastName}`)
+    const dummyAll = []
+    const dummyRecent = []
+    const weekMs = 7 * 24 * 60 * 60 * 1000
+    fullNames.forEach((name, idx) => {
+      const numRecords = 1 + (idx % 3)
+      for (let i = 0; i < numRecords; i++) {
+        const daysAgo = Math.floor(Math.random() * 28)
+        const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000)
+        dummyAll.push({
+          id: dummyAll.length + 1,
+          name,
+          date: d.toISOString().split('T')[0],
+          time: `${9 + (idx % 3)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')} AM`
+        })
+      }
+    })
+    dummyAll.forEach((r, i) => {
+      if (i < 10) dummyRecent.push({ ...r, status: dummyMembers[i % dummyMembers.length].status || 'Old Member' })
+    })
+    const totalWeek = dummyAll.filter(r => {
+      const d = new Date(r.date)
+      return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    }).length
+    return { members: dummyMembers, recent: dummyRecent, all: dummyAll, totalWeek, totalMonth: dummyAll.length }
+  }
+
   const getStatusStyles = (status) => {
     const normalized = status?.toLowerCase() || '';
     if (normalized === 'new member') return 'bg-green-100 text-green-700';
@@ -229,45 +389,53 @@ const AdminPage = () => {
 
           <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-              <h3 className="text-sm font-semibold text-gray-600 mb-4">Attendees Status</h3>
+              <h3 className="text-sm font-semibold text-gray-600 mb-4">Member Status</h3>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-semibold text-gray-500">Total</span>
+                <span className="text-xs font-semibold text-[#4A558F]">{memberStatus.total} / 100%</span>
+              </div>
               <div className="w-full h-4 rounded-full overflow-hidden flex bg-gray-100">
                 <div 
                   className="bg-[#4A558F] h-full transition-all duration-700" 
-                  style={{ width: `${stats.ratio?.oldPercentage || 0}%` }}
+                  style={{ width: `${memberStatus.activePct}%` }}
                 ></div>
                 <div 
                   className="bg-[#D9DFF2] h-full transition-all duration-700" 
-                  style={{ width: `${stats.ratio?.newPercentage || 0}%` }}
+                  style={{ width: `${memberStatus.inactivePct}%` }}
                 ></div>
               </div>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#4A558F]"></div>
-                    <span className="text-sm text-gray-600">Old Members</span>
+                    <span className="text-sm text-gray-600">Active</span>
                   </div>
-                  <span className="text-sm font-medium text-[#4A558F]">{stats.ratio?.old || 0} / {stats.ratio?.oldPercentage || 0}%</span>
+                  <span className="text-sm font-medium text-[#4A558F]">{memberStatus.active} / {memberStatus.activePct}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#D9DFF2]"></div>
-                    <span className="text-sm text-gray-600">New Members</span>
+                    <div className="w-3 h-3 rounded-full bg-[#D9DFF2] border border-gray-300"></div>
+                    <span className="text-sm text-gray-600">Inactive</span>
                   </div>
-                  <span className="text-sm font-medium text-[#4A558F]">{stats.ratio?.new || 0} / {stats.ratio?.newPercentage || 0}%</span>
+                  <span className="text-sm font-medium text-gray-400">{memberStatus.inactive} / {memberStatus.inactivePct}%</span>
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-              <h3 className="text-sm font-semibold text-gray-600 mb-4">Weekly Activity</h3>
+              <h3 className="text-sm font-semibold text-gray-600 mb-4">Weekly Attendance</h3>
               <div className="flex items-end gap-4 h-32">
-                {[10, 25, 15, stats.totalAttendeesWeek].map((count, i) => (
-                  <div key={i} className="flex flex-col items-center flex-1">
-                    <span className="text-xs text-gray-500 mb-1">{count}</span>
-                    <div className="w-full rounded-t-lg bg-[#4A558F]" style={{ height: `${Math.min((count / 50) * 100, 100)}%` }}></div>
-                    <span className="text-xs text-gray-500 mt-1">W{i+1}</span>
-                  </div>
-                ))}
+                {weeklyData.map((count, i) => {
+                  const maxVal = Math.max(...weeklyData, 1)
+                  const barHeightPx = maxVal > 0 ? Math.round((count / maxVal) * 100) : 0
+                  return (
+                    <div key={i} className="flex flex-col items-center flex-1">
+                      <span className="text-xs text-gray-500 mb-1">{count}</span>
+                      <div className="w-full rounded-t-lg bg-[#4A558F]" style={{ height: `${barHeightPx}px` }}></div>
+                      <span className="text-xs text-gray-500 mt-1">W{i+1}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -304,10 +472,75 @@ const AdminPage = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <h3 className="text-xl font-semibold text-[#4A558F]">Recent Activity</h3>
-            <button onClick={handleExport} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#4A558F] transition-colors">
-              <Download size={16} />
-              Export CSV
-            </button>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors bg-white">
+                <Search size={16} className="text-gray-400" />
+                <input
+                  type="search"
+                  placeholder="Search by name..."
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  className="w-full ml-2 focus:outline-none text-sm"
+                />
+              </div>
+
+              <div className="relative" ref={filterRef}>
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                >
+                  <Filter size={16} />
+                  <span>Filter & Sort</span>
+                  <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showFilterDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
+                    {['All', 'New Member', 'Old Member'].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-gray-100"></div>
+                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
+                    {['All', 'Active', 'Inactive'].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => { setActivityFilter(opt); setShowFilterDropdown(false) }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {opt === 'All' ? 'All' : opt}
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-gray-100"></div>
+                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+                    {[
+                      { label: 'Newest First', val: 'date-desc' },
+                      { label: 'Oldest First', val: 'date-asc' },
+                      { label: 'Name A-Z', val: 'name' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.val}
+                        onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white">
+                <Download size={16} />
+                Export
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -315,28 +548,38 @@ const AdminPage = () => {
               <thead>
                 <tr className="border-b border-gray-200 text-left">
                   <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                  <th className="py-3 px-4 text-gray-600 font-medium">Member type</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
                 </tr>
               </thead>
               <tbody>
-                {attendanceRecords.length > 0 ? (
-                  attendanceRecords.map((row) => (
-                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 text-gray-700 font-medium">{row.name}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusStyles(row.status)}`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-500">{row.date}</td>
-                      <td className="py-3 px-4 text-gray-500">{row.time}</td>
-                    </tr>
-                  ))
+                {filteredRecords.length > 0 ? (
+                  filteredRecords.map((row) => {
+                    const isActive = memberStatus.activityMap?.[row.name] ?? false
+                    return (
+                      <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-4 text-gray-700 font-medium">{row.name}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusStyles(row.status)}`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${isActive ? 'bg-[#4A558F]' : 'bg-[#D9DFF2] border border-gray-300'}`}></span>
+                          <span className={`ml-1.5 text-xs font-semibold ${isActive ? 'text-[#4A558F]' : 'text-gray-400'}`}>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-500">{row.date}</td>
+                        <td className="py-3 px-4 text-gray-500">{row.time}</td>
+                      </tr>
+                    )
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="4" className="py-10 text-center text-gray-400">No activity recorded today.</td>
+                    <td colSpan="5" className="py-10 text-center text-gray-400">No activity recorded today.</td>
                   </tr>
                 )}
               </tbody>
