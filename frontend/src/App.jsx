@@ -14,6 +14,7 @@ import Visitors from './routes/admin/adminVisitors';
 import Announcements from './routes/admin/adminAnnouncement';
 import Members from './routes/admin/adminMembers';
 import Attendance from './routes/admin/adminAttendance';
+import AdminProfile from './routes/admin/adminProfile';
 import ProtectedRoute from './components/ProtectedRoutes'; 
 import ErrorPage from './components/ErrorPage';
 
@@ -131,6 +132,14 @@ function App() {
           element={
             <ProtectedRoute adminOnly={true}>
               <Attendance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminProfile />
             </ProtectedRoute>
           }
         />

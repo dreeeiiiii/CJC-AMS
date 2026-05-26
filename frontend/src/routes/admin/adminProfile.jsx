@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import MemberLayout from "../../components/MemberLayout";
+import AdminNavbar from "../../components/adminNavbar";
+import Footer from "../../components/footer";
 import { fetchMyProfile, updateMyProfile } from "../../api/userApi";
 
-const MemberProfile = () => {
+const AdminProfile = () => {
   const [editMode, setEditMode] = useState(false);
   const qrRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -22,16 +23,15 @@ const MemberProfile = () => {
     group: "",
     joinDate: "",
     id: "N/A",
-    profileImage: null, 
-    role: "MEMBER"
+    profileImage: null,
+    role: "ADMIN"
   });
 
   const [editForm, setEditForm] = useState({ ...userData });
   const [saved, setSaved] = useState(false);
-  
-  // States for database-backed file streams
-  const [pendingImage, setPendingImage] = useState(null); // Base64 for local client rendering path
-  const [selectedFile, setSelectedFile] = useState(null); // The raw binary Blob file object 
+
+  const [pendingImage, setPendingImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -52,9 +52,9 @@ const MemberProfile = () => {
           status: serverUser.status || "",
           group: serverUser.group || "",
           joinDate: serverUser.joinDate || serverUser.createdAt || "",
-          id: serverUser.id || "CJC-2024-001",
+          id: serverUser.id || "N/A",
           profileImage: serverUser.profileImage || null,
-          role: serverUser.role || "MEMBER"
+          role: serverUser.role || "ADMIN"
         };
         setUserData(profileData);
         setEditForm(profileData);
@@ -74,9 +74,9 @@ const MemberProfile = () => {
             status: parsed.status || "",
             group: parsed.group || "",
             joinDate: parsed.joinDate || parsed.createdAt || "",
-            id: parsed.id || "CJC-2024-001",
+            id: parsed.id || "N/A",
             profileImage: parsed.profileImage || null,
-            role: parsed.role || "MEMBER"
+            role: parsed.role || "ADMIN"
           };
           setUserData(initialData);
           setEditForm(initialData);
@@ -103,12 +103,9 @@ const MemberProfile = () => {
       email: editForm.email,
       contactNo: editForm.contact,
       address: editForm.address,
-      gender: editForm.gender,
-      group: editForm.group,
       joinDate: editForm.joinDate || undefined,
     };
 
-    // Optimistic UI updates
     const optimisticData = { ...userData, ...editForm };
     setUserData(optimisticData);
     setEditForm(optimisticData);
@@ -130,10 +127,6 @@ const MemberProfile = () => {
         email: serverUser.email || optimisticData.email,
         contact: serverUser.contactNo || serverUser.contact || optimisticData.contact,
         address: serverUser.address || optimisticData.address,
-        gender: serverUser.gender || optimisticData.gender,
-        status: serverUser.status || optimisticData.status,
-        group: serverUser.group || optimisticData.group,
-        joinDate: serverUser.joinDate || serverUser.createdAt || optimisticData.joinDate,
         profileImage: serverUser.profileImage || optimisticData.profileImage,
       };
       setUserData(syncedData);
@@ -141,7 +134,7 @@ const MemberProfile = () => {
       localStorage.setItem("user", JSON.stringify(serverUser));
       window.dispatchEvent(new Event("userDataUpdated"));
     } catch (err) {
-      console.error("Failed to save profile fields securely:", err);
+      console.error("Failed to save profile fields:", err);
       setUserData(prevUserData);
       setEditForm(prevUserData);
       window.dispatchEvent(new Event("userDataUpdated"));
@@ -151,10 +144,10 @@ const MemberProfile = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file); 
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPendingImage(reader.result); 
+        setPendingImage(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -177,17 +170,16 @@ const MemberProfile = () => {
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to upload image link to server");
+      if (!response.ok) throw new Error("Failed to upload image");
 
       const data = await response.json();
-      const newImageUrl = data.imageUrl; // Direct link parsed out from destination disk or cloud infrastructure
+      const newImageUrl = data.imageUrl;
 
       const updatedProfileState = {
         ...userData,
         profileImage: newImageUrl
       };
 
-      // Forces persistent synchronization across all browser layers
       setUserData(updatedProfileState);
       setEditForm(updatedProfileState);
 
@@ -199,7 +191,7 @@ const MemberProfile = () => {
       window.dispatchEvent(new Event("userDataUpdated"));
 
     } catch (error) {
-      console.error("Error linking image metadata profile upload:", error);
+      console.error("Error uploading profile image:", error);
       setUserData(prev => ({ ...prev, profileImage: prevImage }));
       setEditForm(prev => ({ ...prev, profileImage: prevImage }));
     } finally {
@@ -242,13 +234,15 @@ const MemberProfile = () => {
   };
 
   return (
-    <MemberLayout activeNav="profile">
-      <div className="px-6 md:px-12 py-10 md:py-14 bg-white min-h-[calc(100vh-4rem)] font-montserrat">
-        <h1 className="text-3xl md:text-4xl font-bold text-[#3B4B89] text-center mb-10">
-          My Profile
+    <div className="min-h-screen flex flex-col bg-gray-50 font-montserrat">
+      <AdminNavbar />
+
+      <div className="flex-1 px-6 md:px-12 py-10 md:py-14">
+        <h1 className="text-3xl md:text-4xl font-bold text-[#364687] text-center mb-10">
+          Admin Profile
         </h1>
 
-        <div className="max-w-4xl mx-auto bg-[#F0F2F9] border border-gray-400 rounded-[30px] p-6 md:p-10 lg:p-12 relative">
+        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-[30px] p-6 md:p-10 lg:p-12 shadow-sm relative">
           <button
             onClick={handleEditToggle}
             className="absolute top-6 right-6 flex items-center gap-1.5 px-3 py-2 border border-gray-300 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition shadow-sm z-10"
@@ -257,11 +251,12 @@ const MemberProfile = () => {
             Edit
           </button>
 
+          {/* Profile Header */}
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
             <div className="flex flex-col items-center">
-              <div 
-                  className="relative group cursor-pointer w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-[#3B4B89] overflow-hidden bg-white shadow-lg"
-                  onClick={() => fileInputRef.current.click()}
+              <div
+                className="relative group cursor-pointer w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-[#364687] overflow-hidden bg-white shadow-lg"
+                onClick={() => fileInputRef.current.click()}
               >
                 {(userData.profileImage || pendingImage) ? (
                   <img src={pendingImage || userData.profileImage} alt="Profile" className="w-full h-full object-cover" />
@@ -275,19 +270,19 @@ const MemberProfile = () => {
                 </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
               </div>
-              
+
               {pendingImage && (
                 <div className="flex gap-2 mt-3">
-                  <button 
-                    onClick={handleSaveImage} 
+                  <button
+                    onClick={handleSaveImage}
                     disabled={isUploading}
-                    className="px-4 py-1.5 bg-[#3B4B89] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1 disabled:opacity-70"
+                    className="px-4 py-1.5 bg-[#364687] text-white text-xs font-medium rounded-lg hover:bg-[#2d3a6a] transition flex items-center gap-1 disabled:opacity-70"
                   >
-                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
+                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                     {isUploading ? "Saving..." : "Save Photo"}
                   </button>
-                  <button 
-                    onClick={handleCancelImage} 
+                  <button
+                    onClick={handleCancelImage}
                     disabled={isUploading}
                     className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition disabled:opacity-70"
                   >
@@ -298,99 +293,109 @@ const MemberProfile = () => {
             </div>
 
             <div className="text-center md:text-left flex-1">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#3B4B89]">{formattedFullName}</h2>
-              <span className="inline-block mt-2 px-3 py-1 bg-[#3B4B89]/10 text-[#3B4B89] text-xs font-semibold uppercase tracking-wider rounded-full">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#364687]">{formattedFullName}</h2>
+              <span className="inline-block mt-2 px-3 py-1 bg-[#364687]/10 text-[#364687] text-xs font-semibold uppercase tracking-wider rounded-full">
                 <Shield size={12} className="inline mr-1" />
-                CJC Member
+                Administrator
               </span>
 
               <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-3 text-sm">
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">First Name</p>
-                  <p className="text-[#3B4B89] font-bold">{userData.firstName}</p>
+                  <p className="text-gray-500 font-medium">First Name</p>
+                  <p className="text-[#364687] font-bold">{userData.firstName}</p>
                 </div>
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">Middle Name</p>
-                  <p className="text-[#3B4B89] font-bold">{userData.middleName || "—"}</p>
+                  <p className="text-gray-500 font-medium">Middle Name</p>
+                  <p className="text-[#364687] font-bold">{userData.middleName || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">Last Name</p>
-                  <p className="text-[#3B4B89] font-bold">{userData.lastName}</p>
+                  <p className="text-gray-500 font-medium">Last Name</p>
+                  <p className="text-[#364687] font-bold">{userData.lastName}</p>
                 </div>
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">Gender</p>
-                  <p className="text-[#3B4B89] font-bold">{userData.gender || "—"}</p>
+                  <p className="text-gray-500 font-medium">Gender</p>
+                  <p className="text-[#364687] font-bold">{userData.gender || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">Status</p>
+                  <p className="text-gray-500 font-medium">Status</p>
                   <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded-full ${userData.status === "Active" || userData.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                     {userData.status || "Active"}
                   </span>
                 </div>
                 <div>
-                  <p className="text-[#5A6BA8] font-medium">Group</p>
-                  <p className="text-[#3B4B89] font-bold">{userData.group || "—"}</p>
+                  <p className="text-gray-500 font-medium">Group</p>
+                  <p className="text-[#364687] font-bold">{userData.group || "—"}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-            <div className="flex-1 space-y-5">
-              <h3 className="text-lg font-semibold text-[#3B4B89] mb-4">Contact Details</h3>
-              <div className="space-y-4">
-                {[
-                  { label: "Email Address", value: userData.email },
-                  { label: "Contact Number", value: userData.contact },
-                  { label: "Address", value: userData.address },
-                  { label: "Member ID", value: `CJC-${String(userData.id).padStart(4, '0')}` }
-                ].map((item, index) => (
-                  <div key={index}>
-                    <p className="text-[#5A6BA8] text-sm font-medium mb-1">{item.label}</p>
-                    <p className="text-[#3B4B89] text-base font-bold">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:w-72 flex-shrink-0 space-y-6">
-              <div className="bg-[#F0F2F9] rounded-2xl p-5 border border-gray-200">
-                <h3 className="text-sm font-semibold text-[#3B4B89] flex items-center gap-2 mb-4">
-                  <Calendar size={16} />
-                  Account Info
+          <div className="border-t border-gray-200 pt-8">
+            <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+              {/* Contact Details */}
+              <div className="flex-1 space-y-5">
+                <h3 className="text-lg font-semibold text-[#364687] flex items-center gap-2">
+                  <Users size={18} />
+                  Contact Details
                 </h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-[#5A6BA8]">Member Since</p>
-                    <p className="text-[#3B4B89] font-semibold">{formatDate(userData.joinDate)}</p>
-                  </div>
+                <div className="space-y-4">
+                  {[
+                    { label: "Email Address", value: userData.email },
+                    { label: "Contact Number", value: userData.contact },
+                    { label: "Address", value: userData.address },
+                    { label: "Member ID", value: `CJC-${String(userData.id).padStart(4, '0')}` }
+                  ].map((item, index) => (
+                    <div key={index}>
+                      <p className="text-gray-500 text-sm font-medium mb-1">{item.label}</p>
+                      <p className="text-[#364687] text-base font-bold">{item.value || "—"}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center border border-gray-100">
-                <h3 className="text-sm font-semibold text-[#3B4B89] mb-4">Your QR Code</h3>
-                <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                  <QRCodeSVG
-                    ref={qrRef}
-                    value={qrValue}
-                    size={140}
-                    level="M"
-                    includeMargin={false}
-                  />
+              {/* Account Info & QR Code */}
+              <div className="lg:w-72 flex-shrink-0 space-y-6">
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                  <h3 className="text-sm font-semibold text-[#364687] flex items-center gap-2 mb-4">
+                    <Calendar size={16} />
+                    Account Info
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Member Since</p>
+                      <p className="text-[#364687] font-semibold">{formatDate(userData.joinDate)}</p>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  onClick={handleDownloadQR}
-                  className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition shadow-sm"
-                >
-                  <Download size={16} />
-                  Download
-                </button>
+
+                <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center border border-gray-100">
+                  <h3 className="text-sm font-semibold text-[#364687] mb-4">Your QR Code</h3>
+                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <QRCodeSVG
+                      ref={qrRef}
+                      value={qrValue}
+                      size={140}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <button
+                    onClick={handleDownloadQR}
+                    className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition shadow-sm"
+                  >
+                    <Download size={16} />
+                    Download
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      <Footer />
+
+      {/* Edit Modal */}
       <AnimatePresence>
         {editMode && (
           <motion.div
@@ -430,45 +435,17 @@ const MemberProfile = () => {
                       type={field.type || "text"}
                       value={editForm[field.key]}
                       onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none"
                     />
                   </div>
                 ))}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                  <select
-                    value={editForm.gender}
-                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent outline-none bg-white"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Group</label>
-                  <select
-                    value={editForm.group}
-                    onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent outline-none bg-white"
-                  >
-                    <option value="">Select Group</option>
-                    <option value="General">General</option>
-                    <option value="Kids">Kids</option>
-                    <option value="Campus">Campus</option>
-                    <option value="YA">YA</option>
-                    <option value="Mommies">Mommies</option>
-                    <option value="Daddies">Daddies</option>
-                  </select>
-                </div>
               </div>
 
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                 <button
                   onClick={handleSave}
                   className={`px-5 py-2 rounded-lg text-sm font-medium text-white transition ${
-                    saved ? "bg-green-500" : "bg-[#3B4B89] hover:bg-[#2d3a6a]"
+                    saved ? "bg-green-500" : "bg-[#364687] hover:bg-[#2d3a6a]"
                   }`}
                 >
                   {saved ? "Saved!" : "Save Changes"}
@@ -478,8 +455,8 @@ const MemberProfile = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </MemberLayout>
+    </div>
   );
 };
 
-export default MemberProfile;
+export default AdminProfile;

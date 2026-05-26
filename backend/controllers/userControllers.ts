@@ -18,7 +18,8 @@ export const getAllUsers = async (req: Request, res: Response) => {
         contactNo: true,
         address: true,
         status: true,
-        profileImage: true, // Added to ensure visibility across lists
+        profileImage: true,
+        joinDate: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' } // Shows newest members first
@@ -90,6 +91,7 @@ export const createUsers = async (req: Request, res: Response) => {
           gender,
           status: status || "New Member",
           profileImage: profileImage || null,
+          joinDate: new Date(),
         },
       });
 
@@ -133,6 +135,7 @@ export const createUsers = async (req: Request, res: Response) => {
           address: address || "",
           gender,
           status: status || "New Member",
+          joinDate: new Date(),
         }
       });
 
@@ -151,7 +154,7 @@ export const createUsers = async (req: Request, res: Response) => {
 // 📌 Update user (Admin Dashboard endpoint)
 export const updateUsers = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { firstName, lastName, middleName, contactNo, address, gender, role, password, status, profileImage } = req.body;
+  const { firstName, lastName, middleName, contactNo, address, gender, role, password, status, profileImage, joinDate } = req.body;
 
   try {
     const updateData: any = {
@@ -163,11 +166,32 @@ export const updateUsers = async (req: Request, res: Response) => {
       gender,
       role,
       status,
-      profileImage, // Persistent update directly inside your DB instance
+      profileImage,
     };
 
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    if (joinDate !== undefined && joinDate !== '') {
+      const current = await prisma.member.findUnique({
+        where: { id: Number(id) },
+        select: { joinDate: true },
+      });
+
+      const newJoinDate = new Date(joinDate);
+      const oldJoinDate = current?.joinDate;
+
+      const datesDiffer = !oldJoinDate ||
+        oldJoinDate.getFullYear() !== newJoinDate.getFullYear() ||
+        oldJoinDate.getMonth() !== newJoinDate.getMonth() ||
+        oldJoinDate.getDate() !== newJoinDate.getDate();
+
+      if (datesDiffer) {
+        updateData.joinDate = newJoinDate;
+        const currentYear = new Date().getFullYear();
+        updateData.status = newJoinDate.getFullYear() >= currentYear ? "New Member" : "Old Member";
+      }
     }
 
     const updatedUser = await prisma.member.update({
@@ -227,19 +251,43 @@ export const updateMyProfile = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
     const userId = (req.user as any).id;
-    const { firstName, middleName, lastName, email, contactNo, address } = req.body;
+    const { firstName, middleName, lastName, email, contactNo, address, gender, group, joinDate } = req.body;
 
-    // Writes directly to SQL layer via Prisma Client engine interface
+    const updateData: any = {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      contactNo,
+      address,
+      gender,
+      group,
+    };
+
+    if (joinDate !== undefined && joinDate !== '') {
+      const current = await prisma.member.findUnique({
+        where: { id: userId },
+        select: { joinDate: true },
+      });
+
+      const newJoinDate = new Date(joinDate);
+      const oldJoinDate = current?.joinDate;
+
+      const datesDiffer = !oldJoinDate ||
+        oldJoinDate.getFullYear() !== newJoinDate.getFullYear() ||
+        oldJoinDate.getMonth() !== newJoinDate.getMonth() ||
+        oldJoinDate.getDate() !== newJoinDate.getDate();
+
+      if (datesDiffer) {
+        updateData.joinDate = newJoinDate;
+        const currentYear = new Date().getFullYear();
+        updateData.status = newJoinDate.getFullYear() >= currentYear ? "New Member" : "Old Member";
+      }
+    }
+
     const updatedUser = await prisma.member.update({
       where: { id: userId },
-      data: {
-        firstName,
-        middleName,
-        lastName,
-        email,
-        contactNo,
-        address,
-      },
+      data: updateData,
     });
 
     res.status(200).json(updatedUser);

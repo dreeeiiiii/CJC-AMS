@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const AdminNavbar = () => {
@@ -14,9 +14,16 @@ const AdminNavbar = () => {
   const [userData] = useState(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
-      try { return JSON.parse(stored); } catch (e) {}
+      try {
+        const parsed = JSON.parse(stored);
+        return {
+          fullName: parsed.fullName || "Admin",
+          role: parsed.role || "ADMIN",
+          profileImage: parsed.profileImage || null,
+        };
+      } catch (e) {}
     }
-    return { fullName: "Admin", role: "ADMIN" };
+    return { fullName: "Admin", role: "ADMIN", profileImage: null };
   });
 
   useEffect(() => {
@@ -157,6 +164,13 @@ const AdminNavbar = () => {
                 onClick={() => setadminDropdownOpen(!adminDropdownOpen)}
                 className="flex items-center gap-2 bg-[#364687] text-white px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium hover:bg-[#2d3a6a] transition"
               >
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-300">
+                  {userData.profileImage ? (
+                    <img src={userData.profileImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-full h-full p-1 text-gray-500" />
+                  )}
+                </div>
                 <span className="hidden sm:inline capitalize">{userData.role.toLowerCase()}</span>
                 <ChevronDown size={16} className={`transition-transform ${adminDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -174,6 +188,16 @@ const AdminNavbar = () => {
                       <div className="px-4 py-2 border-b border-gray-50">
                         <p className="text-xs font-semibold text-gray-400 uppercase">Account</p>
                       </div>
+                      <button
+                        onClick={() => {
+                          setadminDropdownOpen(false);
+                          navigate("/admin/profile");
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <User size={16} />
+                        Profile
+                      </button>
                       <button
                         onClick={() => {
                           setadminDropdownOpen(false);

@@ -40,8 +40,8 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
 
   const fullName = `${member.firstName} ${member.lastName}`.trim()
   const initials = (member.firstName?.[0] || '') + (member.lastName?.[0] || '')
-  const memberSince = member.createdAt
-    ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const memberSince = member.joinDate
+    ? new Date(member.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '—'
 
   return (
@@ -60,7 +60,7 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
             </div>
             <div>
               <p className="text-white font-semibold text-base">{fullName}</p>
-              <p className="text-white/60 text-xs mt-0.5">{member.email || 'No email'}</p>
+              <p className="text-white/60 text-xs mt-0.5">ID: {member.id}</p>
               <div className="flex gap-2 mt-1.5">
                 <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full ${
                   member.status === 'Old Member'
@@ -102,8 +102,20 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
                 <p className="text-sm font-semibold text-[#1a2a5e]">{member.middleName || '—'}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Email</p>
+                <p className="text-sm font-semibold text-[#1a2a5e]">{member.email || '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-[10px] text-gray-400 font-medium mb-1">Gender</p>
                 <p className="text-sm font-semibold text-[#1a2a5e]">{member.gender || '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[10px] text-gray-400 font-medium mb-1">Status</p>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  member.status === 'Old Member' ? 'bg-[#D9DFF2] text-[#4A558F]' : 'bg-green-100 text-green-700'
+                }`}>
+                  {member.status}
+                </span>
               </div>
               <div className="col-span-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
@@ -202,13 +214,14 @@ const AdminMembers = () => {
   // Form state
   const [formData, setFormData] = useState({
     firstName: '',
-    middleInitial: '',
+    middleName: '',
     lastName: '',
     contactNo: '',
     email: '',
     address: '',
     gender: '',
     status: 'New Member',
+    joinDate: '',
     mode: 'admin'
   })
   const [formErrors, setFormErrors] = useState({})
@@ -331,7 +344,7 @@ const AdminMembers = () => {
 
   const resetForm = () => {
     setEditingMemberId(null)
-    setFormData({ firstName: '', middleInitial: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member' })
+    setFormData({ firstName: '', middleName: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member', joinDate: '' })
     setFormErrors({})
   }
 
@@ -460,13 +473,14 @@ const AdminMembers = () => {
     setEditingMemberId(member.id)
     setFormData({
       firstName: member.firstName || '',
-      middleInitial: member.middleName || '',
+      middleName: member.middleName || '',
       lastName: member.lastName || '',
       email: member.email || '',
       contactNo: member.contactNo || '',
       address: member.address || '',
       gender: member.gender || '',
       status: member.status || 'New Member',
+      joinDate: member.joinDate ? new Date(member.joinDate).toISOString().split('T')[0] : '',
       mode: 'admin',
     })
     setSelectedMember(null)
@@ -624,7 +638,7 @@ const AdminMembers = () => {
                         />
                       </th>
                       <th className="py-3 px-4 text-gray-600 font-medium">First Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Middle Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Middle Initial</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Last Name</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Email</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
@@ -658,7 +672,7 @@ const AdminMembers = () => {
                         <td className="py-3 px-4">
                           <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName}</span>
                         </td>
-                        <td className="py-3 px-4 text-gray-700">{member.middleName || '-'}</td>
+                        <td className="py-3 px-4 text-gray-700">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
                         <td className="py-3 px-4">
                           <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.lastName}</span>
                         </td>
@@ -712,7 +726,7 @@ const AdminMembers = () => {
 
       {/* Add Member Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-4 p-5 border-b border-gray-100">
               <button onClick={() => { setShowModal(false); resetForm() }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -724,7 +738,7 @@ const AdminMembers = () => {
             <div className="p-5">
               <div className="grid grid-cols-2 gap-x-4">
                 <FloatingLabelInput label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="Juan" error={formErrors.firstName} icon={User} />
-                <FloatingLabelInput label="Middle Initial" name="middleInitial" value={formData.middleInitial} onChange={handleInputChange} placeholder="D" maxLength={1} />
+                <FloatingLabelInput label="Middle Name" name="middleName" value={formData.middleName} onChange={handleInputChange} placeholder="Middle" />
               </div>
               <FloatingLabelInput label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Dela Cruz" error={formErrors.lastName} />
               <FloatingLabelInput label="Email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email...." error={formErrors.email} />
@@ -762,6 +776,10 @@ const AdminMembers = () => {
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <label className="absolute left-4 top-0 -translate-y-1/2 text-xs text-[#4A558F] bg-white px-1">Status</label>
               </div>
+
+              {editingMemberId && (
+                <FloatingLabelInput label="Member Since" name="joinDate" value={formData.joinDate} onChange={handleInputChange} type="date" />
+              )}
 
               <div className="flex gap-3 mt-8">
                 <button onClick={() => { setShowModal(false); resetForm() }} className="flex-1 bg-gray-200 text-gray-600 rounded-xl py-3 hover:bg-gray-300 transition-colors text-sm font-medium">Cancel</button>

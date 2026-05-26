@@ -12,7 +12,7 @@ const AdminAttendance = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('')
-  const [groupFilter, setGroupFilter] = useState('All')
+  const [groupFilter, setGroupFilter] = useState([])
   const [showGroupDropdown, setShowGroupDropdown] = useState(false)
   const [selectedRecords, setSelectedRecords] = useState([])
   const [pendingDeleteIds, setPendingDeleteIds] = useState([])
@@ -66,7 +66,7 @@ const AdminAttendance = () => {
     const search = searchTerm.toLowerCase()
     const nameMatch = record.name.toLowerCase().includes(search)
     const dateMatch = !dateFilter || record.date === dateFilter
-    const grpMatch = groupFilter === 'All' || record.group === groupFilter
+    const grpMatch = groupFilter.length === 0 || groupFilter.includes(record.group)
     return nameMatch && dateMatch && grpMatch
   })
 
@@ -180,27 +180,44 @@ const AdminAttendance = () => {
                       className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
                     >
                       <Filter size={16} />
-                      <span>{groupFilter === 'All' ? 'Group' : groupFilter}</span>
+                      <span>{groupFilter.length === 0 ? 'Group' : `${groupFilter.length} selected`}</span>
                       <ChevronDown size={14} className={`transition-transform ${showGroupDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
                     {showGroupDropdown && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
                         <button
-                          onClick={() => { setGroupFilter('All'); setShowGroupDropdown(false); }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          onClick={() => { setGroupFilter([]); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter.length === 0 ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
-                          All 
+                          All Groups
                         </button>
-                        {groups.map(g => (
-                          <button
-                            key={g}
-                            onClick={() => { setGroupFilter(g); setShowGroupDropdown(false); }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter === g ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                          >
-                            {g}
-                          </button>
-                        ))}
+                        <div className="my-1 border-t border-gray-100"></div>
+                        {groups.map(g => {
+                          const checked = groupFilter.includes(g)
+                          return (
+                            <label
+                              key={g}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors ${
+                                checked ? 'bg-[#D9DFF2]/50 text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={checked}
+                                onChange={() => {
+                                  setGroupFilter(prev =>
+                                    prev.includes(g)
+                                      ? prev.filter(x => x !== g)
+                                      : [...prev, g]
+                                  )
+                                }}
+                              />
+                              {g}
+                            </label>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -287,13 +304,17 @@ const AdminAttendance = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              record.group === 'Mommies' || record.group === 'Daddies'
-                                ? 'bg-[#D9DFF2] text-[#4A558F]'
-                                : record.group === 'Campus' || record.group === 'YA'
-                                  ? 'bg-green-100 text-green-700'
-                                  : record.group === 'Kids'
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : 'bg-gray-100 text-gray-600'
+                              record.group === 'Mommies'
+                                ? 'bg-pink-100 text-pink-700'
+                                : record.group === 'Daddies'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : record.group === 'Campus'
+                                    ? 'bg-green-100 text-green-700'
+                                    : record.group === 'YA'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : record.group === 'Kids'
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-gray-100 text-gray-600'
                             }`}>
                               {record.group}
                             </span>
