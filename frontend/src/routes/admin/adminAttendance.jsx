@@ -289,7 +289,7 @@ const AdminAttendance = () => {
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                               record.group === 'Mommies' || record.group === 'Daddies'
                                 ? 'bg-[#D9DFF2] text-[#4A558F]'
-                                : record.group === 'YouthCampus' || record.group === 'YouthAdult'
+                                : record.group === 'Campus' || record.group === 'YA'
                                   ? 'bg-green-100 text-green-700'
                                   : record.group === 'Kids'
                                     ? 'bg-purple-100 text-purple-700'
