@@ -170,7 +170,7 @@ export const getAllAttendance = async (req: Request, res: Response) => {
                     select: {
                         firstName: true,
                         lastName: true,
-                        category: true,
+                        group: true,
                         createdAt: true
                     }
                 },
@@ -188,17 +188,17 @@ export const getAllAttendance = async (req: Request, res: Response) => {
             const firstName = record.member?.firstName || record.visitor?.firstName || "Unknown";
             const lastName = record.member?.lastName || record.visitor?.lastName || "User";
 
-            let category = "General";
-            if (record.member?.category) {
-                category = record.member.category;
+            let group = "General";
+            if (record.member?.group) {
+                group = record.member.group;
             } else if (record.visitor) {
-                category = "Visitor";
+                group = "Visitor";
             }
 
             return {
                 id: record.id,
                 name: `${firstName} ${lastName}`,
-                category,
+                group,
                 date: record.createdAt.toISOString().split('T')[0],
                 time: record.createdAt.toLocaleTimeString('en-US', {
                     hour: '2-digit',

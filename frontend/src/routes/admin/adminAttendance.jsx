@@ -12,8 +12,8 @@ const AdminAttendance = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('All')
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
+  const [groupFilter, setGroupFilter] = useState('All')
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false)
   const [selectedRecords, setSelectedRecords] = useState([])
   const [pendingDeleteIds, setPendingDeleteIds] = useState([])
   const [toast, setToast] = useState(null)
@@ -60,14 +60,14 @@ const AdminAttendance = () => {
     setTimeout(() => setToast(null), 5000)
   }, [])
 
-  const categories = [...new Set(records.map(r => r.category))].sort()
+  const groups = [...new Set(records.map(r => r.group))].sort()
 
   const filteredRecords = records.filter(record => {
     const search = searchTerm.toLowerCase()
     const nameMatch = record.name.toLowerCase().includes(search)
     const dateMatch = !dateFilter || record.date === dateFilter
-    const catMatch = categoryFilter === 'All' || record.category === categoryFilter
-    return nameMatch && dateMatch && catMatch
+    const grpMatch = groupFilter === 'All' || record.group === groupFilter
+    return nameMatch && dateMatch && grpMatch
   })
 
   const toggleSelectAll = () => {
@@ -165,7 +165,7 @@ const AdminAttendance = () => {
                   />
                 </div>
 
-                {/* Date Filter + Category Filter + Print */}
+                {/* Date Filter + Group Filter + Print */}
                 <div className="flex items-center gap-3">
                   <input
                     type="date"
@@ -176,29 +176,29 @@ const AdminAttendance = () => {
 
                   <div className="relative">
                     <button
-                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                      onClick={() => setShowGroupDropdown(!showGroupDropdown)}
                       className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
                     >
                       <Filter size={16} />
-                      <span>{categoryFilter === 'All' ? 'Filter' : categoryFilter}</span>
-                      <ChevronDown size={14} className={`transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                      <span>{groupFilter === 'All' ? 'Group' : groupFilter}</span>
+                      <ChevronDown size={14} className={`transition-transform ${showGroupDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
-                    {showCategoryDropdown && (
+                    {showGroupDropdown && (
                       <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
                         <button
-                          onClick={() => { setCategoryFilter('All'); setShowCategoryDropdown(false); }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${categoryFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          onClick={() => { setGroupFilter('All'); setShowGroupDropdown(false); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
                           All 
                         </button>
-                        {categories.map(cat => (
+                        {groups.map(g => (
                           <button
-                            key={cat}
-                            onClick={() => { setCategoryFilter(cat); setShowCategoryDropdown(false); }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${categoryFilter === cat ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            key={g}
+                            onClick={() => { setGroupFilter(g); setShowGroupDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter === g ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                           >
-                            {cat}
+                            {g}
                           </button>
                         ))}
                       </div>
@@ -254,7 +254,7 @@ const AdminAttendance = () => {
                         />
                       </th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Category</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Group</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
                     </tr>
@@ -287,15 +287,15 @@ const AdminAttendance = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              record.category === 'Momshies' || record.category === 'Daddies'
+                              record.group === 'Mommies' || record.group === 'Daddies'
                                 ? 'bg-[#D9DFF2] text-[#4A558F]'
-                                : record.category === 'Campus Girl' || record.category === 'Campus Boy'
+                                : record.group === 'YouthCampus' || record.group === 'YouthAdult'
                                   ? 'bg-green-100 text-green-700'
-                                  : record.category === 'YA Female' || record.category === 'YA Male'
+                                  : record.group === 'Kids'
                                     ? 'bg-purple-100 text-purple-700'
                                     : 'bg-gray-100 text-gray-600'
                             }`}>
-                              {record.category}
+                              {record.group}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-gray-500">{record.date}</td>

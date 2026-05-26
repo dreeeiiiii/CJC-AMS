@@ -8,9 +8,9 @@ datasource db {
 
 // -------------------- ENUMS --------------------
 
-enum Gender {
-  Male
-  Female
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum Role {
@@ -24,10 +24,20 @@ enum Category {
   WalkIn
 }
 
-enum AccountStatus {
-  ACTIVE
-  INACTIVE
+enum Gender {
+  Male
+  Female
 }
+
+enum Group {
+  General
+  Kids
+  YouthCampus 
+  YouthAdult
+  Mommies
+  Daddies
+}
+
 
 // -------------------- MEMBER PROFILE (NO AUTH HERE) --------------------
 
@@ -45,7 +55,8 @@ model Member {
   gender       Gender
 
   status       String   @default("New Member")
-  category     String   @default("General")
+  joinDate     DateTime @default(now())
+  group        Group    @default(General)
   profileImage String?
 
   createdAt    DateTime @default(now())
