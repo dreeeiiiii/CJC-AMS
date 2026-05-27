@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { 
   getActiveVerse, 
-  createVerse, 
   getTestimonies, 
   createTestimony, 
   deleteTestimony 
@@ -27,8 +26,6 @@ router.get("/testimonies", getTestimonies);
  * Only users with the 'ADMIN' role can modify the Verse of the Day or Testimonies.
  */
 
-// POST /api/contentRoutes/verse
-router.post("/verse", protect, adminOnly, createVerse);
 
 // POST /api/contentRoutes/testimonies
 router.post("/testimonies", protect, adminOnly, createTestimony);

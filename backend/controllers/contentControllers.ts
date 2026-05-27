@@ -1,61 +1,42 @@
 import type { Request, Response } from 'express';
 import prisma from '../db.js';
-
-/**
- * --- VERSE CONTROLLERS ---
- */
+import verses from '../data/verses.json' with { type: "json" };
 
 // @desc    Get the current active Verse of the Day
-// @route   GET /api/content/verse/today
+// @route   GET /api/content/verse/tod
+
 export const getActiveVerse = async (req: Request, res: Response) => {
   try {
-    // We look for the most recently updated 'active' verse
-    const verse = await prisma.verse.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: 'desc' },
-    });
+    // Force the date calculation to use Philippine Standard Time
+    const manilaString = new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" });
+    const now = new Date(manilaString);
+    
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
 
-    if (!verse) {
-      return res.status(404).json({ message: "No active verse found" });
+    // 2. Safely cycle through the array using modulo math
+    const verseIndex = (dayOfYear - 1) % verses.length;
+    const verseOfTheDay = verses[verseIndex];
+
+    if (!verseOfTheDay) {
+      return res.status(404).json({ message: "No active verse found in the local file." });
     }
 
-    res.status(200).json(verse);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Internal server error" });
-  }
-};
-
-// @desc    Create a new Verse (and set as active)
-// @route   POST /api/content/verse
-export const createVerse = async (req: Request, res: Response) => {
-  const { content, reference, topic } = req.body;
-
-  if (!content || !reference) {
-    return res.status(400).json({ message: "Content and reference are required" });
-  }
-
-  try {
-    // 1. Transaction: Deactivate others and create new one to ensure data integrity
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.verse.updateMany({
-        data: { isActive: false },
-      });
-
-      return await tx.verse.create({
-        data: {
-          content,
-          reference,
-          topic: topic || null,
-          isActive: true,
-        },
-      });
+    return res.status(200).json({
+      content: verseOfTheDay.text, 
+      reference: verseOfTheDay.reference,
+      version: verseOfTheDay.version,    
+      category: verseOfTheDay.category   
     });
 
-    res.status(201).json({ message: "Verse created and published", result });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message || "Internal server error" });
   }
 };
+
+
 
 /**
  * --- TESTIMONY CONTROLLERS ---

@@ -1,23 +1,27 @@
 import { Router } from "express";
-import { 
-  getAllUsers, 
-  getUsersById, 
-  createUsers, 
-  updateUsers, 
+import {
+  getAllUsers,
+  getUsersById,
+  createUsers,
+  updateUsers,
   deleteUsers,
   getMyProfile,
   updateMyProfile
 } from "../controllers/userControllers.js";
-import { protect } from "../middleware/auth.js";
+
+import { protect, adminOnly } from "../middleware/auth.js";
 
 const router = Router();
 
-router.get("/me", protect as any, getMyProfile);
-router.put("/me", protect as any, updateMyProfile);
-router.get("/", getAllUsers);
-router.get("/:id", getUsersById);
-router.post("/", createUsers);
-router.put("/:id", updateUsers);
-router.delete("/:id", deleteUsers);
+// 👤 Authenticated user routes
+router.get("/me", protect, getMyProfile);
+router.put("/me", protect, updateMyProfile);
+
+// 👥 Admin / system user management
+router.get("/", protect, adminOnly, getAllUsers);
+router.get("/:id", protect, adminOnly, getUsersById);
+router.post("/", protect, adminOnly, createUsers);
+router.put("/:id", protect, adminOnly, updateUsers);
+router.delete("/:id", protect, adminOnly, deleteUsers);
 
 export default router;

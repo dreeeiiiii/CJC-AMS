@@ -2,6 +2,7 @@ import express from "express";
 // Rule: Use 'import type' for interfaces/types
 import type { Request, Response } from "express";
 import type { AuthRequest } from "./middleware/auth.js";
+import { initCronJobs } from './utils/cron.js';
 
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -25,6 +26,7 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import visitorRoutes from "./routes/visitorRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js"; // 🚀 Imported modular routes
 import testimonyRoutes from "./routes/testimonyRoutes.js";
+import forgotPasswordRoutes from "./routes/forgotPasswordRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -70,6 +72,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/visitors", visitorRoutes);
 app.use("/api/announcements", announcementRoutes); // 🚀 Cleanly mounted announcement router here
 app.use("/api/testimonies", testimonyRoutes);
+app.use("/api", forgotPasswordRoutes);
 
 /**
  * Profile Image Upload Route (Cloudinary with local disk fallback)
@@ -132,6 +135,7 @@ app.get('/test', async (req: Request, res: Response) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
+  initCronJobs();
   console.log(`🚀 Server ready at: http://localhost:${PORT}`);
   console.log(`📑 API Docs available at: http://localhost:${PORT}/api-docs`);
 });

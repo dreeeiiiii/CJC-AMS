@@ -1,22 +1,35 @@
 import { Router } from "express";
-import { 
-  recordAttendance, 
-  getRecentActivity, 
+import {
+  recordAttendance,
+  getRecentActivity,
   getAttendanceStats,
+  getAttendanceSummary,
   getAllAttendance,
   exportAttendance,
-  deleteAttendance 
+  deleteAttendance
 } from "../controllers/attendanceController.js";
+
 import { protect, adminOnly } from "../middleware/auth.js";
 
 const router = Router();
 
-// Admin only activities
+// 📌 CREATE attendance (QR + manual)
 router.post("/", protect, adminOnly, recordAttendance);
+
+// 📊 DASHBOARD
 router.get("/recent", protect, adminOnly, getRecentActivity);
 router.get("/stats", protect, adminOnly, getAttendanceStats);
+
+// (optional: if this is personal dashboard)
+router.get("/my-summary", getAttendanceSummary);
+
+// 📋 DATA
 router.get("/", protect, adminOnly, getAllAttendance);
+
+// 📤 EXPORT
 router.get("/export", protect, adminOnly, exportAttendance);
+
+// 🗑 DELETE
 router.delete("/:id", protect, adminOnly, deleteAttendance);
 
 export default router;

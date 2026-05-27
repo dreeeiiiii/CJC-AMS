@@ -55,6 +55,7 @@ model Member {
   gender       Gender
 
   status       String   @default("New Member")
+  accountStatus String  @default("Active")     
   joinDate     DateTime @default(now())
   group        Group    @default(General)
   profileImage String?
@@ -65,26 +66,27 @@ model Member {
   // relations
   account      UserAccount?  
   attendances  Attendance[]
-  testimonies  Testimony?
+  testimonies  Testimony[]
 }
 
 // -------------------- AUTH SYSTEM --------------------
 
 model UserAccount {
-  id           Int      @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
 
-  email        String   @unique
-  password     String
+  email          String         @unique
+  password       String
 
-  role         Role     @default(MEMBER)
-  status       AccountStatus @default(ACTIVE)
+  role           Role           @default(MEMBER)
 
-  lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  accountStatus  AccountStatus  @default(ACTIVE)
 
-  memberId     Int      @unique
-  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  lastLoginAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  memberId       Int            @unique
+  member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 // -------------------- VISITORS --------------------
@@ -149,7 +151,7 @@ model Testimony {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberId  Int?     @unique
+  memberId  Int?     
   member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   name      String?
@@ -170,4 +172,14 @@ model Attendance {
 
   member     Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
   visitor    Visitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+}
+
+// -------------------Forgot password -------------------
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
