@@ -42,6 +42,54 @@ const AdminPage = () => {
 
   const inputRef = useRef(null)
 
+  // Compute consecutive weekly attendance streak per member name
+  const computeStreaks = (records) => {
+    const getWeekKey = (dateStr) => {
+      const d = new Date(dateStr)
+      const jan4 = new Date(d.getFullYear(), 0, 4)
+      const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000)
+      const weekNum = Math.ceil((dayOfYear + jan4.getDay() - 1) / 7)
+      return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
+    }
+
+    const memberWeeks = {}
+    records.forEach(r => {
+      if (!r.name || !r.date) return
+      if (!memberWeeks[r.name]) memberWeeks[r.name] = new Set()
+      memberWeeks[r.name].add(getWeekKey(r.date))
+    })
+
+    const streaks = {}
+    Object.entries(memberWeeks).forEach(([name, weeksSet]) => {
+      const weeks = [...weeksSet].sort().reverse()
+      if (weeks.length === 0) { streaks[name] = 0; return }
+
+      const weekToDate = (wk) => {
+        const [year, w] = wk.split('-W').map(Number)
+        const jan4 = new Date(year, 0, 4)
+        const monday = new Date(jan4)
+        monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7)
+        return monday
+      }
+
+      let streak = 1
+      for (let i = 0; i < weeks.length - 1; i++) {
+        const curr = weekToDate(weeks[i])
+        const next = weekToDate(weeks[i + 1])
+        const diffDays = (curr - next) / (1000 * 60 * 60 * 24)
+        if (diffDays === 7) {
+          streak++
+        } else {
+          break
+        }
+      }
+      streaks[name] = streak
+    })
+    return streaks
+  }
+
+  const streakMap = computeStreaks(allAttendanceRecords)
+
   const filteredRecords = useMemo(() => {
     return attendanceRecords
       .filter(row => {
@@ -552,6 +600,7 @@ const AdminPage = () => {
                   <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
                   <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
+                  <th className="py-3 px-4 text-gray-600 font-medium">Streak</th>
                 </tr>
               </thead>
               <tbody>
@@ -574,12 +623,32 @@ const AdminPage = () => {
                         </td>
                         <td className="py-3 px-4 text-gray-500">{row.date}</td>
                         <td className="py-3 px-4 text-gray-500">{row.time}</td>
+                        <td className="py-3 px-4">
+                          {(() => {
+                            const s = streakMap[row.name] || 0
+                            if (s >= 4) return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-600">
+                                🔥 {s} wks
+                              </span>
+                            )
+                            if (s >= 2) return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-600">
+                                ⚡ {s} wks
+                              </span>
+                            )
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                                {s} wk
+                              </span>
+                            )
+                          })()}
+                        </td>
                       </tr>
                     )
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-10 text-center text-gray-400">No activity recorded today.</td>
+                    <td colSpan="6" className="py-10 text-center text-gray-400">No activity recorded today.</td>
                   </tr>
                 )}
               </tbody>

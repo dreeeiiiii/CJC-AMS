@@ -127,7 +127,69 @@ const AdminAttendance = () => {
   }
 
   const handlePrint = () => {
-    window.print()
+    const groupLabel = groupFilter.length > 0
+      ? groupFilter.length === 1
+        ? groupFilter[0]
+        : groupFilter.length <= 3
+          ? groupFilter.join(', ')
+          : `${groupFilter.slice(0, 2).join(', ')} (+${groupFilter.length - 2} more)`
+      : null
+
+    const printTitle = groupLabel
+      ? `${groupLabel} Attendance Records`
+      : dateFilter
+        ? `Attendance Records - ${dateFilter}`
+        : 'All Attendance Records'
+
+      const rows = filteredRecords.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td>${r.name}</td>
+          <td>${r.group}</td>
+          <td>${r.date}</td>
+          <td>${r.time}</td>
+        </tr>
+      `).join('')
+
+      const win = window.open('', '_blank')
+      win.document.write(`
+        <html>
+          <head>
+            <title>${printTitle}</title>
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }
+              h1 { font-size: 22px; color: #4A558F; margin-bottom: 4px; }
+              .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+              table { width: 100%; border-collapse: collapse; font-size: 13px; }
+              th { background: #D9DFF2; color: #4A558F; text-align: left; padding: 10px 12px; font-weight: 600; }
+              td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+              .num { width: 40px; text-align: center; color: #888; }
+              tr:nth-child(even) td { background: #f9fafb; }
+              .footer { margin-top: 20px; font-size: 11px; color: #aaa; text-align: center; }
+              @media print { body { padding: 20px; } }
+            </style>
+          </head>
+          <body>
+            <h1>${printTitle}</h1>
+            <div class="subtitle">${filteredRecords.length} record(s)</div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Name</th>
+                  <th>Group</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+            <script>window.print();window.close();<${'/'}script>
+          </body>
+        </html>
+      `)
+      win.document.close()
   }
 
   return (
