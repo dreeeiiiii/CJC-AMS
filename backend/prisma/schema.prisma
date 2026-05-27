@@ -123,6 +123,9 @@ model Announcement {
   category  String   @default("General")
   author    String   @default("CJCRSG Phils. Inc.")
   link      String?
+  pinned              Boolean    @default(false)
+  scheduledAt         DateTime?
+  acknowledgmentCount Int        @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

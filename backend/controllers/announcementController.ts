@@ -25,7 +25,7 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const [announcements, total, thisWeekCount, withImagesCount] = await Promise.all([
+    const [announcements, total, thisWeekCount, withImagesCount, pinnedCount, scheduledCount] = await Promise.all([
       prisma.announcement.findMany({
         skip,
         take: limit,
@@ -38,6 +38,12 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
       prisma.announcement.count({
         where: { image: { not: null } },
       }),
+      prisma.announcement.count({
+        where: { pinned: true },
+      }),
+      prisma.announcement.count({
+        where: { scheduledAt: { not: null } },
+      }),
     ]);
 
     return res.status(200).json({
@@ -47,6 +53,8 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
         total,
         thisWeek: thisWeekCount,
         withImages: withImagesCount,
+        pinned: pinnedCount,
+        scheduled: scheduledCount,
       },
     });
   } catch (error: any) {
@@ -62,7 +70,7 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
  */
 export const createAnnouncement = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { title, content, category, author, link } = req.body;
+    const { title, content, category, author, link, scheduledAt } = req.body;
 
     // validation
     if (!title || !content) {
@@ -88,6 +96,7 @@ export const createAnnouncement = async (req: Request, res: Response): Promise<a
         link: link || null,
         image: imageUrl,
         timestamp: formatDate(),
+        ...(scheduledAt ? { scheduledAt: new Date(scheduledAt) } : {}),
       },
     });
 
@@ -111,7 +120,7 @@ export const deleteAnnouncement = async (req: Request, res: Response): Promise<a
       return res.status(400).json({ error: "Invalid ID parameter" });
     }
 
-    const parsedId = parseInt(id, 10);
+    const parsedId = parseInt(id as string, 10);
     if (isNaN(parsedId)) {
       return res.status(400).json({ error: "Invalid announcement ID format" });
     }
@@ -152,18 +161,12 @@ export const deleteAnnouncement = async (req: Request, res: Response): Promise<a
 };
 
 /**
- * UPDATE ANNOUNCEMENT
+ * ACKNOWLEDGE ANNOUNCEMENT (POST)
  */
-export const updateAnnouncement = async (req: Request, res: Response): Promise<any> => {
+export const acknowledgeAnnouncement = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { title, content, category, author, link } = req.body;
-
-    if (!id || typeof id !== "string") {
-      return res.status(400).json({ error: "Invalid ID parameter" });
-    }
-
-    const parsedId = parseInt(id, 10);
+    const parsedId = parseInt(id as string, 10);
     if (isNaN(parsedId)) {
       return res.status(400).json({ error: "Invalid announcement ID format" });
     }
@@ -176,8 +179,89 @@ export const updateAnnouncement = async (req: Request, res: Response): Promise<a
       return res.status(404).json({ error: "Announcement not found" });
     }
 
-    const updatedAnnouncement = await prisma.announcement.update({
+    const updated = await prisma.announcement.update({
       where: { id: parsedId },
+      data: { acknowledgmentCount: { increment: 1 } },
+    });
+
+    return res.status(200).json(updated);
+  } catch (error: any) {
+    console.error("Acknowledge Error:", error);
+    return res.status(500).json({
+      error: error.message || "Failed to acknowledge announcement",
+    });
+  }
+};
+
+/**
+ * UNACKNOWLEDGE ANNOUNCEMENT (DELETE)
+ */
+export const unacknowledgeAnnouncement = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const parsedId = parseInt(id as string, 10);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ error: "Invalid announcement ID format" });
+    }
+
+    const existing = await prisma.announcement.findUnique({
+      where: { id: parsedId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Announcement not found" });
+    }
+
+    const updated = await prisma.announcement.update({
+      where: { id: parsedId },
+      data: {
+        acknowledgmentCount: {
+          decrement: 1,
+        },
+      },
+    });
+
+    // Ensure count never goes below 0
+    if (updated.acknowledgmentCount < 0) {
+      await prisma.announcement.update({
+        where: { id: parsedId },
+        data: { acknowledgmentCount: 0 },
+      });
+      updated.acknowledgmentCount = 0;
+    }
+
+    return res.status(200).json(updated);
+  } catch (error: any) {
+    console.error("Unacknowledge Error:", error);
+    return res.status(500).json({
+      error: error.message || "Failed to unacknowledge announcement",
+    });
+  }
+};
+
+/**
+ * UPDATE ANNOUNCEMENT
+ */
+export const updateAnnouncement = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id: idParam } = req.params;
+    const id = parseInt(idParam as string, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid announcement ID format" });
+    }
+
+    const { title, content, category, author, link } = req.body;
+
+    const existing = await prisma.announcement.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Announcement not found" });
+    }
+
+    const updatedAnnouncement = await prisma.announcement.update({
+      where: { id },
       data: {
         title: title?.trim() ?? existing.title,
         content: content?.trim() ?? existing.content,
@@ -192,6 +276,45 @@ export const updateAnnouncement = async (req: Request, res: Response): Promise<a
     console.error("Update Announcement Error:", error);
     return res.status(500).json({
       error: error.message || "Failed to update announcement",
+    });
+  }
+};
+
+/**
+ * TOGGLE PIN
+ */
+export const togglePin = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const { pinned } = req.body;
+
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ error: "Invalid ID parameter" });
+    }
+
+    const parsedId = parseInt(id as string, 10);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ error: "Invalid announcement ID format" });
+    }
+
+    const announcement = await prisma.announcement.findUnique({
+      where: { id: parsedId },
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ error: "Announcement not found" });
+    }
+
+    const updated = await prisma.announcement.update({
+      where: { id: parsedId },
+      data: { pinned: pinned ?? !announcement.pinned },
+    });
+
+    return res.status(200).json(updated);
+  } catch (error: any) {
+    console.error("Toggle Pin Error:", error);
+    return res.status(500).json({
+      error: error.message || "Failed to toggle pin",
     });
   }
 };

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, ExternalLink, MoreHorizontal } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Search, ExternalLink, MoreHorizontal, Pin, CheckCircle } from "lucide-react";
 import axios from "axios";
 import MemberLayout from "../../components/memberLayout";
 
@@ -8,7 +7,9 @@ const BACKEND_API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api/announcements` 
   : "http://localhost:5000/api/announcements"; 
 
-const AnnouncementCard = ({ announcement }) => {
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   // Toggle state for See More / See Less
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -25,6 +26,16 @@ const AnnouncementCard = ({ announcement }) => {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
       
+      {/* Pinned Badge */}
+      {announcement.pinned && (
+        <div className="px-4 pt-3 pb-0">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#EEF0FA] text-[#3B4B89]">
+            <Pin size={12} />
+            Pinned
+          </span>
+        </div>
+      )}
+
       {/* FB-Style Header */}
       <div className="flex items-start justify-between p-4">
         <div className="flex items-center gap-3">
@@ -76,7 +87,7 @@ const AnnouncementCard = ({ announcement }) => {
 
       {/* Image (Fixed height for uniform grid alignment) */}
       {announcement.image && (
-        <div className="w-full border-t border-b border-gray-100 bg-gray-50 mt-auto">
+        <div className="w-full border-t border-b border-gray-100 bg-gray-50">
           <img
             src={announcement.image}
             alt="Announcement"
@@ -90,19 +101,37 @@ const AnnouncementCard = ({ announcement }) => {
       )}
 
       {/* Action Bar */}
-      {announcement.link && (
-        <div className={`px-4 py-1.5 flex items-center justify-between border-t border-gray-200 ${!announcement.image && 'mt-auto'}`}>
+      <div className="px-4 py-2 flex items-center justify-between border-t border-gray-200 mt-auto">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onAcknowledge?.(announcement.id)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              announcement.selfAcknowledged
+                ? "text-green-700 bg-green-50 border-green-200"
+                : "text-gray-500 border-gray-300 hover:bg-green-50 hover:border-green-200 hover:text-green-700"
+            }`}
+          >
+            <CheckCircle size={14} />
+            {announcement.selfAcknowledged ? "Acknowledged" : "Got it"}
+          </button>
+          {announcement.acknowledgmentCount > 0 && (
+            <span className="text-xs text-gray-400">
+              · {announcement.acknowledgmentCount} {announcement.acknowledgmentCount === 1 ? "person" : "people"}
+            </span>
+          )}
+        </div>
+        {announcement.link && (
           <a
             href={announcement.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-2 text-[15px] font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-2 py-1.5 px-3 text-[13px] font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
           >
-            <ExternalLink size={18} />
+            <ExternalLink size={16} />
             View Full Post
           </a>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -111,16 +140,15 @@ const MemberAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const categories = ["all", "Events", "General", "Youth", "Service Updates"];
+  const categories = ["All", "General", "Event", "Urgent", "Update"];
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const res = await axios.get(BACKEND_API_URL);
-        setAnnouncements(res.data);
+        const res = await axios.get(`${BACKEND_API_URL}?limit=1000`);
+        setAnnouncements(res.data.data || []);
       } catch (error) {
         console.error("Error fetching announcements from backend:", error);
       } finally {
@@ -131,16 +159,47 @@ const MemberAnnouncements = () => {
     fetchAnnouncements();
   }, []);
 
-  const filteredAnnouncements = announcements.filter((ann) => {
-    const matchesSearch =
-      ann.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ann.content?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Remove scheduled, apply search + category filter, sort pinned first
+  const liveAnnouncements = announcements.filter(
+    (ann) => !ann.scheduledAt || new Date(ann.scheduledAt) <= new Date()
+  );
 
-    const matchesCategory =
-      selectedCategory === "all" || ann.category === selectedCategory;
+  const searchedAnnouncements = liveAnnouncements.filter((ann) =>
+    ann.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    ann.content?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    return matchesSearch && matchesCategory;
-  });
+  const filteredAnnouncements = searchedAnnouncements
+    .filter((ann) => selectedCategory === "All" || ann.category === selectedCategory)
+    .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+
+  // Feature 4 — Acknowledge / un-acknowledge
+  const handleAcknowledge = async (id) => {
+    const target = announcements.find((a) => a.id === id);
+    if (!target) return;
+
+    const wasAcknowledged = target.selfAcknowledged;
+    const method = wasAcknowledged ? "DELETE" : "POST";
+
+    try {
+      await axios({ method, url: `${API_BASE}/api/announcements/${id}/acknowledge` });
+      setAnnouncements((prev) =>
+        prev.map((a) =>
+          a.id === id
+            ? {
+                ...a,
+                selfAcknowledged: !wasAcknowledged,
+                acknowledgmentCount: wasAcknowledged
+                  ? Math.max(0, (a.acknowledgmentCount || 0) - 1)
+                  : (a.acknowledgmentCount || 0) + 1,
+              }
+            : a
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling acknowledgment:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -187,45 +246,27 @@ const MemberAnnouncements = () => {
                 />
               </div>
 
-              <div className="relative">
-                <button
-                  onClick={() => setFilterOpen(!filterOpen)}
-                  className={`p-2 rounded-full border transition-colors ${
-                    filterOpen || selectedCategory !== "all"
-                      ? "bg-[#3B4B89] text-white border-[#3B4B89]"
-                      : "border-gray-300 text-gray-600 bg-white hover:bg-gray-100"
-                  }`}
-                >
-                  <SlidersHorizontal size={18} />
-                </button>
-
-                <AnimatePresence>
-                  {filterOpen && (
-                    <motion.div
-                      className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-10"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+              {/* Category Filter Tabs */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {categories.map((cat) => {
+                  const count = cat === "All"
+                    ? searchedAnnouncements.length
+                    : searchedAnnouncements.filter((a) => a.category === cat).length;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selectedCategory === cat
+                          ? "bg-[#3B4B89] text-white border-[#3B4B89]"
+                          : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                      }`}
                     >
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => {
-                            setSelectedCategory(cat);
-                            setFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                            selectedCategory === cat
-                              ? "bg-[#3B4B89] text-white"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {cat}
+                      <span className="ml-1 opacity-75">({count})</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -238,7 +279,7 @@ const MemberAnnouncements = () => {
           {filteredAnnouncements.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
               {filteredAnnouncements.map((ann) => (
-                <AnnouncementCard key={ann.id} announcement={ann} />
+                <AnnouncementCard key={ann.id} announcement={ann} onAcknowledge={handleAcknowledge} />
               ))}
             </div>
           ) : (

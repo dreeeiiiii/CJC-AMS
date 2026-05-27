@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
 import {
   ImagePlus,
   Send,
-  Calendar,
   Edit2,
   Trash2,
   Paperclip,
@@ -16,7 +15,10 @@ import {
   Type,
   Tag,
   User,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Pin,
+  CalendarClock,
+  CheckCircle
 } from 'lucide-react'
 
 const AdminAnnouncement = () => {
@@ -42,7 +44,7 @@ const AdminAnnouncement = () => {
   // Pagination states
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const [stats, setStats] = useState({ total: 0, thisWeek: 0, withImages: 0 })
+  const [stats, setStats] = useState({ total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0 })
   const ITEMS_PER_PAGE = 5
 
   // UI states
@@ -50,6 +52,13 @@ const AdminAnnouncement = () => {
   const [deleteModal, setDeleteModal] = useState(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [userName, setUserName] = useState('Admin')
+
+  // Feature 2 - Scheduled posting
+  const [scheduledMode, setScheduledMode] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState('')
+
+  // Feature 3 - Category filter
+  const [activeFilter, setActiveFilter] = useState('All')
 
   const fileInputRef = useRef(null)
 
@@ -83,7 +92,7 @@ const AdminAnnouncement = () => {
           const data = await response.json()
           setAnnouncements(data.data || [])
           setHasMore(data.hasMore !== false)
-          setStats(data.stats || { total: 0, thisWeek: 0, withImages: 0 })
+          setStats(data.stats || { total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0 })
           setPage(1)
         }
       } catch (error) {
@@ -181,6 +190,10 @@ const AdminAnnouncement = () => {
         formData.append('image', selectedFile)
       }
 
+      if (scheduledAt) {
+        formData.append('scheduledAt', scheduledAt)
+      }
+
       const response = await fetch(
         `${API_URL}/api/announcements`,
         {
@@ -200,6 +213,8 @@ const AdminAnnouncement = () => {
           total: prev.total + 1,
           thisWeek: prev.thisWeek + 1,
           withImages: newPost.image ? prev.withImages + 1 : prev.withImages,
+          pinned: newPost.pinned ? prev.pinned + 1 : prev.pinned,
+          scheduled: newPost.scheduledAt ? prev.scheduled + 1 : prev.scheduled,
         }))
 
         // Reset form
@@ -207,6 +222,8 @@ const AdminAnnouncement = () => {
         setPostContent('')
         setPostCategory('General')
         setPostLink('')
+        setScheduledMode(false)
+        setScheduledAt('')
 
         clearImage()
       }
@@ -239,6 +256,8 @@ const AdminAnnouncement = () => {
           total: Math.max(0, prev.total - 1),
           thisWeek: Math.max(0, prev.thisWeek - 1),
           withImages: deleted?.image ? Math.max(0, prev.withImages - 1) : prev.withImages,
+          pinned: deleted?.pinned ? Math.max(0, prev.pinned - 1) : prev.pinned,
+          scheduled: deleted?.scheduledAt ? Math.max(0, prev.scheduled - 1) : prev.scheduled,
         }))
 
         setDeleteModal(null)
@@ -332,7 +351,7 @@ const AdminAnnouncement = () => {
         })
 
         setHasMore(result.hasMore !== false)
-        setStats(result.stats || { total: 0, thisWeek: 0, withImages: 0 })
+        setStats(result.stats || { total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0 })
         setPage(nextPage)
       }
     } catch (error) {
@@ -341,6 +360,98 @@ const AdminAnnouncement = () => {
       setLoadingMore(false)
     }
   }
+
+  // Feature 1 - Pin / Unpin
+  const handleTogglePin = async (id) => {
+    const target = announcements.find((a) => a.id === id)
+
+    if (!target) return
+
+    const newPinned = !target.pinned
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/announcements/${id}/pin`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ pinned: newPinned }),
+        }
+      )
+
+      if (response.ok) {
+        setAnnouncements((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, pinned: newPinned } : a
+          )
+        )
+        setStats((prev) => ({
+          ...prev,
+          pinned: newPinned ? prev.pinned + 1 : Math.max(0, prev.pinned - 1),
+        }))
+      }
+    } catch (error) {
+      console.error('Error toggling pin:', error)
+    }
+  }
+
+  // Feature 4 - Acknowledgment
+  const handleAcknowledge = async (id) => {
+    const target = announcements.find((a) => a.id === id)
+
+    if (!target) return
+
+    const wasAcknowledged = target.selfAcknowledged
+    const method = wasAcknowledged ? 'DELETE' : 'POST'
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/announcements/${id}/acknowledge`,
+        {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        setAnnouncements((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  selfAcknowledged: !wasAcknowledged,
+                  acknowledgmentCount: wasAcknowledged
+                    ? Math.max(0, (a.acknowledgmentCount || 0) - 1)
+                    : (a.acknowledgmentCount || 0) + 1,
+                }
+              : a
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error toggling acknowledgment:', error)
+    }
+  }
+
+  // Feature 3 - Derived sorted / filtered list
+  const filteredAnnouncements = useMemo(() => {
+    const isScheduled = (a) =>
+      a.scheduledAt && new Date(a.scheduledAt) > new Date()
+
+    const pinned = announcements.filter((a) => a.pinned && !isScheduled(a))
+    const unpinned = announcements.filter((a) => !a.pinned && !isScheduled(a))
+    const scheduled = announcements.filter((a) => isScheduled(a))
+
+    const ordered = [...pinned, ...unpinned, ...scheduled]
+
+    if (activeFilter === 'All') return ordered
+    return ordered.filter((a) => a.category === activeFilter)
+  }, [announcements, activeFilter])
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Just now'
@@ -423,10 +534,6 @@ const AdminAnnouncement = () => {
                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                   <h2 className="text-3xl font-semibold text-[#4A558F]">Hi, Admin {userName}!</h2>
                   <p className="text-gray-500 text-sm mt-2">Create and manage announcements for the community.</p>
-                  <button className="mt-4 bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full justify-center">
-                    <Calendar size={18} />
-                    View Events
-                  </button>
                 </div>
 
                 {/* Quick Stats */}
@@ -440,6 +547,14 @@ const AdminAnnouncement = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">This Week</span>
                       <span className="font-semibold text-[#4A558F]">{stats.thisWeek}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Pinned</span>
+                      <span className="font-semibold text-[#4A558F]">{stats.pinned}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Scheduled</span>
+                      <span className="font-semibold text-[#4A558F]">{stats.scheduled}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">With Images</span>
@@ -507,6 +622,47 @@ const AdminAnnouncement = () => {
                       className="w-full focus:outline-none text-sm"
                     />
                   </div>
+                </div>
+
+                {/* Schedule for later */}
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!scheduledMode) setScheduledAt('')
+                      setScheduledMode(!scheduledMode)
+                    }}
+                    className={`w-8 h-[18px] rounded-full relative transition-colors duration-200 ${
+                      scheduledMode ? 'bg-[#4A558F]' : 'bg-gray-300'
+                    }`}
+                    aria-label="Toggle scheduled posting"
+                  >
+                    <span
+                      className={`absolute top-[3px] w-3 h-3 bg-white rounded-full transition-all duration-200 ${
+                        scheduledMode ? 'left-[17px]' : 'left-[3px]'
+                      }`}
+                    />
+                  </button>
+                  <span
+                    className="text-xs text-gray-500 flex items-center gap-1.5 cursor-pointer select-none"
+                    onClick={() => {
+                      if (!scheduledMode) setScheduledAt('')
+                      setScheduledMode(!scheduledMode)
+                    }}
+                  >
+                    <CalendarClock size={14} />
+                    Schedule for later
+                  </span>
+                  {scheduledMode && (
+                    <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-[#4A558F] transition-colors flex-1 max-w-[220px]">
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        className="w-full focus:outline-none text-xs text-gray-600"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Formatting Toolbar */}
@@ -588,18 +744,49 @@ const AdminAnnouncement = () => {
                   </div>
                   <button
                     onClick={handlePost}
-                    disabled={isLoading || !postTitle.trim() || !postContent.trim() || wordCount > maxWords}
-                    className="bg-[#4A558F] text-white rounded-xl py-2 px-6 hover:bg-[#3a4575] transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading || !postTitle.trim() || !postContent.trim() || wordCount > maxWords || (scheduledMode && !scheduledAt)}
+                    className={`rounded-xl py-2 px-6 transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      scheduledMode
+                        ? 'bg-amber-600 text-white hover:bg-amber-700'
+                        : 'bg-[#4A558F] text-white hover:bg-[#3a4575]'
+                    }`}
                   >
                     {isLoading ? (
                       <Loader2 size={18} className="animate-spin" />
+                    ) : scheduledMode ? (
+                      <CalendarClock size={18} />
                     ) : (
                       <Send size={18} />
                     )}
-                    Post
+                    {scheduledMode ? 'Schedule' : 'Post'}
                   </button>
                 </div>
               </div>
+
+              {/* Feature 3 - Category Filter Tabs */}
+              {announcements.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {['All', 'General', 'Event', 'Urgent', 'Update'].map((cat) => {
+                    const count = cat === 'All'
+                      ? announcements.length
+                      : announcements.filter((a) => a.category === cat).length
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setActiveFilter(cat)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          activeFilter === cat
+                            ? 'bg-[#4A558F] text-white border-[#4A558F]'
+                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        {cat}
+                        {count > 0 && <span className="ml-1 opacity-75">({count})</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* Announcement Feed */}
               {announcements.length === 0 ? (
@@ -608,10 +795,41 @@ const AdminAnnouncement = () => {
                   <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No updates yet!</h3>
                   <p className="text-gray-500 text-sm">Create your first announcement to keep the community informed.</p>
                 </div>
+              ) : filteredAnnouncements.length === 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm p-12 border border-gray-100 text-center">
+                  <div className="text-4xl mb-3 text-gray-300">🔍</div>
+                  <h3 className="text-lg font-semibold text-gray-500 mb-1">No announcements in this category</h3>
+                  <p className="text-gray-400 text-sm">Try selecting a different filter.</p>
+                </div>
               ) : (
                 <div className="space-y-6">
-                  {announcements.map((announcement) => (
-                    <div key={announcement.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  {filteredAnnouncements.map((announcement) => {
+                    const isScheduled = announcement.scheduledAt && new Date(announcement.scheduledAt) > new Date()
+                    return (
+                    <div
+                      key={announcement.id}
+                      className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${
+                        announcement.pinned && !isScheduled
+                          ? 'border-[#4A558F] border-2'
+                          : 'border-gray-100'
+                      }`}
+                    >
+                      {/* Pin banner */}
+                      {announcement.pinned && !isScheduled && (
+                        <div className="bg-[#EEF0FA] px-5 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-[#4A558F]">
+                          <Pin size={13} />
+                          Pinned announcement
+                        </div>
+                      )}
+
+                      {/* Scheduled banner */}
+                      {isScheduled && (
+                        <div className="bg-amber-50 px-5 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+                          <CalendarClock size={13} />
+                          Scheduled — {new Date(announcement.scheduledAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </div>
+                      )}
+
                       <div className="p-5">
                         {/* Header */}
                         <div className="flex items-start justify-between mb-4">
@@ -715,25 +933,57 @@ const AdminAnnouncement = () => {
                         )}
                       </div>
 
-                      {/* Actions */}
-                      <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end gap-3">
-                        <button
-                          onClick={() => handleEdit(announcement.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
-                        >
-                          <Edit2 size={14} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteModal(announcement.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
+                      {/* Feature 4 + Feature 1 - Actions */}
+                      <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleAcknowledge(announcement.id)}
+                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                              announcement.selfAcknowledged
+                                ? 'text-green-700 bg-green-50 border-green-200'
+                                : 'text-gray-500 border-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-700'
+                            }`}
+                          >
+                            <CheckCircle size={14} />
+                            {announcement.selfAcknowledged ? 'Acknowledged' : 'Got it'}
+                          </button>
+                          {announcement.acknowledgmentCount > 0 && (
+                            <span className="text-xs text-gray-400">
+                              {announcement.acknowledgmentCount} {announcement.acknowledgmentCount === 1 ? 'person' : 'people'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleTogglePin(announcement.id)}
+                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                              announcement.pinned
+                                ? 'text-[#4A558F] bg-[#EEF0FA] font-medium'
+                                : 'text-gray-500 hover:text-[#4A558F] hover:bg-[#EEF0FA]'
+                            }`}
+                          >
+                            <Pin size={14} />
+                            {announcement.pinned ? 'Unpin' : 'Pin'}
+                          </button>
+                          <button
+                            onClick={() => handleEdit(announcement.id)}
+                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
+                          >
+                            <Edit2 size={14} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeleteModal(announcement.id)}
+                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
