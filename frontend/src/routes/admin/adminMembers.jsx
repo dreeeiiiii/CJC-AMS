@@ -226,19 +226,52 @@ const AdminMembers = () => {
   })
   const [formErrors, setFormErrors] = useState({})
 
+  const dismissToast = useCallback(() => {
+    setToast(null)
+    setToastType('success')
+    setToastAction(null)
+  }, [])
+
+  const showToast = useCallback((message, type = 'success', action = null) => {
+    setToast(message)
+    setToastType(type)
+    setToastAction(action)
+    setTimeout(() => setToast(null), 5000)
+  }, [])
   // Fetch Members
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/users'); 
+  
+      const token = localStorage.getItem("token"); // or wherever you store it
+  
+      const response = await fetch("http://localhost:5000/api/users", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.status === 401) {
+        showToast("Unauthorized. Please login again.", "error");
+        return;
+      }
+  
       const data = await response.json();
+  
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format");
+      }
+  
       setMembers(data);
     } catch (error) {
+      console.error(error);
       showToast("Failed to load members", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchMembers();
@@ -267,18 +300,7 @@ const AdminMembers = () => {
     }
   }, [])
 
-  const dismissToast = useCallback(() => {
-    setToast(null)
-    setToastType('success')
-    setToastAction(null)
-  }, [])
 
-  const showToast = useCallback((message, type = 'success', action = null) => {
-    setToast(message)
-    setToastType(type)
-    setToastAction(action)
-    setTimeout(() => setToast(null), 5000)
-  }, [])
 
   // 📌 Combined Filter and Sort Logic
   const filteredMembers = members

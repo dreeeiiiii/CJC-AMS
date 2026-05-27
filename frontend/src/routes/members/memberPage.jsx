@@ -26,7 +26,6 @@ function getSundaysInMonth(year, month) {
   return sundays;
 }
 
-// FIXED: timezone-safe key
 function toKey(date) {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -47,26 +46,33 @@ const MemberPage = () => {
   const [verse, setVerse] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [showStoryModal, setShowStoryModal] = useState(false);
 
-  const [attendanceMap, setAttendanceMap] = useState({});
-  const [streak, setStreak] = useState(0);
+  // ✅ NEW: raw attendance records from backend
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // -------------------- FETCH DATA --------------------
+  // -------------------- FETCH --------------------
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
+        const token = localStorage.getItem("token");
+
         const base = "http://localhost:5000/api";
 
         const [verseRes, testRes, attRes] = await Promise.all([
           fetch(`${base}/content/verse/today`),
           fetch(`${base}/content/testimonies`),
-          fetch(`${base}/attendance/my-summary`)
+          fetch(`${base}/attendance/my-attendance`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
         ]);
 
         if (verseRes.ok) setVerse(await verseRes.json());
@@ -74,12 +80,7 @@ const MemberPage = () => {
 
         if (attRes.ok) {
           const data = await attRes.json();
-
-          console.log("ATTENDANCE RESPONSE:", data);
-
-          // SAFE fallback handling
-          setAttendanceMap(data.attendance || {});
-          setStreak(data.streak || 0);
+          setAttendanceHistory(data || []);
         }
 
       } catch (err) {
@@ -92,7 +93,8 @@ const MemberPage = () => {
     fetchAll();
   }, []);
 
-  // close dropdown
+  // -------------------- CLOSE DROPDOWN --------------------
+
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -104,7 +106,20 @@ const MemberPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // -------------------- DERIVED STATS (NO RATE) --------------------
+  // -------------------- BUILD ATTENDANCE MAP (FROM BACKEND DATA) --------------------
+
+  const attendanceMap = useMemo(() => {
+    const map = {};
+
+    attendanceHistory.forEach((record) => {
+      const d = new Date(record.createdAt);
+      map[toKey(d)] = true;
+    });
+
+    return map;
+  }, [attendanceHistory]);
+
+  // -------------------- STATS --------------------
 
   const { attendedCount, absentCount } = useMemo(() => {
     let total = 0;
@@ -117,8 +132,7 @@ const MemberPage = () => {
 
           const key = toKey(d);
 
-          // IMPORTANT FIX: strict boolean check
-          if (attendanceMap[key] === true) {
+          if (attendanceMap[key]) {
             attended++;
           }
         }
@@ -143,24 +157,22 @@ const MemberPage = () => {
     );
   }
 
-  // -------------------- UI --------------------
+  // -------------------- UI (UNCHANGED) --------------------
 
   return (
     <MemberLayout activeNav="home">
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
-        {/* HEADER */}
         <div>
-          <h1 className="text-3xl font-bold text-[#1E3A8A]">My Attendance</h1>
+          <h1 className="text-3xl font-bold text-[#1E3A8A]">
+            My Attendance
+          </h1>
         </div>
 
-        {/* TOP CARD */}
+        {/* OVERVIEW */}
         <div className="bg-white rounded-2xl p-6 border flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-lg">Attendance Overview</h3>
-          </div>
+          <h3 className="font-bold text-lg">Attendance Overview</h3>
 
-          {/* YEAR */}
           <div ref={dropdownRef} className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -192,13 +204,11 @@ const MemberPage = () => {
         <div className="bg-white rounded-2xl p-6 border overflow-x-auto">
           <div className="min-w-[700px]">
 
-            {/* MONTH HEADER */}
             <div className="grid grid-cols-13 text-xs text-gray-500 text-center mb-3">
               <div></div>
               {MONTHS.map((m) => <div key={m}>{m}</div>)}
             </div>
 
-            {/* SUNDAYS */}
             <div className="grid grid-cols-13 gap-2">
               <div className="text-xs font-bold text-[#1E3A8A]">Sun</div>
 
@@ -206,7 +216,7 @@ const MemberPage = () => {
                 <div key={mi} className="flex flex-col gap-1">
                   {getSundaysInMonth(selectedYear, mi).map((d) => {
                     const key = toKey(d);
-                    const attended = attendanceMap[key] === true;
+                    const attended = attendanceMap[key];
                     const future = isFuture(d);
 
                     return (
@@ -229,35 +239,44 @@ const MemberPage = () => {
               ))}
             </div>
 
-            {/* STATS (RATE REMOVED) */}
+            {/* STATS */}
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Attended</p>
-                <p className="text-xl font-bold text-[#1E3A8A]">{attendedCount}</p>
+                <p className="text-xl font-bold text-[#1E3A8A]">
+                  {attendedCount}
+                </p>
               </div>
 
               <div className="bg-gray-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Absent</p>
-                <p className="text-xl font-bold text-red-600">{absentCount}</p>
+                <p className="text-xl font-bold text-red-600">
+                  {absentCount}
+                </p>
               </div>
 
               <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs text-gray-500">Streak</p>
-                <p className="text-xl font-bold text-[#1E3A8A]">{streak}</p>
+                <p className="text-xs text-gray-500">Records</p>
+                <p className="text-xl font-bold text-[#1E3A8A]">
+                  {attendanceHistory.length}
+                </p>
               </div>
             </div>
 
           </div>
         </div>
 
-        {/* VERSE + TESTIMONY */}
+        {/* VERSE + TESTIMONY stays unchanged */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border">
-            <h2 className="font-bold text-[#1E3A8A] mb-3">Verse of the Day</h2>
+            <h2 className="font-bold text-[#1E3A8A] mb-3">
+              Verse of the Day
+            </h2>
+
             <p className="text-gray-700">
               "{verse?.content || "Trust in the Lord with all your heart"}"
             </p>
+
             <p className="text-sm text-[#1E3A8A] mt-2">
               — {verse?.reference || "Proverbs 3:5-6"}
             </p>
@@ -270,7 +289,6 @@ const MemberPage = () => {
               onShareStory={() => setShowStoryModal(true)}
             />
           </div>
-
         </div>
 
       </div>
