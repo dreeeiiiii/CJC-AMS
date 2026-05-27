@@ -226,11 +226,16 @@ const AdminMembers = () => {
   })
   const [formErrors, setFormErrors] = useState({})
 
+  const getAuthHeader = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  });
+
   // Fetch Members
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/users'); 
+      const response = await fetch('http://localhost:5000/api/users', getAuthHeader());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setMembers(data);
     } catch (error) {
@@ -325,7 +330,10 @@ const AdminMembers = () => {
         : 'http://localhost:5000/api/users'
       const response = await fetch(url, {
         method: editingMemberId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader().headers,
+        },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -361,7 +369,10 @@ const AdminMembers = () => {
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
         await Promise.all(ids.map(id =>
-          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
+          fetch(`http://localhost:5000/api/users/${id}`, {
+            method: 'DELETE',
+            ...getAuthHeader(),
+          })
         ))
         setMembers(prev => prev.filter(m => !ids.includes(m.id)))
         setPendingDeleteIds([])
@@ -445,7 +456,10 @@ const AdminMembers = () => {
     clearTimeout(deleteTimeoutRef.current)
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
-        await fetch(`http://localhost:5000/api/users/${member.id}`, { method: 'DELETE' })
+        await fetch(`http://localhost:5000/api/users/${member.id}`, {
+          method: 'DELETE',
+          ...getAuthHeader(),
+        })
         setMembers(prev => prev.filter(m => m.id !== member.id))
         setPendingDeleteIds([])
         deletedMembersRef.current = []
