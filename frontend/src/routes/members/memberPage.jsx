@@ -1,306 +1,278 @@
-import { useState, useEffect, useRef } from "react";
-import { Loader2, Plus, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Loader2 } from "lucide-react";
 import MemberLayout from "../../components/MemberLayout";
 import ShareStoryModal from "../../components/ShareStoryModal";
 import TestimonyCarousel from "../../components/TestimonyCarousel";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR - 2023 + 1 }, (_, i) => CURRENT_YEAR - i); // [2026, 2025, 2024, 2023]
+// -------------------- CONSTANTS --------------------
 
-/** Returns an array of Date objects for every Sunday in the given month/year. */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 2023 + 1 }, (_, i) => CURRENT_YEAR - i);
+
+// -------------------- HELPERS --------------------
+
 function getSundaysInMonth(year, month) {
   const sundays = [];
   const d = new Date(year, month, 1);
-  // Advance to the first Sunday
+
   while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+
   while (d.getMonth() === month) {
     sundays.push(new Date(d));
     d.setDate(d.getDate() + 7);
   }
+
   return sundays;
 }
 
-/** Returns a YYYY-MM-DD string key for a Date. */
+// FIXED: timezone-safe key
 function toKey(date) {
-  return date.toISOString().slice(0, 10);
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-/** Returns true if the date is strictly in the future (after today). */
 function isFuture(date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return date > today;
 }
 
-// --- Component ---
+// -------------------- COMPONENT --------------------
 
 const MemberPage = () => {
-  const [testimonials, setTestimonials] = useState([]);
   const [verse, setVerse] = useState(null);
+  const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showStoryModal, setShowStoryModal] = useState(false);
 
-  // Attendance state: Record<"YYYY-MM-DD", boolean>
-  const [attendance, setAttendance] = useState({});
+  const [attendanceMap, setAttendanceMap] = useState({});
+  const [streak, setStreak] = useState(0);
 
-  // Year selector
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
+  // -------------------- FETCH DATA --------------------
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const base = "http://localhost:5000/api";
+
+        const [verseRes, testRes, attRes] = await Promise.all([
+          fetch(`${base}/content/verse/today`),
+          fetch(`${base}/content/testimonies`),
+          fetch(`${base}/attendance/my-summary`)
+        ]);
+
+        if (verseRes.ok) setVerse(await verseRes.json());
+        if (testRes.ok) setTestimonials(await testRes.json());
+
+        if (attRes.ok) {
+          const data = await attRes.json();
+
+          console.log("ATTENDANCE RESPONSE:", data);
+
+          // SAFE fallback handling
+          setAttendanceMap(data.attendance || {});
+          setStreak(data.streak || 0);
+        }
+
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  // close dropdown
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Fetch verse + testimonies
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const baseUrl = "http://localhost:5000/api/content";
-        const [verseRes, testimonyRes] = await Promise.all([
-          fetch(`${baseUrl}/verse/today`),
-          fetch(`${baseUrl}/testimonies`),
-        ]);
+  // -------------------- DERIVED STATS (NO RATE) --------------------
 
-        if (verseRes.ok) {
-          const verseData = await verseRes.json();
-          setVerse(verseData);
-        }
-
-        if (testimonyRes.ok) {
-          const testimonyData = await testimonyRes.json();
-          setTestimonials(testimonyData || []);
-        }
-      } catch (error) {
-        console.error("Error fetching content:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
-  }, []);
-
-  // Toggle a Sunday cell's attendance
-  const toggleAttendance = (date) => {
-    if (isFuture(date)) return;
-    const k = toKey(date);
-    setAttendance((prev) => {
-      const next = { ...prev };
-      if (next[k]) delete next[k];
-      else next[k] = true;
-      return next;
-    });
-  };
-
-  // Derive stats for the selected year
-  const { attendedCount, totalPast } = (() => {
-    let attended = 0;
+  const { attendedCount, absentCount } = useMemo(() => {
     let total = 0;
-    for (let mi = 0; mi < 12; mi++) {
-      getSundaysInMonth(selectedYear, mi).forEach((sd) => {
-        if (!isFuture(sd)) {
+    let attended = 0;
+
+    for (let m = 0; m < 12; m++) {
+      getSundaysInMonth(selectedYear, m).forEach((d) => {
+        if (!isFuture(d)) {
           total++;
-          if (attendance[toKey(sd)]) attended++;
+
+          const key = toKey(d);
+
+          // IMPORTANT FIX: strict boolean check
+          if (attendanceMap[key] === true) {
+            attended++;
+          }
         }
       });
     }
-    return { attendedCount: attended, totalPast: total };
-  })();
 
-  const absentCount = totalPast - attendedCount;
-  const attendanceRate = totalPast > 0 ? Math.round((attendedCount / totalPast) * 100) : 0;
+    return {
+      attendedCount: attended,
+      absentCount: total - attended
+    };
+  }, [attendanceMap, selectedYear]);
+
+  // -------------------- LOADING --------------------
 
   if (loading) {
     return (
       <MemberLayout activeNav="home">
         <div className="flex h-[60vh] items-center justify-center">
-          <Loader2 className="animate-spin text-[#3B4B89]" size={48} />
+          <Loader2 className="animate-spin text-[#1E3A8A]" size={48} />
         </div>
       </MemberLayout>
     );
   }
 
+  // -------------------- UI --------------------
+
   return (
     <MemberLayout activeNav="home">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
-        {/* PAGE HEADER */}
+        {/* HEADER */}
         <div>
-          <h1 className="text-3xl font-bold text-[#1E3A8A] tracking-tight">My Attendance</h1>
-          <p className="text-sm text-gray-500 mt-1">Track and manage your Sunday service attendance.</p>
+          <h1 className="text-3xl font-bold text-[#1E3A8A]">My Attendance</h1>
         </div>
 
-        {/* ATTENDANCE SECTION */}
-        <section className="space-y-6">
-
-          {/* Top Control Bar */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <span className="text-3xl" role="img" aria-label="waving hand">👋</span>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Hi, Mary!</h3>
-                <p className="text-xs text-gray-500 max-w-md mt-0.5">
-                  Your Sunday service attendance for the year.
-                </p>
-              </div>
-            </div>
-
-            {/* Year Dropdown */}
-            <div className="self-end md:self-start relative inline-block text-left" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen((o) => !o)}
-                className="flex items-center gap-2 border border-gray-200 rounded-xl px-4 py-1.5 text-sm font-semibold text-gray-700 bg-white shadow-sm hover:bg-gray-50 transition"
-              >
-                {selectedYear}
-                <ChevronDown
-                  size={16}
-                  className={`text-gray-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-200 rounded-xl shadow-md z-10 overflow-hidden">
-                  {YEARS.map((year) => (
-                    <button
-                      key={year}
-                      onClick={() => {
-                        setSelectedYear(year);
-                        setDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 text-sm transition hover:bg-gray-50 ${
-                        year === selectedYear
-                          ? "font-semibold text-[#1E3A8A]"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {year}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* TOP CARD */}
+        <div className="bg-white rounded-2xl p-6 border flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-lg">Attendance Overview</h3>
           </div>
 
-          {/* Attendance Grid Matrix */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-x-auto">
-            <div className="min-w-[640px]">
+          {/* YEAR */}
+          <div ref={dropdownRef} className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="border px-4 py-1 rounded-lg text-sm"
+            >
+              {selectedYear}
+            </button>
 
-              {/* Month header row */}
-              <div
-                className="grid gap-2 mb-3 text-center text-xs font-semibold text-gray-500"
-                style={{ gridTemplateColumns: "2.5rem repeat(12, 1fr)" }}
-              >
-                <div /> {/* empty corner */}
-                {MONTHS.map((m) => <div key={m}>{m}</div>)}
-              </div>
-
-              {/* Sunday cells row */}
-              <div
-                className="grid gap-2 items-start"
-                style={{ gridTemplateColumns: "2.5rem repeat(12, 1fr)" }}
-              >
-                <div className="text-xs font-bold text-[#3B4B89] pt-1">Sun</div>
-
-                {MONTHS.map((_, mi) => {
-                  const sundays = getSundaysInMonth(selectedYear, mi);
-                  return (
-                    <div key={mi} className="flex flex-col gap-1">
-                      {sundays.map((sd) => {
-                        const k = toKey(sd);
-                        const future = isFuture(sd);
-                        const attended = !!attendance[k];
-
-                        return (
-                          <div
-                            key={k}
-                            title={sd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            onClick={() => toggleAttendance(sd)}
-                            className={[
-                              "w-full aspect-square rounded border transition",
-                              future
-                                ? "bg-gray-50 border-gray-100 cursor-default opacity-50"
-                                : attended
-                                ? "bg-[#1E3A8A] border-[#1E3A8A] cursor-pointer"
-                                : "bg-white border-gray-200 cursor-pointer hover:border-gray-400",
-                            ].join(" ")}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mt-6">
-                {[
-                  { label: "Attended", value: attendedCount },
-                  { label: "Absent", value: absentCount },
-                  { label: "Rate", value: `${attendanceRate}%` },
-                ].map(({ label, value }) => (
-                  <div key={label} className="bg-gray-50 rounded-xl px-4 py-3">
-                    <p className="text-xs text-gray-400">{label}</p>
-                    <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
-                  </div>
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 bg-white border rounded-lg shadow">
+                {YEARS.map((y) => (
+                  <button
+                    key={y}
+                    onClick={() => {
+                      setSelectedYear(y);
+                      setDropdownOpen(false);
+                    }}
+                    className="block px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    {y}
+                  </button>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* Legend */}
-              <div className="flex justify-center items-center gap-8 mt-6 pt-4 border-t border-gray-50 text-xs font-medium text-gray-500">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-[#1E3A8A] rounded" />
-                  <span>Attended</span>
+        {/* GRID */}
+        <div className="bg-white rounded-2xl p-6 border overflow-x-auto">
+          <div className="min-w-[700px]">
+
+            {/* MONTH HEADER */}
+            <div className="grid grid-cols-13 text-xs text-gray-500 text-center mb-3">
+              <div></div>
+              {MONTHS.map((m) => <div key={m}>{m}</div>)}
+            </div>
+
+            {/* SUNDAYS */}
+            <div className="grid grid-cols-13 gap-2">
+              <div className="text-xs font-bold text-[#1E3A8A]">Sun</div>
+
+              {MONTHS.map((_, mi) => (
+                <div key={mi} className="flex flex-col gap-1">
+                  {getSundaysInMonth(selectedYear, mi).map((d) => {
+                    const key = toKey(d);
+                    const attended = attendanceMap[key] === true;
+                    const future = isFuture(d);
+
+                    return (
+                      <div
+                        key={key}
+                        className={[
+                          "aspect-square rounded border flex items-center justify-center text-[10px] font-bold",
+                          future
+                            ? "bg-gray-100 opacity-40"
+                            : attended
+                            ? "bg-[#1E3A8A] border-[#1E3A8A] text-white"
+                            : "bg-red-50 border-red-300 text-red-500"
+                        ].join(" ")}
+                      >
+                        {d.getDate()}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border border-gray-300 rounded bg-white" />
-                  <span>Absent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gray-100 border border-gray-100 rounded opacity-50" />
-                  <span>Future</span>
-                </div>
+              ))}
+            </div>
+
+            {/* STATS (RATE REMOVED) */}
+            <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Attended</p>
+                <p className="text-xl font-bold text-[#1E3A8A]">{attendedCount}</p>
               </div>
 
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Absent</p>
+                <p className="text-xl font-bold text-red-600">{absentCount}</p>
+              </div>
+
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Streak</p>
+                <p className="text-xl font-bold text-[#1E3A8A]">{streak}</p>
+              </div>
             </div>
+
           </div>
-        </section>
+        </div>
 
-        {/* TWO COLUMN GRID: VERSE & TESTIMONIES */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* VERSE + TESTIMONY */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Verse of the Day */}
-          <section className="lg:col-span-2 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-6">
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold text-[#3B4B89] mb-4">Verse of the Day</h2>
-              <p className="text-lg text-gray-700 font-light leading-relaxed mb-3">
-                {verse?.content ? `"${verse.content}"` : '"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."'}
-              </p>
-              <p className="text-sm font-semibold text-[#3B4B89]">
-                — {verse?.reference || "Proverbs 3:5-6"}{" "}
-                {verse?.topic ? `(${verse.topic})` : verse?.content ? "" : "(NIV)"}
-              </p>
-            </div>
-          </section>
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border">
+            <h2 className="font-bold text-[#1E3A8A] mb-3">Verse of the Day</h2>
+            <p className="text-gray-700">
+              "{verse?.content || "Trust in the Lord with all your heart"}"
+            </p>
+            <p className="text-sm text-[#1E3A8A] mt-2">
+              — {verse?.reference || "Proverbs 3:5-6"}
+            </p>
+          </div>
 
-          {/* Testimonies */}
-          <section className="bg-[#3B4B89] rounded-2xl p-6 shadow-sm text-white text-center">
-            <h2 className="text-xl font-bold mb-4">Testimonies</h2>
+          <div className="bg-[#1E3A8A] text-white p-6 rounded-2xl">
+            <h2 className="font-bold mb-3">Testimonies</h2>
             <TestimonyCarousel
               testimonials={testimonials}
               onShareStory={() => setShowStoryModal(true)}
             />
-          </section>
+          </div>
 
         </div>
+
       </div>
 
       <ShareStoryModal
