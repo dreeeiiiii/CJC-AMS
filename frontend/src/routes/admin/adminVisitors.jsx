@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
+import Modal from '../../components/Modal'
 import { 
   Search, Filter, Download, Plus, ArrowLeft, User, 
   Building2, Calendar, CheckCircle, X, ChevronDown, 
@@ -84,8 +85,8 @@ const VisitorDetailModal = ({ visitor, onClose, onDelete, onEdit }) => {
   const visitTimeStr = visitDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <Modal isOpen={true} onClose={onClose}>
+      <div className="font-montserrat">
 
         {/* Header */}
         <div className="bg-[#1a2a5e] p-5 flex items-center justify-between">
@@ -185,28 +186,28 @@ const VisitorDetailModal = ({ visitor, onClose, onDelete, onEdit }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
+        <div className="p-4 sm:px-6 sm:py-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors order-3 sm:order-1"
           >
             Close
           </button>
           <button
             onClick={() => onDelete(visitor)}
-            className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors order-2"
           >
             Remove Visitor
           </button>
           <button
             onClick={() => onEdit(visitor)}
-            className="px-4 py-2 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors order-1 sm:order-3"
           >
             Edit Visitor
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -551,7 +552,23 @@ const AdminVisitors = () => {
           </div>
 
           {/* KPI Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {/* Mobile: 3-col compact grid */}
+          <div className="grid grid-cols-3 sm:hidden gap-0 mb-8">
+            <div className="flex flex-col items-center py-4 border-r border-gray-200">
+              <p className="font-bold text-xl text-[#4A558F]">{isLoading ? '...' : stats.week}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Visitors<br/>This Week</p>
+            </div>
+            <div className="flex flex-col items-center py-4 border-r border-gray-200">
+              <p className="font-bold text-xl text-[#4A558F]">{isLoading ? '...' : stats.month}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Visitors<br/>This Month</p>
+            </div>
+            <div className="flex flex-col items-center py-4">
+              <p className="font-bold text-xl text-[#4A558F]">{isLoading ? '...' : stats.total}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Overall<br/>Visitors</p>
+            </div>
+          </div>
+          {/* Tablet+: cards */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
               <p className="font-bold text-3xl text-[#4A558F]">{isLoading ? '...' : stats.week}</p>
               <p className="text-sm text-gray-500 mt-1">Visitors This Week</p>
@@ -585,8 +602,11 @@ const AdminVisitors = () => {
                   <div className="relative" ref={filterRef}>
                     <button
                       onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"                    >
-                      <Filter size={16} /> Filter & Sort
+                      className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                    >
+                      <Filter size={16} />
+                      <span className="hidden xs:inline">Filter & Sort</span>
+                      <span className="xs:hidden">Filter</span>
                       <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -597,7 +617,7 @@ const AdminVisitors = () => {
                           <button
                             key={opt}
                             onClick={() => { setCategoryFilter(opt); setShowFilterDropdown(false) }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${categoryFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${categoryFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                           >
                             {opt}
                           </button>
@@ -612,7 +632,7 @@ const AdminVisitors = () => {
                           <button
                             key={opt.val}
                             onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                           >
                             {opt.label}
                           </button>
@@ -622,9 +642,9 @@ const AdminVisitors = () => {
                   </div>
                   <button
                     onClick={handleExportCSV}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
+                    className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
                   >
-                    <Download size={16} /> Export
+                    <Download size={16} /> <span className="hidden xs:inline">Export</span>
                   </button>
                 </div>
               </div>
@@ -665,10 +685,10 @@ const AdminVisitors = () => {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Full Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Original Church</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Invited By</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Date & Time</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Church</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Invited By</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -707,20 +727,20 @@ const AdminVisitors = () => {
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 hidden sm:table-cell">
                             <div className="flex items-center gap-1.5 text-gray-600">
                               <Building2 size={14} className="text-gray-400" />
                               {visitor.churchAffiliation || visitor.originalChurch}
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 hide-xs hidden sm:table-cell">
                             <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
                               {visitor.invitedBy || 'Walk-in'}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5 text-gray-600">
-                              <Calendar size={14} className="text-gray-400" />
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 text-gray-600 text-xs sm:text-sm">
+                              <Calendar size={14} className="text-gray-400 hidden sm:inline" />
                               {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
                             </div>
                             {isPendingDelete ? (
@@ -755,11 +775,9 @@ const AdminVisitors = () => {
         />
       )}
 
-      {/* ── Add / Edit Visitor Modal ─────────────────────────────────────── */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center gap-4 p-5 border-b border-gray-100">
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetForm() }}>
+        <div className="font-montserrat">
+          <div className="flex items-center gap-4 p-5 border-b border-gray-100">
               <button
                 onClick={() => { setShowAddModal(false); resetForm() }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -829,15 +847,14 @@ const AdminVisitors = () => {
                       : <><Plus size={18} /> Save Visitor</>
                   }
                 </button>
-              </div>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* ── Toast ───────────────────────────────────────────────────────── */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+        <div className="toast-container fixed bottom-6 right-6 z-50 animate-slide-up">
           <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
             toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}>
@@ -861,15 +878,7 @@ const AdminVisitors = () => {
 
       <Footer />
 
-      <style>{`
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
+
     </>
   )
 }

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import ConfirmDialog from "./ConfirmDialog";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -51,46 +52,16 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Logout Confirmation Modal */}
-      <AnimatePresence>
-        {showLogoutConfirm && (
-          <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white rounded-xl shadow-lg p-6 w-80 text-center"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.3 }}
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Confirm Logout
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to log out?
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => setShowLogoutConfirm(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-300 text-gray-800 hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
-                >
-                  Logout
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Confirm Logout"
+        message="Are you sure you want to log out?"
+        confirmText="Logout"
+        variant="danger"
+        loading={loading}
+      />
 
       <nav className="sticky top-0 z-40 shadow-md bg-white">
         <div className="flex justify-between items-center px-4 md:px-8 py-3 md:py-4 text-[#364687]">

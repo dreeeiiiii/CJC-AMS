@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
+import Modal from '../../components/Modal'
 import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, 
@@ -45,8 +46,8 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
     : '—'
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <Modal isOpen={true} onClose={onClose}>
+      <div className="font-montserrat">
 
         {/* Header */}
         <div className="bg-[#1a2a5e] p-5 flex items-center justify-between">
@@ -88,7 +89,7 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
             <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
               Personal Information
             </p>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2.5">
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-[10px] text-gray-400 font-medium mb-1">First Name</p>
                 <p className="text-sm font-semibold text-[#1a2a5e]">{member.firstName}</p>
@@ -117,7 +118,7 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
                   {member.status}
                 </span>
               </div>
-              <div className="col-span-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <div className="col-span-1 xs:col-span-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-[10px] text-gray-400 font-medium mb-1 flex items-center gap-1">
                   <MapPin size={10} /> Address
                 </p>
@@ -164,28 +165,28 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-2">
+        <div className="p-4 sm:px-6 sm:py-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium hover:bg-gray-200 transition-colors order-3 sm:order-1"
           >
             Close
           </button>
           <button
             onClick={() => onDelete(member)}
-            className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors order-2"
           >
             Remove Member
           </button>
           <button
             onClick={() => onEdit(member)}
-            className="px-4 py-2 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#1a2a5e] text-white text-sm font-medium hover:bg-[#253570] transition-colors order-1 sm:order-3"
           >
             Edit Member
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -534,7 +535,23 @@ const AdminMembers = () => {
           </div>
 
           {/* KPI Metrics Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {/* Mobile: 3-col compact grid */}
+          <div className="grid grid-cols-3 sm:hidden gap-0 mb-8">
+            <div className="flex flex-col items-center py-4 border-r border-gray-200">
+              <p className="font-bold text-xl text-[#4A558F]">{loading ? '...' : newMembersCount}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">New Members</p>
+            </div>
+            <div className="flex flex-col items-center py-4 border-r border-gray-200">
+              <p className="font-bold text-xl text-[#4A558F]">{loading ? '...' : oldMembersCount}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Old Members</p>
+            </div>
+            <div className="flex flex-col items-center py-4">
+              <p className="font-bold text-xl text-[#4A558F]">{loading ? '...' : members.length}</p>
+              <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Overall Members</p>
+            </div>
+          </div>
+          {/* Tablet+: cards */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100 flex flex-col items-center">
               <p className="font-bold text-3xl text-[#4A558F]">{loading ? '...' : newMembersCount}</p>
               <p className="text-sm text-gray-500 mt-1">New Members</p>
@@ -575,10 +592,11 @@ const AdminMembers = () => {
                   <div className="relative" ref={filterRef}>
                     <button 
                       onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                      className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
                     >
                       <Filter size={16} />
-                      <span>Filter & Sort</span>
+                      <span className="hidden xs:inline">Filter & Sort</span>
+                      <span className="xs:hidden">Filter</span>
                       <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -589,7 +607,7 @@ const AdminMembers = () => {
                           <button
                             key={opt}
                             onClick={() => { setStatusFilter(opt); setShowFilterDropdown(false); }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${statusFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                           >
                             {opt}
                           </button>
@@ -605,7 +623,7 @@ const AdminMembers = () => {
                           <button
                             key={opt.val}
                             onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false); }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                           >
                             {opt.label}
                           </button>
@@ -615,9 +633,9 @@ const AdminMembers = () => {
                   </div>
 
 
-                  <button 
+                  <button
                     onClick={handleExportCSV}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
+                    className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
                   >
                     <Download size={16} />
                     Export
@@ -663,12 +681,11 @@ const AdminMembers = () => {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">First Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Middle Initial</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Last Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Email</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Middle</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Email</th>
                       <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Member Since</th>
+                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Member Since</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -696,13 +713,10 @@ const AdminMembers = () => {
                           />
                         </td>
                         <td className="py-3 px-4">
-                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName}</span>
+                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName} {member.lastName}</span>
                         </td>
-                        <td className="py-3 px-4 text-gray-700">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
-                        <td className="py-3 px-4">
-                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.lastName}</span>
-                        </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-gray-700 hidden sm:table-cell">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
+                        <td className="py-3 px-4 hidden sm:table-cell">
                           <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.email}</span>
                         </td>
                         <td className="py-3 px-4">
@@ -712,7 +726,7 @@ const AdminMembers = () => {
                             <CheckCircle size={12} /> {member.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 hidden sm:table-cell">
                           <span className="text-gray-500">{new Date(member.joinDate).toLocaleDateString()}</span>
                           {isPendingDelete && (
                             <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
@@ -750,16 +764,14 @@ const AdminMembers = () => {
         />
       )}
 
-      {/* Add Member Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center gap-4 p-5 border-b border-gray-100">
-              <button onClick={() => { setShowModal(false); resetForm() }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <ArrowLeft size={20} className="text-[#4A558F]" />
-              </button>
-              <h3 className="text-lg font-semibold text-[#4A558F]">{editingMemberId ? 'Edit Member' : 'Add New Member'}</h3>
-            </div>
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }}>
+        <div className="font-montserrat">
+          <div className="flex items-center gap-4 p-5 border-b border-gray-100">
+            <button onClick={() => { setShowModal(false); resetForm() }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ArrowLeft size={20} className="text-[#4A558F]" />
+            </button>
+            <h3 className="text-lg font-semibold text-[#4A558F]">{editingMemberId ? 'Edit Member' : 'Add New Member'}</h3>
+          </div>
 
             <div className="p-5">
               <div className="grid grid-cols-2 gap-x-4">
@@ -813,10 +825,9 @@ const AdminMembers = () => {
                   <Plus size={18} /> {editingMemberId ? 'Update Member' : 'Add Member'}
                 </button>
               </div>
-            </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Toast Notification */}
       {toast && (
@@ -841,15 +852,7 @@ const AdminMembers = () => {
 
       <Footer />
 
-      <style>{`
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
+
     </>
   )
 }

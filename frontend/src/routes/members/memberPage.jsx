@@ -179,7 +179,7 @@ const MemberPage = () => {
         <section className="space-y-6">
 
           {/* Top Control Bar */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-start gap-4">
               <span className="text-3xl" role="img" aria-label="waving hand">👋</span>
               <div>
@@ -226,8 +226,22 @@ const MemberPage = () => {
             </div>
           </div>
 
+          {/* Stats row — outside grid card, centered on mobile */}
+          <div className="grid grid-cols-3 gap-3 text-center md:text-left max-w-md mx-auto md:max-w-none md:mx-0">
+            {[
+              { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
+              { label: "Absent",   value: absentCount,   color: "text-red-600"   },
+              { label: "Records",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-gray-50 rounded-xl p-3 md:px-4 md:py-3">
+                <p className="text-xs text-gray-400">{label}</p>
+                <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Attendance Grid Matrix */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-x-auto">
+          <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 overflow-x-auto">
             <div className="min-w-[640px]">
 
               {/* Month header row */}
@@ -283,22 +297,8 @@ const MemberPage = () => {
                 })}
               </div>
 
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mt-6">
-                {[
-                  { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
-                  { label: "Absent",   value: absentCount,   color: "text-red-600"   },
-                  { label: "Records",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-gray-50 rounded-xl px-4 py-3">
-                    <p className="text-xs text-gray-400">{label}</p>
-                    <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
-                  </div>
-                ))}
-              </div>
-
               {/* Legend */}
-              <div className="flex justify-center items-center gap-8 mt-6 pt-4 border-t border-gray-50 text-xs font-medium text-gray-500">
+              <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-6 pt-4 border-t border-gray-50 text-xs font-medium text-gray-500">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-[#1E3A8A] rounded" />
                   <span>Attended</span>

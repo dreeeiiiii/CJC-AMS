@@ -215,34 +215,43 @@ const AdminAttendance = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
             <div className="p-5 border-b border-gray-100">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                {/* Search */}
-                <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-72 focus-within:border-[#4A558F] transition-colors bg-white">
-                  <Search size={16} className="text-gray-400" />
-                  <input
-                    type="search"
-                    placeholder="Search..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full ml-2 focus:outline-none text-sm"
-                  />
+                {/* Search + Print (mobile row) */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex-1 sm:flex-none sm:w-72 flex items-center border border-gray-200 rounded-full px-4 py-2 focus-within:border-[#4A558F] transition-colors bg-white">
+                    <Search size={16} className="text-gray-400" />
+                    <input
+                      type="search"
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full ml-2 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePrint}
+                    className="sm:hidden flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
+                  >
+                    <Printer size={16} />
+                  </button>
                 </div>
 
-                {/* Date Filter + Group Filter + Print */}
-                <div className="flex items-center gap-3">
+                {/* Controls */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <input
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-600 focus:outline-none focus:border-[#4A558F] transition-colors"
+                    className="border border-gray-200 rounded-full px-4 py-2.5 text-sm text-gray-600 focus:outline-none focus:border-[#4A558F] transition-colors"
                   />
 
                   <div className="relative">
                     <button
                       onClick={() => setShowGroupDropdown(!showGroupDropdown)}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                      className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
                     >
                       <Filter size={16} />
-                      <span>{groupFilter.length === 0 ? 'Group' : `${groupFilter.length} selected`}</span>
+                      <span className="hidden xs:inline">{groupFilter.length === 0 ? 'Group' : `${groupFilter.length} selected`}</span>
+                      <span className="xs:hidden">Group</span>
                       <ChevronDown size={14} className={`transition-transform ${showGroupDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -250,7 +259,7 @@ const AdminAttendance = () => {
                       <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
                         <button
                           onClick={() => { setGroupFilter([]); }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${groupFilter.length === 0 ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${groupFilter.length === 0 ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
                           All Groups
                         </button>
@@ -260,7 +269,7 @@ const AdminAttendance = () => {
                           return (
                             <label
                               key={g}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors ${
+                              className={`flex items-center gap-2 px-3 py-3 rounded-lg text-sm cursor-pointer transition-colors ${
                                 checked ? 'bg-[#D9DFF2]/50 text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'
                               }`}
                             >
@@ -286,10 +295,10 @@ const AdminAttendance = () => {
 
                   <button
                     onClick={handlePrint}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
+                    className="hidden sm:flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
                   >
                     <Printer size={16} />
-                    Print
+                    <span className="hidden xs:inline">Print</span>
                   </button>
                 </div>
               </div>
@@ -404,7 +413,7 @@ const AdminAttendance = () => {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+        <div className="toast-container fixed bottom-6 right-6 z-50 animate-slide-up">
           <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
             toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}>
@@ -425,15 +434,7 @@ const AdminAttendance = () => {
 
       <Footer />
 
-      <style>{`
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
+
     </>
   )
 }

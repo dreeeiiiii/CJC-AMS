@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import {
   ImagePlus,
   Send,
@@ -44,7 +45,7 @@ const AdminAnnouncement = () => {
   // Pagination states
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const [stats, setStats] = useState({ total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0 })
+  const [stats, setStats] = useState({ total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0, byCategory: {} })
   const ITEMS_PER_PAGE = 5
 
   // UI states
@@ -92,7 +93,7 @@ const AdminAnnouncement = () => {
           const data = await response.json()
           setAnnouncements(data.data || [])
           setHasMore(data.hasMore !== false)
-          setStats(data.stats || { total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0 })
+          setStats(data.stats || { total: 0, thisWeek: 0, withImages: 0, pinned: 0, scheduled: 0, byCategory: {} })
           setPage(1)
         }
       } catch (error) {
@@ -453,6 +454,11 @@ const AdminAnnouncement = () => {
     return ordered.filter((a) => a.category === activeFilter)
   }, [announcements, activeFilter])
 
+  const totalForFilter = activeFilter === 'All'
+    ? stats.total
+    : (stats.byCategory?.[activeFilter] || 0)
+  const showLoadMore = filteredAnnouncements.length < totalForFilter
+
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Just now'
 
@@ -549,16 +555,16 @@ const AdminAnnouncement = () => {
                       <span className="font-semibold text-[#4A558F]">{stats.thisWeek}</span>
                     </div>
                     <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">With Images</span>
+                      <span className="font-semibold text-[#4A558F]">{stats.withImages}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Pinned</span>
                       <span className="font-semibold text-[#4A558F]">{stats.pinned}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Scheduled</span>
                       <span className="font-semibold text-[#4A558F]">{stats.scheduled}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">With Images</span>
-                      <span className="font-semibold text-[#4A558F]">{stats.withImages}</span>
                     </div>
                   </div>
                 </div>
@@ -666,30 +672,30 @@ const AdminAnnouncement = () => {
                 </div>
 
                 {/* Formatting Toolbar */}
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1 mb-2">
                   <button
                     type="button"
                     onClick={() => insertFormat('bold')}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    className="p-3 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
                     title="Bold"
                   >
-                    <Bold size={16} />
+                    <Bold size={18} />
                   </button>
                   <button
                     type="button"
                     onClick={() => insertFormat('italic')}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    className="p-3 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
                     title="Italic"
                   >
-                    <Italic size={16} />
+                    <Italic size={18} />
                   </button>
                   <button
                     type="button"
                     onClick={() => insertFormat('emoji')}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
+                    className="p-3 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#4A558F] transition-colors"
                     title="Add Emoji"
                   >
-                    <Smile size={16} />
+                    <Smile size={18} />
                   </button>
                 </div>
 
@@ -745,7 +751,7 @@ const AdminAnnouncement = () => {
                   <button
                     onClick={handlePost}
                     disabled={isLoading || !postTitle.trim() || !postContent.trim() || wordCount > maxWords || (scheduledMode && !scheduledAt)}
-                    className={`rounded-xl py-2 px-6 transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`rounded-xl py-3 px-8 transition-all duration-300 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm ${
                       scheduledMode
                         ? 'bg-amber-600 text-white hover:bg-amber-700'
                         : 'bg-[#4A558F] text-white hover:bg-[#3a4575]'
@@ -765,16 +771,16 @@ const AdminAnnouncement = () => {
 
               {/* Feature 3 - Category Filter Tabs */}
               {announcements.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   {['All', 'General', 'Event', 'Urgent', 'Update'].map((cat) => {
                     const count = cat === 'All'
-                      ? announcements.length
-                      : announcements.filter((a) => a.category === cat).length
+                      ? stats.total
+                      : (stats.byCategory?.[cat] || 0)
                     return (
                       <button
                         key={cat}
                         onClick={() => setActiveFilter(cat)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        className={`px-4 py-2.5 rounded-full text-xs font-medium border transition-all ${
                           activeFilter === cat
                             ? 'bg-[#4A558F] text-white border-[#4A558F]'
                             : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
@@ -934,17 +940,17 @@ const AdminAnnouncement = () => {
                       </div>
 
                       {/* Feature 4 + Feature 1 - Actions */}
-                      <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="border-t border-gray-100 px-4 sm:px-5 py-3 flex flex-col xs:flex-row items-start xs:items-center gap-3 xs:gap-0 justify-between">
+                        <div className="flex items-center gap-2 w-full xs:w-auto">
                           <button
                             onClick={() => handleAcknowledge(announcement.id)}
-                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                            className={`flex items-center gap-1.5 text-xs px-4 py-2.5 rounded-lg border transition-colors ${
                               announcement.selfAcknowledged
                                 ? 'text-green-700 bg-green-50 border-green-200'
                                 : 'text-gray-500 border-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-700'
                             }`}
                           >
-                            <CheckCircle size={14} />
+                            <CheckCircle size={16} />
                             {announcement.selfAcknowledged ? 'Acknowledged' : 'Got it'}
                           </button>
                           {announcement.acknowledgmentCount > 0 && (
@@ -953,31 +959,31 @@ const AdminAnnouncement = () => {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 w-full xs:w-auto justify-end">
                           <button
                             onClick={() => handleTogglePin(announcement.id)}
-                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                            className={`flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-lg transition-colors ${
                               announcement.pinned
                                 ? 'text-[#4A558F] bg-[#EEF0FA] font-medium'
                                 : 'text-gray-500 hover:text-[#4A558F] hover:bg-[#EEF0FA]'
                             }`}
                           >
-                            <Pin size={14} />
-                            {announcement.pinned ? 'Unpin' : 'Pin'}
+                            <Pin size={16} />
+                            <span className="hidden xs:inline">{announcement.pinned ? 'Unpin' : 'Pin'}</span>
                           </button>
                           <button
                             onClick={() => handleEdit(announcement.id)}
-                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#D9DFF2]/50"
+                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#4A558F] transition-colors px-3 py-2.5 rounded-lg hover:bg-[#D9DFF2]/50"
                           >
-                            <Edit2 size={14} />
-                            Edit
+                            <Edit2 size={16} />
+                            <span className="hidden xs:inline">Edit</span>
                           </button>
                           <button
                             onClick={() => setDeleteModal(announcement.id)}
-                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-3 py-2.5 rounded-lg hover:bg-red-50"
                           >
-                            <Trash2 size={14} />
-                            Delete
+                            <Trash2 size={16} />
+                            <span className="hidden xs:inline">Delete</span>
                           </button>
                         </div>
                       </div>
@@ -992,9 +998,9 @@ const AdminAnnouncement = () => {
                 <div className="flex justify-center pt-2">
                   <button
                     onClick={handleLoadMore}
-                    disabled={loadingMore || !hasMore}
+                    disabled={loadingMore || !showLoadMore}
                     className={`flex items-center gap-2 px-8 py-3 rounded-xl border-2 text-sm font-semibold shadow-sm transition-all duration-300 ${
-                      hasMore
+                      showLoadMore
                         ? 'border-[#D9DFF2] text-[#4A558F] bg-white hover:bg-[#D9DFF2] hover:border-[#4A558F]'
                         : 'border-gray-200 text-gray-400 bg-gray-50 cursor-default'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -1004,7 +1010,7 @@ const AdminAnnouncement = () => {
                         <Loader2 size={18} className="animate-spin" />
                         Loading...
                       </>
-                    ) : hasMore ? (
+                    ) : showLoadMore ? (
                       'Load More Announcements'
                     ) : (
                       'All announcements loaded'
@@ -1015,33 +1021,16 @@ const AdminAnnouncement = () => {
             </div>
           </div>
         </div>
-
-        {/* Delete Confirmation Modal */}
-        {deleteModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={24} className="text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Announcement?</h3>
-              <p className="text-sm text-gray-500 mb-6">This action cannot be undone. Are you sure you want to delete this post?</p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setDeleteModal(null)}
-                  className="px-5 py-2 rounded-xl bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteModal)}
-                  className="px-5 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        
+        <ConfirmDialog
+          isOpen={!!deleteModal}
+          onClose={() => setDeleteModal(null)}
+          onConfirm={() => handleDelete(deleteModal)}
+          title="Delete Announcement?"
+          message="This action cannot be undone. Are you sure you want to delete this post?"
+          confirmText="Delete"
+          variant="danger"
+        />
 
         <Footer />
       </>

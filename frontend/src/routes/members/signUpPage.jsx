@@ -2,7 +2,8 @@ import Navbar from "../../components/navbar";
 import Footer from "../../components/footer";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Eye, EyeOff, XCircle, CheckCircle, X } from "lucide-react"; 
+import { Eye, EyeOff, XCircle, CheckCircle, X } from "lucide-react";
+import Modal from "../../components/Modal"; 
 import axios from "axios";
 
 // 💡 Helper function for backend/network errors
@@ -114,42 +115,29 @@ export const Signup = () => {
       <Navbar />
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900 relative px-4 py-10">
         
-        {/* 🚨 POPUP MODAL (Handles both Error and Success) 🚨 */}
-        {popup.show && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-fade-in-up flex flex-col items-center text-center relative">
-                    
-                    {popup.isError && (
-                        <button 
-                            onClick={closePopup}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
-                    
-                    {popup.isError ? (
-                        <XCircle className="text-red-400 w-16 h-16 mb-4" />
-                    ) : (
-                        <CheckCircle className="text-green-400 w-16 h-16 mb-4" />
-                    )}
+        <Modal isOpen={popup.show} onClose={popup.isError ? closePopup : undefined}>
+            <div className="p-6 flex flex-col items-center text-center">
+                {popup.isError ? (
+                    <XCircle className="text-red-400 w-16 h-16 mb-4" />
+                ) : (
+                    <CheckCircle className="text-green-400 w-16 h-16 mb-4" />
+                )}
 
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        {popup.isError ? "Signup Issue" : "Welcome!"}
-                    </h3>
-                    <p className="text-gray-600 mb-6">{popup.message}</p>
-                    
-                    {popup.isError && (
-                        <button 
-                            onClick={closePopup}
-                            className="w-full bg-indigo-500 text-white font-semibold py-2 rounded-xl hover:bg-indigo-600 transition"
-                        >
-                            Got it
-                        </button>
-                    )}
-                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {popup.isError ? "Signup Issue" : "Welcome!"}
+                </h3>
+                <p className="text-gray-600 mb-6">{popup.message}</p>
+                
+                {popup.isError && (
+                    <button 
+                        onClick={closePopup}
+                        className="w-full bg-indigo-500 text-white font-semibold py-2 rounded-xl hover:bg-indigo-600 transition"
+                    >
+                        Got it
+                    </button>
+                )}
             </div>
-        )}
+        </Modal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 w-full max-w-screen-xl font-montserrat">
           {/* Hero text — hidden on small screens, shown on md+ */}

@@ -26,7 +26,7 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const [announcements, total, thisWeekCount, withImagesCount, pinnedCount, scheduledCount] = await Promise.all([
+    const [announcements, total, thisWeekCount, withImagesCount, pinnedCount, scheduledCount, categoryAgg] = await Promise.all([
       prisma.announcement.findMany({
         skip,
         take: limit,
@@ -43,9 +43,18 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
         where: { pinned: true },
       }),
       prisma.announcement.count({
-        where: { scheduledAt: { not: null } },
+        where: { scheduledAt: { gt: now } },
+      }),
+      prisma.announcement.groupBy({
+        by: ['category'],
+        _count: { category: true },
       }),
     ]);
+
+    const byCategory: Record<string, number> = {};
+    for (const row of categoryAgg) {
+      byCategory[row.category] = row._count.category;
+    }
 
     return res.status(200).json({
       data: announcements,
@@ -56,6 +65,7 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
         withImages: withImagesCount,
         pinned: pinnedCount,
         scheduled: scheduledCount,
+        byCategory,
       },
     });
   } catch (error: any) {

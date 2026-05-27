@@ -25,12 +25,16 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
     ? contentText 
     : contentText.slice(0, maxLength) + (isLongText ? "..." : "");
 
-  // Close lightbox on Escape
   useEffect(() => {
-    if (!lightboxImage) return;
+    document.body.style.overflow = lightboxImage ? "hidden" : "";
+    document.body.classList.toggle("lightbox-open", !!lightboxImage);
     const handleKey = (e) => { if (e.key === "Escape") setLightboxImage(null); };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    if (lightboxImage) window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = "";
+      document.body.classList.remove("lightbox-open");
+      window.removeEventListener("keydown", handleKey);
+    };
   }, [lightboxImage]);
 
   return (
@@ -102,7 +106,7 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
             src={announcement.image}
             alt="Announcement"
             referrerPolicy="no-referrer"
-            className="w-full h-64 object-cover cursor-pointer"
+            className="w-full h-48 sm:h-64 object-cover cursor-pointer"
             onClick={() => setLightboxImage(announcement.image)}
             onError={(e) => {
               e.target.style.display = "none";
@@ -116,7 +120,7 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => onAcknowledge?.(announcement.id)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border min-h-[48px] transition-colors ${
               announcement.selfAcknowledged
                 ? "text-green-700 bg-green-50 border-green-200"
                 : "text-gray-500 border-gray-300 hover:bg-green-50 hover:border-green-200 hover:text-green-700"
@@ -136,7 +140,7 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
             href={announcement.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 py-1.5 px-3 text-[13px] font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-2 py-1.5 px-3 text-[13px] font-semibold text-gray-600 hover:bg-gray-100 rounded-md min-h-[48px] transition-colors"
           >
             <ExternalLink size={16} />
             View Full Post
@@ -144,15 +148,18 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
         )}
       </div>
 
-      {/* Lightbox overlay */}
       {lightboxImage && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full size announcement image"
           onClick={() => setLightboxImage(null)}
         >
           <button
             onClick={() => setLightboxImage(null)}
             className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
+            aria-label="Close lightbox"
           >
             <X size={24} />
           </button>
@@ -261,45 +268,42 @@ const MemberAnnouncements = () => {
       <section className="px-6 md:px-12 py-6 bg-gray-50">
         {/* Widened container to match the 2-column grid */}
         <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[auto_1fr_auto] gap-4 items-center">
+            <h2 className="text-xl font-semibold text-gray-800 whitespace-nowrap">
               Latest Updates
             </h2>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-initial sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search announcements..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent outline-none"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search announcements..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 text-sm focus:ring-2 focus:ring-[#3B4B89] focus:border-transparent outline-none"
+              />
+            </div>
 
-              {/* Category Filter Tabs */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {categories.map((cat) => {
-                  const count = cat === "All"
-                    ? searchedAnnouncements.length
-                    : searchedAnnouncements.filter((a) => a.category === cat).length;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                        selectedCategory === cat
-                          ? "bg-[#3B4B89] text-white border-[#3B4B89]"
-                          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {cat}
-                      <span className="ml-1 opacity-75">({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap md:col-span-2 lg:col-span-1">
+              {categories.map((cat) => {
+                const count = cat === "All"
+                  ? searchedAnnouncements.length
+                  : searchedAnnouncements.filter((a) => a.category === cat).length;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-2 text-[11px] sm:text-xs font-medium border rounded-full transition-colors ${
+                      selectedCategory === cat
+                        ? "bg-[#3B4B89] text-white border-[#3B4B89]"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {cat}
+                    <span className="ml-1 opacity-75">({count})</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -309,7 +313,7 @@ const MemberAnnouncements = () => {
       <section className="px-4 md:px-12 pb-12 bg-gray-50 min-h-screen">
         <div className="max-w-5xl mx-auto pt-4">
           {filteredAnnouncements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {filteredAnnouncements.map((ann) => (
                 <AnnouncementCard key={ann.id} announcement={ann} onAcknowledge={handleAcknowledge} />
               ))}

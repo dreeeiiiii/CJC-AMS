@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import AdminNavbar from "../../components/adminNavbar"
 import Footer from '../../components/footer'
+import Modal from '../../components/Modal'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 
@@ -389,7 +390,7 @@ const AdminPage = () => {
       <AdminNavbar />
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg font-montserrat text-sm text-white transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#4A558F]'}`}>
+        <div className={`toast-container fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg font-montserrat text-sm text-white transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#4A558F]'}`}>
           {toast.message}
         </div>
       )}
@@ -401,9 +402,9 @@ const AdminPage = () => {
             <p className="text-gray-500 text-sm">Manage and monitor attendance here.</p>
             <button
               onClick={() => setShowAttendanceModal(true)}
-              className="bg-[#D9DFF2] text-[#4A558F] rounded-xl py-2.5 px-6 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2"
+              className="bg-[#D9DFF2] text-[#4A558F] rounded-xl py-3 px-8 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-md flex items-center gap-2 w-full sm:w-auto justify-center"
             >
-              <UserPlus size={18} />
+              <UserPlus size={20} />
               Add Attendance
             </button>
           </div>
@@ -463,7 +464,23 @@ const AdminPage = () => {
         </div>
 
         {/* --- STAT CARDS --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-evenly items-center py-6 gap-6 sm:gap-0">
+        {/* Mobile: 3-col compact grid */}
+        <div className="grid grid-cols-3 sm:hidden gap-0">
+          <div className="flex flex-col items-center justify-center py-4 border-r border-gray-200">
+            <p className="font-bold text-xl text-[#4A558F]">{stats.newAttendeesWeek}</p>
+            <p className="text-[11px] text-gray-500 mt-1 text-center px-1">New This Week</p>
+          </div>
+          <div className="flex flex-col items-center justify-center py-4 border-r border-gray-200">
+            <p className="font-bold text-xl text-[#4A558F]">{stats.totalAttendeesWeek}</p>
+            <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Total This Week</p>
+          </div>
+          <div className="flex flex-col items-center justify-center py-4">
+            <p className="font-bold text-xl text-[#4A558F]">{stats.monthlyAttendance}</p>
+            <p className="text-[11px] text-gray-500 mt-1 text-center px-1">Monthly Total</p>
+          </div>
+        </div>
+        {/* Tablet+: flex cards */}
+        <div className="hidden sm:flex bg-white rounded-2xl shadow-sm border border-gray-100 flex-row justify-evenly items-center py-6">
           <div className="flex flex-col items-center text-center">
             <div className="flex items-center gap-2 mb-1">
               <UserPlus size={20} className="text-[#4A558F]" />
@@ -471,7 +488,7 @@ const AdminPage = () => {
             </div>
             <p className="text-sm text-gray-500">New This Week</p>
           </div>
-          <div className="hidden sm:block w-px h-12 bg-gray-200"></div>
+          <div className="w-px h-12 bg-gray-200"></div>
           <div className="flex flex-col items-center text-center">
             <div className="flex items-center gap-2 mb-1">
               <Users size={20} className="text-[#4A558F]" />
@@ -479,7 +496,7 @@ const AdminPage = () => {
             </div>
             <p className="text-sm text-gray-500">Total This Week</p>
           </div>
-          <div className="hidden sm:block w-px h-12 bg-gray-200"></div>
+          <div className="w-px h-12 bg-gray-200"></div>
           <div className="flex flex-col items-center text-center">
             <div className="flex items-center gap-2 mb-1">
               <CalendarCheck size={20} className="text-[#4A558F]" />
@@ -508,10 +525,11 @@ const AdminPage = () => {
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
+                  className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
                 >
                   <Filter size={16} />
-                  <span>Filter & Sort</span>
+                  <span className="hidden xs:inline">Filter & Sort</span>
+                  <span className="xs:hidden">Filter</span>
                   <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -522,7 +540,7 @@ const AdminPage = () => {
                       <button
                         key={opt}
                         onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                       >
                         {opt}
                       </button>
@@ -533,7 +551,7 @@ const AdminPage = () => {
                       <button
                         key={opt}
                         onClick={() => { setActivityFilter(opt); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                       >
                         {opt}
                       </button>
@@ -548,7 +566,7 @@ const AdminPage = () => {
                       <button
                         key={opt.val}
                         onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                       >
                         {opt.label}
                       </button>
@@ -557,7 +575,7 @@ const AdminPage = () => {
                 )}
               </div>
 
-              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white">
+              <button onClick={handleExport} className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white">
                 <Download size={16} />
                 Export
               </button>
@@ -632,101 +650,98 @@ const AdminPage = () => {
 
       <Footer />
 
-      {/* --- ATTENDANCE MODAL --- */}
-      {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-montserrat transition-opacity duration-300">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
-            <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-[#F8F9FD]">
-              <button onClick={closeModal} className="p-2 hover:bg-gray-200/80 rounded-xl transition-colors">
-                <ArrowLeft size={20} className="text-[#4A558F]" />
-              </button>
-              <h3 className="text-base font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-widest">
-                {showScanner ? "Scan QR Code" : "Record Attendance"}
-              </h3>
-            </div>
+      <Modal isOpen={showAttendanceModal} onClose={closeModal}>
+        <div className="font-montserrat">
+          <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-[#F8F9FD]">
+            <button onClick={closeModal} className="p-3 hover:bg-gray-200/80 rounded-xl transition-colors">
+              <ArrowLeft size={20} className="text-[#4A558F]" />
+            </button>
+            <h3 className="text-sm md:text-base font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-widest">
+              {showScanner ? "Scan QR Code" : "Record Attendance"}
+            </h3>
+          </div>
 
-            <div className="p-6">
-              {!showScanner ? (
-                <>
-                  <div className="relative">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value)
-                        setSelectedMember(null)
-                      }}
-                      onFocus={() => setShowDropdown(true)}
-                      placeholder="Search Member Name..."
-                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:border-[#4A558F] transition-colors text-sm"
-                    />
+          <div className="p-6">
+            {!showScanner ? (
+              <>
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setSelectedMember(null)
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    placeholder="Search Member Name..."
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:border-[#4A558F] transition-colors text-sm"
+                  />
 
-                    {showDropdown && filteredMembers.length > 0 && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                        {filteredMembers.map((member) => (
-                          <div
-                            key={member.id}
-                            onClick={() => selectMember(member)}
-                            className="px-4 py-3 cursor-pointer hover:bg-[#F8F9FD] text-sm text-gray-700 flex justify-between items-center transition-colors"
-                          >
-                            <span className="font-medium">{member.firstName} {member.lastName}</span>
-                            <span className="text-[10px] bg-[#D9DFF2] px-2 py-0.5 rounded font-semibold text-[#4A558F]">
-                              {member.role || 'Member'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleAddAttendance}
-                    disabled={!selectedMember}
-                    className={`w-full mt-6 rounded-xl py-3.5 transition-all shadow-md text-sm font-bold uppercase tracking-widest ${
-                      selectedMember ? 'bg-[#4A558F] text-white hover:bg-[#3a4575] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Confirm Attendance
-                  </button>
-
-                  <div className="relative my-6 flex py-1 items-center font-medium">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="flex-shrink mx-4 text-xs text-gray-400 uppercase tracking-wider">OR</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowScanner(true)}
-                    className="w-full py-3.5 bg-[#D9DFF2] text-[#4A558F] font-bold text-sm rounded-xl flex items-center justify-center gap-2.5 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-sm uppercase tracking-wider active:scale-[0.98]"
-                  >
-                    <QrCode size={18} /> Use Camera Scanner
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <div className="w-full bg-[#111827] rounded-2xl p-4 shadow-inner relative border border-gray-800 mb-5 overflow-hidden group">
-                    <div className="absolute inset-x-4 top-4 bottom-4 pointer-events-none z-10">
-                      <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-[#4A558F] rounded-tl"></div>
-                      <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-[#4A558F] rounded-tr"></div>
-                      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-[#4A558F] rounded-bl"></div>
-                      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-[#4A558F] rounded-br"></div>
+                  {showDropdown && filteredMembers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {filteredMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          onClick={() => selectMember(member)}
+                          className="px-4 py-3 cursor-pointer hover:bg-[#F8F9FD] text-sm text-gray-700 flex justify-between items-center transition-colors"
+                        >
+                          <span className="font-medium">{member.firstName} {member.lastName}</span>
+                          <span className="text-[10px] bg-[#D9DFF2] px-2 py-0.5 rounded font-semibold text-[#4A558F]">
+                            {member.role || 'Member'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
-                  </div>
-
-                  <button 
-                    onClick={() => setShowScanner(false)} 
-                    className="w-full bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors uppercase tracking-wider flex items-center justify-center gap-2"
-                  >
-                    <ArrowLeft size={16} /> Back
-                  </button>
+                  )}
                 </div>
-              )}
-            </div>
+
+                <button
+                  onClick={handleAddAttendance}
+                  disabled={!selectedMember}
+                  className={`w-full mt-6 rounded-xl py-3.5 transition-all shadow-md text-sm font-bold uppercase tracking-widest ${
+                    selectedMember ? 'bg-[#4A558F] text-white hover:bg-[#3a4575] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm Attendance
+                </button>
+
+                <div className="relative my-6 flex py-1 items-center font-medium">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="flex-shrink mx-4 text-xs text-gray-400 uppercase tracking-wider">OR</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
+                </div>
+
+                <button
+                  onClick={() => setShowScanner(true)}
+                  className="w-full py-3.5 bg-[#D9DFF2] text-[#4A558F] font-bold text-sm rounded-xl flex items-center justify-center gap-2.5 hover:bg-[#4A558F] hover:text-white transition-all duration-300 shadow-sm uppercase tracking-wider active:scale-[0.98]"
+                >
+                  <QrCode size={18} /> Use Camera Scanner
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className="w-full bg-[#111827] rounded-2xl p-4 shadow-inner relative border border-gray-800 mb-5 overflow-hidden group">
+                  <div className="absolute inset-x-4 top-4 bottom-4 pointer-events-none z-10">
+                    <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-[#4A558F] rounded-tl"></div>
+                    <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-[#4A558F] rounded-tr"></div>
+                    <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-[#4A558F] rounded-bl"></div>
+                    <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-[#4A558F] rounded-br"></div>
+                  </div>
+                  <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
+                </div>
+
+                <button 
+                  onClick={() => setShowScanner(false)} 
+                  className="w-full bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft size={16} /> Back
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </Modal>
     </>
   )
 }

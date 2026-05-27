@@ -1,12 +1,19 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Menu, X, ChevronDown, Home, Bell, User, LogOut } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Menu, X, ChevronDown, Home, Bell, User, LogOut, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchMyProfile } from "../api/userApi";
+import ConfirmDialog from "./ConfirmDialog";
+import Footer from "./footer";
 
 const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const drawerRef = useRef(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [nearFooter, setNearFooter] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -72,6 +79,58 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
     return () => window.removeEventListener("userDataUpdated", syncUser);
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+      setNearFooter(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setLightboxOpen(document.body.classList.contains("lightbox-open"));
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    document.body.style.overflow = "hidden";
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    const handleTab = (e) => {
+      if (!drawerRef.current) return;
+      const focusable = drawerRef.current.querySelectorAll(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.key === "Tab") {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleEsc);
+    document.addEventListener("keydown", handleTab);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener("keydown", handleTab);
+    };
+  }, [mobileMenuOpen]);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
   const navItems = [
     { id: "home", label: "Home", icon: Home, path: "/member/home" },
     { id: "announcements", label: "Announcements", icon: Bell, path: "/member/announcements" },
@@ -110,21 +169,15 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
 
   return (
     <div className="min-h-screen bg-white font-montserrat">
-      {/* Logout Confirmation Modal */}
-      <AnimatePresence>
-        {showLogoutConfirm && (
-          <motion.div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-[100]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="bg-white rounded-xl shadow-lg p-6 w-80 text-center" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Confirm Logout</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to log out?</p>
-              <div className="flex justify-center gap-4">
-                <button onClick={() => setShowLogoutConfirm(false)} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition">Cancel</button>
-                <button onClick={handleLogout} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition">Logout</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Confirm Logout"
+        message="Are you sure you want to log out?"
+        confirmText="Logout"
+        variant="danger"
+      />
 
       <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-100 px-4 md:px-8 py-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -170,7 +223,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
                         setMemberDropdownOpen(false);
                         setShowLogoutConfirm(true);
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 min-h-[48px] transition-colors"
                     >
                       <LogOut size={16} />
                       Logout
@@ -186,7 +239,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)}>
-            <motion.div className="w-64 h-full bg-[#F0F0F5] p-6 pt-20" initial={{ x: -256 }} animate={{ x: 0 }} exit={{ x: -256 }} onClick={(e) => e.stopPropagation()}>
+            <motion.div ref={drawerRef} className="w-64 h-full bg-[#F0F0F5] p-6 pt-20" initial={{ x: -256 }} animate={{ x: 0 }} exit={{ x: -256 }} onClick={(e) => e.stopPropagation()}>
               <div className="flex flex-col items-center mb-8">
                 <ProfileAvatar sizeClass="w-20 h-20 mb-3" />
                 <p className="font-semibold text-[#3B4B89] text-sm text-center">{userData.fullName}</p>
@@ -194,7 +247,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
               </div>
               <nav className="space-y-2">
                 {navItems.map((item) => (
-                  <button key={item.id} onClick={() => handleNavClick(item.id, item.path)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${activeNav === item.id ? "bg-[#3B4B89] text-white shadow-md" : "text-gray-600 hover:bg-white/50"}`}>
+                  <button key={item.id} onClick={() => handleNavClick(item.id, item.path)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium min-h-[48px] transition ${activeNav === item.id ? "bg-[#3B4B89] text-white shadow-md" : "text-gray-600 hover:bg-white/50"}`}>
                     <item.icon size={18} />
                     {item.label}
                   </button>
@@ -205,7 +258,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
         )}
       </AnimatePresence>
 
-      <aside className="hidden md:flex flex-col flex-shrink-0 w-[22%] lg:w-[20%] fixed left-0 top-16 bottom-0 bg-[#F0F0F5] p-6 border-r border-gray-200">
+      <aside className="hidden md:flex flex-col flex-shrink-0 w-64 fixed left-0 top-16 bottom-0 bg-[#F0F0F5] p-6 border-r border-gray-200">
         <div className="flex flex-col items-center text-center mb-10">
           <ProfileAvatar sizeClass="w-24 h-24 mb-4" />
           <p className="font-bold text-[#3B4B89] text-lg leading-tight">{userData.fullName}</p>
@@ -215,7 +268,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
           <button 
             key={item.id} 
             onClick={() => handleNavClick(item.id, item.path)} 
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition whitespace-nowrap overflow-hidden ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium min-h-[48px] transition whitespace-nowrap overflow-hidden ${
               activeNav === item.id 
                 ? "bg-[#3B4B89] text-white shadow-md" 
                 : "text-gray-600 hover:bg-white/50"
@@ -229,9 +282,23 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
         ))}
       </aside>
 
-      <main className="md:ml-[22%] lg:ml-[20%] pt-16 min-h-screen transition-all">
+      <main className="md:ml-64 pt-16 min-h-screen transition-all">
         {children}
+        <Footer />
       </main>
+
+      {showBackToTop && !location.pathname.includes("/member/profile") && !lightboxOpen && !mobileMenuOpen && (
+        <button
+          onClick={scrollToTop}
+          className={`group fixed z-50 bg-[#4A558F] text-white rounded-full p-3 shadow-lg hover:bg-[#3a4575] transition-all duration-300 ${nearFooter ? 'bottom-24' : 'bottom-6'} right-6`}
+          aria-label="Back to top"
+        >
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Back to Top
+          </span>
+          <ArrowUp size={20} />
+        </button>
+      )}
     </div>
   );
 };
