@@ -39,7 +39,6 @@ const AdminPage = () => {
   const [sortBy, setSortBy] = useState('date-desc')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const filterRef = useRef(null)
-
   const inputRef = useRef(null)
 
   // Compute consecutive weekly attendance streak per member name
@@ -90,8 +89,99 @@ const AdminPage = () => {
 
   const streakMap = computeStreaks(allAttendanceRecords)
 
+  // --- API Configuration ---
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
+  const getAuthHeader = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  })
+
+  // --- Dynamic Analytics Computations ---
+  const computeWeeklyData = (allRecords, currentWeekCount) => {
+    const now = new Date()
+    const getWeekStart = (date) => {
+      const d = new Date(date)
+      const day = d.getDay()
+      d.setDate(d.getDate() - day)
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+    const currentWeekStart = getWeekStart(now)
+    const weeks = []
+    
+    for (let i = 3; i >= 1; i--) {
+      const weekStart = new Date(currentWeekStart)
+      weekStart.setDate(weekStart.getDate() - i * 7)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 7)
+      
+      weeks.push(allRecords.filter(r => {
+        const d = new Date(r.createdAt || r.date)
+        return d >= weekStart && d < weekEnd
+      }).length)
+    }
+    weeks.push(currentWeekCount)
+    return weeks
+  }
+
+  const computeMemberStatus = (memberList, allRecords) => {
+    const now = new Date()
+    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
+    const lastAttendance = {}
+    
+    allRecords.forEach(r => {
+      const recordName = r.name || (r.member ? `${r.member.firstName} ${r.member.lastName}` : '')
+      const recordDate = r.createdAt || r.date
+      if (recordName && (!lastAttendance[recordName] || new Date(recordDate) > new Date(lastAttendance[recordName]))) {
+        lastAttendance[recordName] = recordDate
+      }
+    })
+    
+    const activityMap = {}
+    memberList.forEach(m => {
+      const name = `${m.firstName} ${m.lastName}`
+      const lastDate = lastAttendance[name]
+      activityMap[name] = lastDate ? new Date(lastDate) >= fourWeeksAgo : false
+    })
+    
+    const active = Object.values(activityMap).filter(Boolean).length
+    const inactive = Object.values(activityMap).filter(v => !v).length
+    const total = memberList.length
+    
+    return {
+      active,
+      inactive,
+      total,
+      activePct: total > 0 ? Math.round((active / total) * 100) : 0,
+      inactivePct: total > 0 ? Math.round((inactive / total) * 100) : 0,
+      activityMap
+    }
+  }
+
+  // --- Normalizing API Data For Table Display ---
+  const normalizedRecords = useMemo(() => {
+    return attendanceRecords.map(rec => {
+      const name = rec.name || (rec.member ? `${rec.member.firstName} ${rec.member.lastName}` : 'Unknown Member');
+      const status = rec.status || rec.member?.status || 'Old Member';
+      
+      // Parse dates safely from database timestamps
+      const ts = rec.createdAt ? new Date(rec.createdAt) : (rec.date ? new Date(rec.date) : new Date());
+      const dateString = ts.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const timeString = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      return {
+        id: rec.id,
+        name,
+        status,
+        date: dateString,
+        time: timeString,
+        rawDateTime: ts
+      };
+    });
+  }, [attendanceRecords]);
+
+  // --- Memoized Table Filtering & Sorting ---
   const filteredRecords = useMemo(() => {
-    return attendanceRecords
+    return normalizedRecords
       .filter(row => {
         const matchesSearch = !tableSearch || row.name.toLowerCase().includes(tableSearch.toLowerCase())
         const matchesType = typeFilter === 'All' || row.status === typeFilter
@@ -103,18 +193,12 @@ const AdminPage = () => {
       })
       .sort((a, b) => {
         if (sortBy === 'name') return a.name.localeCompare(b.name)
-        if (sortBy === 'date-asc') return new Date(a.date) - new Date(b.date)
-        return new Date(b.date) - new Date(a.date)
+        if (sortBy === 'date-asc') return a.rawDateTime - b.rawDateTime
+        return b.rawDateTime - a.rawDateTime
       })
-  }, [attendanceRecords, tableSearch, typeFilter, activityFilter, sortBy, memberStatus.activityMap])
+  }, [normalizedRecords, tableSearch, typeFilter, activityFilter, sortBy, memberStatus.activityMap])
 
-  // --- API Configuration ---
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
-  const getAuthHeader = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  })
-
-  // --- Data Fetching ---
+  // --- Live Data Fetching ---
   const fetchDashboardData = async () => {
     try {
       const config = getAuthHeader()
@@ -128,38 +212,27 @@ const AdminPage = () => {
         axios.get(`${API_BASE_URL}/api/attendance`, config)
       ])
       
-      let membersData = membersRes.data
-      let activityData = activityRes.data
-      let allData = allAttendanceRes.data
-      let weekTotal = statsRes.data.totalAttendeesWeek || 0
-
-      if (!allData || allData.length === 0) {
-        const dummy = generateDummyData()
-        membersData = dummy.members
-        activityData = dummy.recent
-        allData = dummy.all
-        weekTotal = dummy.totalWeek
-      }
+      const membersData = membersRes.data || []
+      const activityData = activityRes.data || []
+      const allData = allAttendanceRes.data || []
+      const weekTotal = statsRes.data?.totalAttendeesWeek || 0
 
       setMembers(membersData)
       setAttendanceRecords(activityData)
-      setStats({ ...statsRes.data, totalAttendeesWeek: weekTotal, monthlyAttendance: allData.length })
       setAllAttendanceRecords(allData)
+      
+      setStats({ 
+        newAttendeesWeek: statsRes.data?.newAttendeesWeek || 0,
+        totalAttendeesWeek: weekTotal, 
+        monthlyAttendance: allData.length,
+        ratio: statsRes.data?.ratio || { old: 0, new: 0, oldPercentage: 0, newPercentage: 0 }
+      })
 
-      const weeks = computeWeeklyData(allData, weekTotal)
-      setWeeklyData(weeks)
-
-      const status = computeMemberStatus(membersData, allData)
-      setMemberStatus(status)
+      setWeeklyData(computeWeeklyData(allData, weekTotal))
+      setMemberStatus(computeMemberStatus(membersData, allData))
     } catch (error) {
       console.error("Dashboard Fetch Error:", error)
-      const dummy = generateDummyData()
-      setMembers(dummy.members)
-      setAttendanceRecords(dummy.recent)
-      setStats({ totalAttendeesWeek: dummy.totalWeek, monthlyAttendance: dummy.totalMonth, newAttendeesWeek: 3, ratio: { old: 0, new: 0, oldPercentage: 0, newPercentage: 0 } })
-      setAllAttendanceRecords(dummy.all)
-      setWeeklyData(computeWeeklyData(dummy.all, dummy.totalWeek))
-      setMemberStatus(computeMemberStatus(dummy.members, dummy.all))
+      showToast("Could not sync data with server", "error")
     }
   }
 
@@ -177,8 +250,7 @@ const AdminPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // --- QR SCANNER LOGIC (UPDATED & PATCHED) ---
-  // --- DEBUGGING QR SCANNER LOGIC ---
+  // --- QR Scanner Instance Lifecycle ---
   useEffect(() => {
     let scanner = null;
     let timeoutId = null;
@@ -194,42 +266,30 @@ const AdminPage = () => {
           });
 
           const onScanSuccess = async (decodedText) => {
-            // 1. ALERT IMMEDIATELY TO PROVE THE CAMERA READ SOMETHING
-            alert(`RAW QR CODE DETECTED!\nContent: "${decodedText}"`);
-            
             try {
               const cleanId = decodedText.trim();
-              alert(`Step 2: Cleaned ID is "${cleanId}"\nIs it NaN? ${isNaN(Number(cleanId))}`);
-
               if (isNaN(Number(cleanId))) {
                 showToast('Invalid QR payload format', 'error');
                 return;
               }
 
-              alert(`Step 3: Sending to API -> ID: ${Number(cleanId)}`);
-
-              const response = await axios.post(
+              await axios.post(
                 `${API_BASE_URL}/api/attendance`, 
                 { memberId: Number(cleanId) }, 
                 getAuthHeader()
               );
               
-              alert(`Step 4: API SUCCESS!\n${JSON.stringify(response.data)}`);
               showToast('Attendance Recorded via QR!');
               closeModal();
               fetchDashboardData();
             } catch (error) {
-              alert(`API ERROR:\nStatus: ${error.response?.status}\nMessage: ${error.response?.data?.message || error.message}`);
               showToast(error.response?.data?.message || 'Invalid QR Code', 'error');
             }
           };
 
-          scanner.render(onScanSuccess, (err) => { 
-            // Optional: Uncomment the line below if you want to see if the library is throwing constant loop errors
-            // console.log("Scanning loop error:", err);
-          });
+          scanner.render(onScanSuccess, (err) => {});
         } catch (initErr) {
-          alert(`SCANNER INITIALIZATION CRASH:\n${initErr.message}`);
+          console.error("Scanner init fail:", initErr);
         }
       }, 100);
     }
@@ -242,7 +302,7 @@ const AdminPage = () => {
     }
   }, [showScanner]);
 
-  // --- Search Logic ---
+  // --- Search Member Input Field Filtering ---
   useEffect(() => {
     if (searchTerm.trim() === '' || selectedMember) {
       setFilteredMembers([])
@@ -259,7 +319,7 @@ const AdminPage = () => {
     setShowDropdown(filtered.length > 0)
   }, [searchTerm, members, selectedMember])
 
-  // --- Handlers ---
+  // --- Actions & Request Interactors ---
   const handleAddAttendance = async () => {
     if (!selectedMember) {
       showToast('Please select a valid member', 'error')
@@ -293,6 +353,7 @@ const AdminPage = () => {
       link.setAttribute('download', `Attendance_Report_${new Date().toLocaleDateString()}.csv`)
       document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
     } catch (error) {
       showToast("Export failed", "error")
     }
@@ -316,110 +377,22 @@ const AdminPage = () => {
     setShowScanner(false)
   }
 
-  const computeWeeklyData = (allRecords, currentWeekCount) => {
-    const now = new Date()
-    const getWeekStart = (date) => {
-      const d = new Date(date)
-      const day = d.getDay()
-      d.setDate(d.getDate() - day)
-      d.setHours(0, 0, 0, 0)
-      return d
-    }
-    const currentWeekStart = getWeekStart(now)
-    const weeks = []
-    for (let i = 3; i >= 1; i--) {
-      const weekStart = new Date(currentWeekStart)
-      weekStart.setDate(weekStart.getDate() - i * 7)
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekEnd.getDate() + 7)
-      weeks.push(allRecords.filter(r => {
-        const d = new Date(r.date)
-        return d >= weekStart && d < weekEnd
-      }).length)
-    }
-    weeks.push(currentWeekCount)
-    return weeks
-  }
-
-  const computeMemberStatus = (members, allRecords) => {
-    const now = new Date()
-    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
-    const lastAttendance = {}
-    allRecords.forEach(r => {
-      if (!lastAttendance[r.name] || new Date(r.date) > new Date(lastAttendance[r.name])) {
-        lastAttendance[r.name] = r.date
-      }
-    })
-    const activityMap = {}
-    members.forEach(m => {
-      const name = `${m.firstName} ${m.lastName}`
-      const lastDate = lastAttendance[name]
-      activityMap[name] = lastDate ? new Date(lastDate) >= fourWeeksAgo : false
-    })
-    const active = Object.values(activityMap).filter(Boolean).length
-    const inactive = Object.values(activityMap).filter(v => !v).length
-    const total = active + inactive
-    return {
-      active,
-      inactive,
-      total,
-      activePct: total > 0 ? Math.round((active / total) * 100) : 0,
-      inactivePct: total > 0 ? Math.round((inactive / total) * 100) : 0,
-      activityMap
-    }
-  }
-
-  const generateDummyData = () => {
-    const now = new Date()
-    const dummyMembers = [
-      { id: 1, firstName: 'Michael', lastName: 'Manlangit', status: 'Old Member' },
-      { id: 2, firstName: 'Hazel Anne', lastName: 'Malitig', status: 'Old Member' },
-      { id: 3, firstName: 'Kenneth', lastName: 'Onan', status: 'New Member' },
-      { id: 4, firstName: 'Kurt Angelo', lastName: 'Labandelo', status: 'Old Member' },
-      { id: 5, firstName: 'Harvy', lastName: 'Winceslao', status: 'Old Member' },
-      { id: 6, firstName: 'Daniel', lastName: 'Catena', status: 'New Member' },
-      { id: 7, firstName: 'Sarah', lastName: 'Cruz', status: 'Old Member' },
-      { id: 8, firstName: 'John', lastName: 'Santos', status: 'New Member' },
-      { id: 9, firstName: 'Maria', lastName: 'Reyes', status: 'Old Member' },
-      { id: 10, firstName: 'Jose', lastName: 'Garcia', status: 'New Member' },
-    ]
-    const fullNames = dummyMembers.map(m => `${m.firstName} ${m.lastName}`)
-    const dummyAll = []
-    const dummyRecent = []
-    const weekMs = 7 * 24 * 60 * 60 * 1000
-    fullNames.forEach((name, idx) => {
-      const numRecords = 1 + (idx % 3)
-      for (let i = 0; i < numRecords; i++) {
-        const daysAgo = Math.floor(Math.random() * 28)
-        const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000)
-        dummyAll.push({
-          id: dummyAll.length + 1,
-          name,
-          date: d.toISOString().split('T')[0],
-          time: `${9 + (idx % 3)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')} AM`
-        })
-      }
-    })
-    dummyAll.forEach((r, i) => {
-      if (i < 10) dummyRecent.push({ ...r, status: dummyMembers[i % dummyMembers.length].status || 'Old Member' })
-    })
-    const totalWeek = dummyAll.filter(r => {
-      const d = new Date(r.date)
-      return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    }).length
-    return { members: dummyMembers, recent: dummyRecent, all: dummyAll, totalWeek, totalMonth: dummyAll.length }
-  }
-
   const getStatusStyles = (status) => {
     const normalized = status?.toLowerCase() || '';
     if (normalized === 'new member') return 'bg-green-100 text-green-700';
-    if (normalized === 'old member') return 'bg-[#D9DFF2] text-[#4A558F]';
+    if (normalized === 'old member') return 'bg-indigo-100 text-indigo-700';
     return 'bg-gray-100 text-gray-500';
   }
 
   return (
     <>
       <AdminNavbar />
+
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg font-montserrat text-sm text-white transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#4A558F]'}`}>
+          {toast.message}
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 font-montserrat">
         <div className="flex flex-col lg:flex-row gap-6">
@@ -543,7 +516,7 @@ const AdminPage = () => {
                 </button>
 
                 {showFilterDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2">
                     <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
                     {['All', 'New Member', 'Old Member'].map((opt) => (
                       <button
@@ -562,7 +535,7 @@ const AdminPage = () => {
                         onClick={() => { setActivityFilter(opt); setShowFilterDropdown(false) }}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                       >
-                        {opt === 'All' ? 'All' : opt}
+                        {opt}
                       </button>
                     ))}
                     <div className="my-1 border-t border-gray-100"></div>
@@ -698,7 +671,9 @@ const AdminPage = () => {
                             className="px-4 py-3 cursor-pointer hover:bg-[#F8F9FD] text-sm text-gray-700 flex justify-between items-center transition-colors"
                           >
                             <span className="font-medium">{member.firstName} {member.lastName}</span>
-                            <span className="text-[10px] bg-[#D9DFF2] px-2 py-0.5 rounded font-semibold text-[#4A558F]">{member.role}</span>
+                            <span className="text-[10px] bg-[#D9DFF2] px-2 py-0.5 rounded font-semibold text-[#4A558F]">
+                              {member.role || 'Member'}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -730,19 +705,13 @@ const AdminPage = () => {
                 </>
               ) : (
                 <div className="flex flex-col items-center">
-                  {/* Styled QR Window Chassis */}
                   <div className="w-full bg-[#111827] rounded-2xl p-4 shadow-inner relative border border-gray-800 mb-5 overflow-hidden group">
-                    
-                    {/* Laser scanning targeting overlay animation */}
                     <div className="absolute inset-x-4 top-4 bottom-4 pointer-events-none z-10">
                       <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-[#4A558F] rounded-tl"></div>
                       <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-[#4A558F] rounded-tr"></div>
                       <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-[#4A558F] rounded-bl"></div>
                       <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-[#4A558F] rounded-br"></div>
-                      <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#4A558F] to-transparent absolute top-1/2 left-0 animate-scanner-line opacity-80"></div>
                     </div>
-
-                    {/* Target scan destination node mount container */}
                     <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
                   </div>
 
@@ -750,7 +719,7 @@ const AdminPage = () => {
                     onClick={() => setShowScanner(false)} 
                     className="w-full bg-gray-100 text-gray-600 rounded-xl py-3 text-sm font-bold hover:bg-gray-200 transition-colors uppercase tracking-wider flex items-center justify-center gap-2"
                   >
-                    <ArrowLeft size={16} /> Back to Search
+                    <ArrowLeft size={16} /> Back
                   </button>
                 </div>
               )}
@@ -758,81 +727,6 @@ const AdminPage = () => {
           </div>
         </div>
       )}
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[60] animate-slide-up">
-          <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl text-sm font-medium ${
-            toast.type === 'success' ? 'bg-gray-900 text-white border-l-4 border-green-500' : 'bg-red-600 text-white'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle size={18} className="text-green-400" /> : <X size={18} />}
-            {toast.message}
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scan-move { 0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; } }
-        
-        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .animate-scanner-line { animation: scan-move 2.5s ease-in-out infinite; }
-        
-        #reader, #reader * {
-          font-family: 'Montserrat', sans-serif !important;
-        }
-
-        /* Target Library Injected Elements explicitly */
-        #reader { 
-          border: none !important; 
-          background: transparent !important;
-        }
-        #reader__scan_region { 
-          background: transparent !important; 
-          display: flex !important;
-          justify-content: center !important;
-        }
-        #reader__scan_region video {
-          border-radius: 12px !important;
-          object-fit: cover !important;
-        }
-        
-        /* Control Dashboard Panel Layout Buttons */
-        #reader__dashboard_section_csr button, 
-        #reader__dashboard_section_swaplink {
-          background: #4A558F !important;
-          color: white !important;
-          border: none !important;
-          padding: 10px 20px !important;
-          border-radius: 10px !important;
-          font-size: 12px !important;
-          text-transform: uppercase !important;
-          font-weight: 700 !important;
-          letter-spacing: 0.05em !important;
-          transition: all 0.2s ease !important;
-          cursor: pointer !important;
-          margin-top: 12px !important;
-          box-shadow: 0 2px 4px rgba(74, 85, 143, 0.2) !important;
-        }
-        #reader__dashboard_section_csr button:hover {
-          background: #3a4575 !important;
-          transform: translateY(-1px) !important;
-        }
-        
-        /* Dropdowns selection adjustments inside the camera selector UI */
-        #reader__dashboard_section_csr select {
-          padding: 8px 12px !important;
-          border-radius: 8px !important;
-          border: 2px solid #E5E7EB !important;
-          background-color: white !important;
-          font-size: 13px !important;
-          color: #374151 !important;
-          outline: none !important;
-        }
-        #reader__dashboard_section_csr select:focus {
-          border-color: #4A558F !important;
-        }
-        #reader img { display: none !important; }
-      `}</style>
     </>
   )
 }

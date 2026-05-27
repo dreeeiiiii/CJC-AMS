@@ -1,18 +1,20 @@
-import { useState, useEffect, useRef } from "react";
-import { Loader2, Plus, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Loader2, ChevronDown } from "lucide-react";
 import MemberLayout from "../../components/MemberLayout";
 import ShareStoryModal from "../../components/ShareStoryModal";
 import TestimonyCarousel from "../../components/TestimonyCarousel";
 
+// -------------------- CONSTANTS --------------------
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR - 2023 + 1 }, (_, i) => CURRENT_YEAR - i); // [2026, 2025, 2024, 2023]
+const YEARS = Array.from({ length: CURRENT_YEAR - 2023 + 1 }, (_, i) => CURRENT_YEAR - i);
 
-/** Returns an array of Date objects for every Sunday in the given month/year. */
+// -------------------- HELPERS --------------------
+
 function getSundaysInMonth(year, month) {
   const sundays = [];
   const d = new Date(year, month, 1);
-  // Advance to the first Sunday
   while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
   while (d.getMonth() === month) {
     sundays.push(new Date(d));
@@ -21,33 +23,69 @@ function getSundaysInMonth(year, month) {
   return sundays;
 }
 
-/** Returns a YYYY-MM-DD string key for a Date. */
+// FIXED (teammate): timezone-safe key — avoids UTC offset shifting the date
 function toKey(date) {
-  return date.toISOString().slice(0, 10);
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-/** Returns true if the date is strictly in the future (after today). */
 function isFuture(date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return date > today;
 }
 
-// --- Component ---
+// -------------------- COMPONENT --------------------
 
 const MemberPage = () => {
-  const [testimonials, setTestimonials] = useState([]);
   const [verse, setVerse] = useState(null);
+  const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showStoryModal, setShowStoryModal] = useState(false);
 
-  // Attendance state: Record<"YYYY-MM-DD", boolean>
-  const [attendance, setAttendance] = useState({});
+  // FIXED (teammate): attendance now comes from API, not local toggle state
+  const [attendanceMap, setAttendanceMap] = useState({});
+  const [streak, setStreak] = useState(0);
 
-  // Year selector
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // -------------------- FETCH DATA --------------------
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const base = "http://localhost:5000/api";
+
+        const [verseRes, testRes, attRes] = await Promise.all([
+          fetch(`${base}/content/verse/today`),
+          fetch(`${base}/content/testimonies`),
+          fetch(`${base}/attendance/my-summary`),
+        ]);
+
+        if (verseRes.ok) setVerse(await verseRes.json());
+        if (testRes.ok) setTestimonials(await testRes.json());
+
+        if (attRes.ok) {
+          const data = await attRes.json();
+          console.log("ATTENDANCE RESPONSE:", data);
+          // FIXED (teammate): safe fallback in case fields are missing
+          setAttendanceMap(data.attendance || {});
+          setStreak(data.streak || 0);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -60,64 +98,31 @@ const MemberPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Fetch verse + testimonies
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const baseUrl = "http://localhost:5000/api/content";
-        const [verseRes, testimonyRes] = await Promise.all([
-          fetch(`${baseUrl}/verse/today`),
-          fetch(`${baseUrl}/testimonies`),
-        ]);
+  // -------------------- DERIVED STATS --------------------
 
-        if (verseRes.ok) {
-          const verseData = await verseRes.json();
-          setVerse(verseData);
-        }
-
-        if (testimonyRes.ok) {
-          const testimonyData = await testimonyRes.json();
-          setTestimonials(testimonyData || []);
-        }
-      } catch (error) {
-        console.error("Error fetching content:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
-  }, []);
-
-  // Toggle a Sunday cell's attendance
-  const toggleAttendance = (date) => {
-    if (isFuture(date)) return;
-    const k = toKey(date);
-    setAttendance((prev) => {
-      const next = { ...prev };
-      if (next[k]) delete next[k];
-      else next[k] = true;
-      return next;
-    });
-  };
-
-  // Derive stats for the selected year
-  const { attendedCount, totalPast } = (() => {
-    let attended = 0;
+  // FIXED (teammate): useMemo to avoid recomputing on every render
+  const { attendedCount, absentCount, attendanceRate } = useMemo(() => {
     let total = 0;
-    for (let mi = 0; mi < 12; mi++) {
-      getSundaysInMonth(selectedYear, mi).forEach((sd) => {
-        if (!isFuture(sd)) {
+    let attended = 0;
+
+    for (let m = 0; m < 12; m++) {
+      getSundaysInMonth(selectedYear, m).forEach((d) => {
+        if (!isFuture(d)) {
           total++;
-          if (attendance[toKey(sd)]) attended++;
+          // FIXED (teammate): strict boolean — avoids truthy mismatches from API
+          if (attendanceMap[toKey(d)] === true) attended++;
         }
       });
     }
-    return { attendedCount: attended, totalPast: total };
-  })();
 
-  const absentCount = totalPast - attendedCount;
-  const attendanceRate = totalPast > 0 ? Math.round((attendedCount / totalPast) * 100) : 0;
+    return {
+      attendedCount: attended,
+      absentCount: total - attended,
+      attendanceRate: total > 0 ? Math.round((attended / total) * 100) : 0,
+    };
+  }, [attendanceMap, selectedYear]);
+
+  // -------------------- LOADING --------------------
 
   if (loading) {
     return (
@@ -128,6 +133,8 @@ const MemberPage = () => {
       </MemberLayout>
     );
   }
+
+  // -------------------- UI --------------------
 
   return (
     <MemberLayout activeNav="home">
@@ -199,7 +206,7 @@ const MemberPage = () => {
                 className="grid gap-2 mb-3 text-center text-xs font-semibold text-gray-500"
                 style={{ gridTemplateColumns: "2.5rem repeat(12, 1fr)" }}
               >
-                <div /> {/* empty corner */}
+                <div />
                 {MONTHS.map((m) => <div key={m}>{m}</div>)}
               </div>
 
@@ -217,22 +224,29 @@ const MemberPage = () => {
                       {sundays.map((sd) => {
                         const k = toKey(sd);
                         const future = isFuture(sd);
-                        const attended = !!attendance[k];
+                        // FIXED (teammate): strict boolean check
+                        const attended = attendanceMap[k] === true;
 
                         return (
                           <div
                             key={k}
-                            title={sd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            onClick={() => toggleAttendance(sd)}
+                            title={sd.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
                             className={[
-                              "w-full aspect-square rounded border transition",
+                              "w-full aspect-square rounded border flex items-center justify-center text-[10px] font-bold transition",
                               future
                                 ? "bg-gray-50 border-gray-100 cursor-default opacity-50"
                                 : attended
-                                ? "bg-[#1E3A8A] border-[#1E3A8A] cursor-pointer"
-                                : "bg-white border-gray-200 cursor-pointer hover:border-gray-400",
+                                ? "bg-[#1E3A8A] border-[#1E3A8A] text-white cursor-default"
+                                // FIXED (teammate): red styling for absent (not just empty white)
+                                : "bg-red-50 border-red-300 text-red-500 cursor-default",
                             ].join(" ")}
-                          />
+                          >
+                            {!future && sd.getDate()}
+                          </div>
                         );
                       })}
                     </div>
@@ -243,13 +257,14 @@ const MemberPage = () => {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3 mt-6">
                 {[
-                  { label: "Attended", value: attendedCount },
-                  { label: "Absent", value: absentCount },
-                  { label: "Rate", value: `${attendanceRate}%` },
-                ].map(({ label, value }) => (
+                  { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
+                  { label: "Absent",   value: absentCount,   color: "text-red-600"   },
+                  // FIXED (teammate): streak from API replaces local rate
+                  { label: "Streak",   value: streak,        color: "text-[#1E3A8A]" },
+                ].map(({ label, value, color }) => (
                   <div key={label} className="bg-gray-50 rounded-xl px-4 py-3">
                     <p className="text-xs text-gray-400">{label}</p>
-                    <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
+                    <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
                   </div>
                 ))}
               </div>
@@ -261,7 +276,7 @@ const MemberPage = () => {
                   <span>Attended</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border border-gray-300 rounded bg-white" />
+                  <div className="w-4 h-4 bg-red-50 border border-red-300 rounded" />
                   <span>Absent</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -278,17 +293,17 @@ const MemberPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           {/* Verse of the Day */}
-          <section className="lg:col-span-2 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-6">
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold text-[#3B4B89] mb-4">Verse of the Day</h2>
-              <p className="text-lg text-gray-700 font-light leading-relaxed mb-3">
-                {verse?.content ? `"${verse.content}"` : '"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."'}
-              </p>
-              <p className="text-sm font-semibold text-[#3B4B89]">
-                — {verse?.reference || "Proverbs 3:5-6"}{" "}
-                {verse?.topic ? `(${verse.topic})` : verse?.content ? "" : "(NIV)"}
-              </p>
-            </div>
+          <section className="lg:col-span-2 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+            <h2 className="text-xl font-bold text-[#3B4B89] mb-4">Verse of the Day</h2>
+            <p className="text-lg text-gray-700 font-light leading-relaxed mb-3">
+              {verse?.content
+                ? `"${verse.content}"`
+                : '"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."'}
+            </p>
+            <p className="text-sm font-semibold text-[#3B4B89]">
+              — {verse?.reference || "Proverbs 3:5-6"}{" "}
+              {verse?.topic ? `(${verse.topic})` : verse?.content ? "" : "(NIV)"}
+            </p>
           </section>
 
           {/* Testimonies */}
