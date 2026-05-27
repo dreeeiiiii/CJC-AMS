@@ -396,3 +396,66 @@ export const getAttendanceSummary = async (
         return res.status(500).json({ error: error.message });
     }
 };
+/**
+ * GET /api/attendance/member/:memberId
+ */
+
+export const getMemberAttendance = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    // ✅ Get member ID from JWT token (NOT params)
+    const memberId = req.user?.id;
+
+    if (!memberId) {
+      return res.status(401).json({
+        message: "Unauthorized: Missing user token"
+      });
+    }
+
+    const records = await prisma.attendance.findMany({
+      where: {
+        memberId
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      include: {
+        member: {
+          select: {
+            firstName: true,
+            lastName: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    const formatted = records.map((record) => ({
+      id: record.id,
+      name: `${record.member?.firstName} ${record.member?.lastName}`,
+      status: record.member?.status || "Member",
+      createdAt: record.createdAt,
+
+      date: record.createdAt.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }),
+
+      time: record.createdAt.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    }));
+
+    return res.json(formatted);
+
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error.message
+    });
+  }
+};

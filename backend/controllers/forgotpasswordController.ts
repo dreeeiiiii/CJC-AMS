@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../db.js";
-import { sendOTPEmail } from "../utils/emails.js";
+import { sendOTP } from "../utils/emails.js";
 import bcrypt from "bcrypt";
 
 
@@ -44,7 +44,7 @@ export const forgotPassword = async (
       },
     });
 
-    await sendOTPEmail(email, otp);
+    await sendOTP(email, otp);
 
     return res.status(200).json({
       message: "OTP sent to email",
