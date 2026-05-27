@@ -330,10 +330,7 @@ const AdminMembers = () => {
         : 'http://localhost:5000/api/users'
       const response = await fetch(url, {
         method: editingMemberId ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeader().headers,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -369,10 +366,7 @@ const AdminMembers = () => {
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
         await Promise.all(ids.map(id =>
-          fetch(`http://localhost:5000/api/users/${id}`, {
-            method: 'DELETE',
-            ...getAuthHeader(),
-          })
+          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
         ))
         setMembers(prev => prev.filter(m => !ids.includes(m.id)))
         setPendingDeleteIds([])
@@ -456,10 +450,7 @@ const AdminMembers = () => {
     clearTimeout(deleteTimeoutRef.current)
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
-        await fetch(`http://localhost:5000/api/users/${member.id}`, {
-          method: 'DELETE',
-          ...getAuthHeader(),
-        })
+        await fetch(`http://localhost:5000/api/users/${member.id}`, { method: 'DELETE' })
         setMembers(prev => prev.filter(m => m.id !== member.id))
         setPendingDeleteIds([])
         deletedMembersRef.current = []

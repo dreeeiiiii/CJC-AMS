@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/navbar';
 import Footer from './components/footer';
@@ -17,62 +18,134 @@ import Attendance from './routes/admin/adminAttendance';
 import AdminProfile from './routes/admin/adminProfile';
 import ProtectedRoute from './components/ProtectedRoutes'; 
 import ErrorPage from './components/ErrorPage';
+import { Target, Eye } from 'lucide-react';
 
 const Home = () => {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { setLoaded(true); }, []);
   return (
     <>
       <Navbar />
-      <main className="flex justify-center items-center flex-col font-montserrat text-[#364687] lg:text-4xl md:text-3xl font-bold">
-        <div className="container flex justify-center items-center flex-col h-[50vh] w-max md:space-y-2 lg:space-y-4">
-          <p className="sm:text-2xl lg:text-3xl font-semibold">WELCOME TO </p>
-          <p className="text-xl sm:text-3xl md:text-4xl lg:text-5xl">CHURCH OF JESUS CHRIST</p>
-          <p className="text-xl sm:text-3xl md:text-4xl lg:text-5xl">THE RISEN SON OF GOD PHILS. INC.</p>
-          <p className="sm:text-2xl lg:text-3xl font-semibold">ATTENDANCE AND MEMBER MANAGEMENT SYSTEM</p>
+      <main className="flex justify-center items-center flex-col font-montserrat text-[#364687] font-bold">
+        <div className="container flex justify-center items-center flex-col px-6 sm:px-10 lg:px-16 py-6 sm:py-8 lg:py-10 text-center">
+          {/* Desktop/Tablet hero text */}
+          <div className="hidden sm:flex sm:flex-col">
+            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-semibold tracking-wider text-[#364687]/80">WELCOME TO</p>
+            <p className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2">CHURCH OF JESUS CHRIST</p>
+            <p className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl">THE RISEN SON OF GOD PHILS. INC.</p>
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-[#364687]/80 mt-2">ATTENDANCE AND MEMBER MANAGEMENT SYSTEM</p>
+          </div>
+          {/* Mobile hero text */}
+          <div className={`sm:hidden transition-all duration-700 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl font-semibold tracking-wider text-[#364687]/80">WELCOME TO</p>
+            <p className="text-3xl font-bold tracking-widest">CJC-AMS</p>
+          </div>
         </div>
-        <div>
-          <img src="/COVER.jpg" alt="CJCRSG Cover Photo" />
+        <div className="w-full max-w-5xl px-4 sm:px-8 lg:px-12">
+          <div className="w-full aspect-[16/7] md:aspect-[32/11] lg:aspect-[16/4] rounded-xl overflow-hidden shadow-lg">
+            <img src="/COVER.jpg" alt="CJCRSG Cover Photo" className="w-full h-full object-cover" />
+          </div>
         </div>
       </main>
 
       {/* Service Times */}
-      <div className="justify-center flex items-center flex-col text-[#364687] lg:space-y-2 lg:text-4xl sm:text-2xl text-xl font-bold font-montserrat h-[400px]">
-        <h2 className="font-medium text-xl lg:text-3xl">Service starts at</h2>
-        <p>9:00 AM - Morning Service</p>
-        <p>2:00 PM - Youth Service</p>
+      <div className="flex justify-center items-center flex-col text-[#364687] font-montserrat py-10 sm:py-12 lg:py-14 px-4">
+        <p className="text-xs sm:text-sm md:text-base lg:text-lg font-medium text-[#364687]/60 tracking-wider mb-4 sm:mb-6">Service starts at</p>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-6 w-full max-w-md sm:max-w-lg lg:max-w-xl">
+          <div className="flex items-center justify-between sm:justify-center bg-[#f4f6ff] border border-[#d0d8f5] rounded-xl px-5 sm:px-8 py-3 sm:py-4 flex-1 transition-transform duration-200 hover:scale-105 hover:shadow-md">
+            <span className="text-sm sm:text-base lg:text-lg font-semibold text-[#364687] sm:hidden">Morning Service</span>
+            <span className="text-sm sm:text-base lg:text-2xl font-semibold text-[#364687]">9:00 AM</span>
+            <span className="hidden sm:inline text-xs text-[#6b7db3] ml-2">Morning Service</span>
+          </div>
+          <div className="flex items-center justify-between sm:justify-center bg-[#f4f6ff] border border-[#d0d8f5] rounded-xl px-5 sm:px-8 py-3 sm:py-4 flex-1 transition-transform duration-200 hover:scale-105 hover:shadow-md">
+            <span className="text-sm sm:text-base lg:text-lg font-semibold text-[#364687] sm:hidden">Youth Service</span>
+            <span className="text-sm sm:text-base lg:text-2xl font-semibold text-[#364687]">2:00 PM</span>
+            <span className="hidden sm:inline text-xs text-[#6b7db3] ml-2">Youth Service</span>
+          </div>
+        </div>
       </div>
 
-      {/* Mission & Vision Section */}
-      <div className="flex sm:flex-row flex-col justify-evenly h-[600px] text-[#364687] lg:text-4xl md:text-3xl font-bold font-montserrat bg-[#364687]/10 mb-3">
-        <div className="container flex justify-center items-center flex-col">
-          <h2 className="font-light text-2xl md:text-3xl lg:text-4xl">Connect with us:</h2>
-          <div className="flex flex-row justify-center items-center text-xs font-light">
-             <div className="flex flex-col justify-center items-center">
-              <img src="/FACEBOOK.png" alt="facebook_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
-              <p className="sm:text-xl">Facebook</p>
-            </div>
-            <div className="flex flex-col justify-center items-center">
-              <img src="/GMAIL.png" alt="gmail_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
-              <p className="sm:text-xl">Gmail</p>
-            </div>
-            <div className="flex flex-col justify-center items-center">
-              <img src="/CONTACT.png" alt="contact_icon" className="w-12 h-12 md:w-full md:h-full object-contain" />
-              <p className="sm:text-xl">Contact</p>
-            </div>
+      {/* Connect + Mission & Vision Section */}
+      <div className="flex sm:flex-row flex-col bg-[#364687]/10 mb-3">
+        {/* Connect Column */}
+        {/* Connect Column */}
+<div className="flex-1 border-b sm:border-b-0 sm:border-r border-[#d0d8f5] px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
+  <h2 className="font-montserrat font-semibold text-sm sm:text-base lg:text-lg text-[#364687] mb-5">Connect with us:</h2>
+  <div className="flex gap-6 sm:gap-8 lg:gap-10">
+    
+    {/* Facebook Link */}
+    <a 
+      href="https://www.facebook.com/cjcrsg" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      aria-label="Visit our Facebook Page"
+      className="flex flex-col items-center gap-2 group select-none"
+    >
+      {/* Drastically increased container dimensions to let the padded images fill out nicely */}
+      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+        <img src="/FACEBOOK.png" alt="facebook_icon" className="w-full h-full object-contain" />
+      </div>
+      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Facebook</p>
+    </a>
+
+    {/* Gmail Link */}
+    <a 
+      href="mailto:cjcrsgonline@gmail.com"
+      aria-label="Email us"
+      className="flex flex-col items-center gap-2 group select-none"
+    >
+      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+        <img src="/GMAIL.png" alt="gmail_icon" className="w-full h-full object-contain" />
+      </div>
+      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Gmail</p>
+    </a>
+
+    {/* Contact Link */}
+    <a 
+      href="tel:09695925076"
+      aria-label="Call us"
+      className="flex flex-col items-center gap-2 group select-none"
+    >
+      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+        <img src="/CONTACT.png" alt="contact_icon" className="w-full h-full object-contain" />
+      </div>
+      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Contact</p>
+    </a>
+
+  </div>
+</div>
+
+        {/* Mission & Vision - Desktop/Tablet */}
+        <div className="hidden sm:flex flex-1 flex-col justify-center px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
+          <div className="mb-6 lg:mb-8">
+            <h2 className="font-montserrat font-bold text-lg sm:text-xl lg:text-2xl text-[#364687] mb-2">Mission</h2>
+            <p className="font-montserrat font-light text-xs sm:text-sm lg:text-base text-[#6b7db3] leading-relaxed">
+              To share the gospel of the kingdom, to make disciples of Christs and to plant in the Philippines and all over the world.
+            </p>
+          </div>
+          <div>
+            <h2 className="font-montserrat font-bold text-lg sm:text-xl lg:text-2xl text-[#364687] mb-2">Vision</h2>
+            <p className="font-montserrat font-light text-xs sm:text-sm lg:text-base text-[#6b7db3] leading-relaxed">
+              To bring people to God.
+            </p>
           </div>
         </div>
 
-        <div className="container items-start text-center flex font-bold">
-          <div className="flex flex-col h-full justify-evenly">
-            <h2 className="text-2xl sm:text-5xl">Mission</h2>
-            <div className="container no-wrap p-4">
-              <p className="text-center font-light indent-6 text-[20px]/9">
-                To share the gospel of the kingdom, to make disciples of Christs and to plant in the Philippines and all over the world.
-              </p>
-            </div>
-            <h2 className="text-2xl sm:text-5xl">Vision</h2>
-            <div className="container no-wrap p-4">
-              <p className="font-light text-[20px]">To bring people to God.</p>
-            </div>
+        {/* Mission & Vision - Mobile Cards */}
+        <div className="sm:hidden flex flex-col gap-3 p-4 bg-[#f4f6ff]">
+          <div className="bg-white rounded-xl border border-[#d0d8f5] p-4">
+            <Target className="text-[#364687] w-6 h-6 mb-2" />
+            <h2 className="font-montserrat font-bold text-sm text-[#364687] mb-1">Mission</h2>
+            <p className="font-montserrat text-xs text-[#6b7db3] leading-relaxed">
+              To share the gospel of the kingdom, to make disciples of Christs and to plant in the Philippines and all over the world.
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-[#d0d8f5] p-4">
+            <Eye className="text-[#364687] w-6 h-6 mb-2" />
+            <h2 className="font-montserrat font-bold text-sm text-[#364687] mb-1">Vision</h2>
+            <p className="font-montserrat text-xs text-[#6b7db3] leading-relaxed">
+              To bring people to God.
+            </p>
           </div>
         </div>
       </div>

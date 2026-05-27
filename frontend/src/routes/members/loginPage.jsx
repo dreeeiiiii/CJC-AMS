@@ -109,11 +109,11 @@ export const Login = () => {
     return (
         <>
             <Navbar/>
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-l from-indigo-400 to-indigo-900 relative">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-l from-indigo-400 to-indigo-900 relative px-4 py-10">
                 
                 {/* 🚨 ERROR POPUP MODAL 🚨 */}
                 {errorPopup.show && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-fade-in-up flex flex-col items-center text-center relative">
                             <button 
                                 onClick={closePopup}
@@ -136,16 +136,22 @@ export const Login = () => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-screen-xl p-6 font-montserrat">
-                    <div className="text-white flex flex-col justify-center items-center text-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 w-full max-w-screen-xl font-montserrat">
+                    {/* Hero text — hidden on small screens, shown on md+ */}
+                    <div className="hidden md:flex text-white flex-col justify-center items-center text-center px-4">
                         <h1 className="text-3xl lg:text-4xl font-bold mb-4">Enter your account</h1>
-                        <p className="text-xl lg:text-2xl mb-6">Please log in using your personal information to stay connected with us.</p>
+                        <p className="text-lg lg:text-2xl mb-6">Please log in using your personal information to stay connected with us.</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-8 shadow-md w-full max-w-lg mx-auto">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-md w-full max-w-lg mx-auto">
+                        {/* Show hero text inside card on mobile only */}
+                        <div className="md:hidden text-center mb-6">
+                            <h1 className="text-2xl font-bold text-indigo-800 mb-2">Enter your account</h1>
+                            <p className="text-sm text-gray-500">Please log in using your personal information to stay connected with us.</p>
+                        </div>
+
                         <h2 className="text-2xl font-semibold text-center mb-6">Log In</h2>
-                        {/* Added noValidate to stop default browser tooltips */}
-                        <form onSubmit={handleLogin} noValidate className="space-y-4 text-sm lg:text-md">
+                        <form onSubmit={handleLogin} noValidate className="space-y-4 text-sm">
 
                             <div className='w-full flex justify-center'>
                                 <GoogleLogin
@@ -160,21 +166,19 @@ export const Login = () => {
                                 <p className="mx-4 mb-0 text-center font-semibold text-gray-500 text-xs">OR</p>
                             </div>
 
-                            {/* Removed the 'required' attribute here */}
                             <input 
                                 type="email" 
                                 placeholder="Email" 
-                                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
 
                             <div className="relative">
-                                {/* Removed the 'required' attribute here */}
                                 <input 
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="Password" 
-                                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -183,15 +187,15 @@ export const Login = () => {
                                 </button>
                             </div>
 
-                            <div className="text-right text-sm lg:text-md">
+                            <div className="text-right text-sm">
                                 <Link to="/messageReset" className="text-indigo-500 hover:underline">Forgot password?</Link>
                             </div>
 
-                            <button type="submit" className="w-full bg-indigo-400 text-white text-lg font-semibold py-2 rounded-xl hover:bg-indigo-500 transition cursor-pointer shadow-md">
+                            <button type="submit" className="w-full bg-indigo-400 text-white text-base font-semibold py-2.5 rounded-xl hover:bg-indigo-500 transition cursor-pointer shadow-md">
                                 Log In
                             </button>
 
-                            <p className="text-sm lg:text-md text-center">
+                            <p className="text-sm text-center">
                                 Don't have an account?
                                 <Link to="/Signup" className="text-indigo-600 hover:underline px-1 font-medium">Sign up</Link> 
                             </p>

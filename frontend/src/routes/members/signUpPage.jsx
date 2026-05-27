@@ -112,7 +112,7 @@ export const Signup = () => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900 relative">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900 relative px-4 py-10">
         
         {/* 🚨 POPUP MODAL (Handles both Error and Success) 🚨 */}
         {popup.show && (
@@ -128,7 +128,6 @@ export const Signup = () => {
                         </button>
                     )}
                     
-                    {/* Dynamic Icon based on success/error */}
                     {popup.isError ? (
                         <XCircle className="text-red-400 w-16 h-16 mb-4" />
                     ) : (
@@ -140,7 +139,6 @@ export const Signup = () => {
                     </h3>
                     <p className="text-gray-600 mb-6">{popup.message}</p>
                     
-                    {/* Only show the 'Got it' button for errors (success auto-redirects) */}
                     {popup.isError && (
                         <button 
                             onClick={closePopup}
@@ -153,27 +151,34 @@ export const Signup = () => {
             </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-15 lg:gap-30 max-w-screen-xl p-6 font-montserrat">
-          <div className="text-white flex flex-col justify-center items-center text-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 w-full max-w-screen-xl font-montserrat">
+          {/* Hero text — hidden on small screens, shown on md+ */}
+          <div className="hidden md:flex text-white flex-col justify-center items-center text-center px-4">
             <h1 className="text-3xl lg:text-4xl font-bold mb-4">Create your account</h1>
-            <p className="text-xl lg:text-2xl mb-6">
+            <p className="text-lg lg:text-2xl mb-6">
               To become a part of our community, please sign up using your personal information.
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-lg mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-lg mx-auto">
+            {/* Show hero text inside card on mobile only */}
+            <div className="md:hidden text-center mb-6">
+              <h1 className="text-2xl font-bold text-indigo-800 mb-2">Create your account</h1>
+              <p className="text-sm text-gray-500">To become a part of our community, please sign up using your personal information.</p>
+            </div>
+
             <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
 
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4 text-sm">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <input
                   type="text"
                   name="firstName"
                   placeholder="First Name"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                  className="w-full px-3 sm:px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
                 />
                 <input
                   type="text"
@@ -181,7 +186,7 @@ export const Signup = () => {
                   placeholder="Last Name"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                  className="w-full px-3 sm:px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
                 />
               </div>
 
@@ -191,17 +196,16 @@ export const Signup = () => {
                 placeholder="Middle Name (Optional)"
                 value={formData.middleName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
 
-              {/* 👇 Updated to use contactNo */}
               <input
                 type="text"
                 name="contactNo" 
                 placeholder="Contact No."
                 value={formData.contactNo} 
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
               
               <input
@@ -210,11 +214,11 @@ export const Signup = () => {
                 placeholder="Address"
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
 
-              <div className="flex space-x-8">
-                <span className="text-md font-medium pl-4">Gender:</span>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
+                <span className="text-sm font-medium">Gender:</span>
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -241,7 +245,7 @@ export const Signup = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
 
               <div className="relative">
@@ -251,7 +255,7 @@ export const Signup = () => {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-indigo-400"
+                  className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
                 />
                 <button
                   type="button"
@@ -264,7 +268,7 @@ export const Signup = () => {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl transition-colors"
+                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl transition-colors text-base"
               >
                 Sign Up
               </button>
