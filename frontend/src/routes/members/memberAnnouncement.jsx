@@ -92,7 +92,7 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
         {isLongText && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-[15px] font-semibold text-gray-500 hover:text-[#3B4B89] ml-1 transition-colors"
+            className="text-[15px] text-gray-500 hover:text-[#3B4B89] ml-1 transition-colors"
           >
             {isExpanded ? "See Less" : "See More"}
           </button>

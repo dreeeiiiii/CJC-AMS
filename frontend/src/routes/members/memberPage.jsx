@@ -38,6 +38,11 @@ function isFuture(date) {
   return date > today;
 }
 
+function getDailyBg() {
+  const day = new Date().getDay(); // 0 (Sun) – 6 (Sat)
+  return `/BG-${day + 1}.jpg`;
+}
+
 // -------------------- COMPONENT --------------------
 
 const MemberPage = () => {
@@ -318,24 +323,34 @@ const MemberPage = () => {
         </section>
 
         {/* TWO COLUMN GRID: VERSE & TESTIMONIES */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
           {/* Verse of the Day */}
-          <section className="lg:col-span-2 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-xl font-bold text-[#3B4B89] mb-4">Verse of the Day</h2>
-            <p className="text-lg text-gray-700 font-light leading-relaxed mb-3">
-              {verse?.content
-                ? `"${verse.content}"`
-                : '"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."'}
-            </p>
-            <p className="text-sm font-semibold text-[#3B4B89]">
-              — {verse?.reference || "Proverbs 3:5-6"}{" "}
-              {verse?.topic ? `(${verse.topic})` : verse?.content ? "" : "(NIV)"}
-            </p>
+          <section
+            className="lg:col-span-2 bg-white rounded-2xl p-8 shadow-sm relative overflow-hidden"
+            style={{
+              backgroundImage: `url("${getDailyBg()}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div className="relative z-10">
+              <h2 className="text-xl font-bold text-white mb-4">Verse of the Day</h2>
+              <p className="text-lg font-medium text-white/90 font-light leading-relaxed mb-3">
+                {verse?.content
+                  ? `"${verse.content}"`
+                  : '"Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."'}
+              </p>
+              <p className="text-sm font-semibold text-white/80">
+                — {verse?.reference || "Proverbs 3:5-6"}{" "}
+                {verse?.topic ? `(${verse.topic})` : verse?.content ? "" : "(NIV)"}
+              </p>
+            </div>
           </section>
 
           {/* Testimonies */}
-          <section className="bg-[#3B4B89] rounded-2xl p-6 shadow-sm text-white text-center">
+          <section className="bg-[#3B4B89] rounded-2xl p-6 shadow-sm text-white text-center flex flex-col">
             <h2 className="text-xl font-bold mb-4">Testimonies</h2>
             <TestimonyCarousel
               testimonials={testimonials}

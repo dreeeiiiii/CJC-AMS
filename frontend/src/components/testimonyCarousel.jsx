@@ -2,8 +2,11 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, MessageSquareQuote } from "lucide-react";
 
+const MAX_CHARS = 125;
+
 const TestimonyCarousel = ({ testimonials, onShareStory }) => {
   const [current, setCurrent] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const containerRef = useRef(null);
   const total = testimonials.length + 1;
 
@@ -53,9 +56,25 @@ const TestimonyCarousel = ({ testimonials, onShareStory }) => {
                   className="w-14 h-14 rounded-full mb-3 border-2 border-white/50 object-cover"
                 />
               )}
-              <p className="text-white/90 text-base font-light italic leading-relaxed mb-3">
-                &ldquo;{t.quote}&rdquo;
-              </p>
+              {(() => {
+                const isLong = t.quote && t.quote.length > MAX_CHARS;
+                const displayQuote = isLong && !expanded
+                  ? t.quote.slice(0, MAX_CHARS)
+                  : t.quote;
+                return (
+                  <div className="text-white/90 text-base font-light italic leading-relaxed mb-2">
+                    <span>&ldquo;{displayQuote}{isLong && !expanded ? "…" : ""}&rdquo;</span>
+                    {isLong && (
+                      <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="inline-flex items-center text-xs font-bold text-[#3B4B89] bg-white px-2.5 py-1 rounded-full hover:bg-white/90 transition ml-1.5 align-middle shadow-sm"
+                      >
+                        {expanded ? "See Less" : "See More"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <p className="text-white font-semibold text-sm">— {t.name}</p>
             </div>
           ))}
