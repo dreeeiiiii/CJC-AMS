@@ -22,7 +22,13 @@ import { Target, Eye } from 'lucide-react';
 
 const Home = () => {
   const [loaded, setLoaded] = useState(false);
+  const [copied, setCopied] = useState(false);
   useEffect(() => { setLoaded(true); }, []);
+  const copyPhone = () => {
+    navigator.clipboard.writeText('09695925076');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
   return (
     <>
       <Navbar />
@@ -68,52 +74,52 @@ const Home = () => {
       {/* Connect + Mission & Vision Section */}
       <div className="flex sm:flex-row flex-col bg-[#364687]/10 mb-3">
         {/* Connect Column */}
-        {/* Connect Column */}
-<div className="flex-1 border-b sm:border-b-0 sm:border-r border-[#d0d8f5] px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
-  <h2 className="font-montserrat font-semibold text-sm sm:text-base lg:text-lg text-[#364687] mb-5">Connect with us:</h2>
-  <div className="flex gap-6 sm:gap-8 lg:gap-10">
-    
-    {/* Facebook Link */}
-    <a 
-      href="https://www.facebook.com/cjcrsg" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      aria-label="Visit our Facebook Page"
-      className="flex flex-col items-center gap-2 group select-none"
-    >
-      {/* Drastically increased container dimensions to let the padded images fill out nicely */}
-      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
-        <img src="/FACEBOOK.png" alt="facebook_icon" className="w-full h-full object-contain" />
-      </div>
-      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Facebook</p>
-    </a>
+        <div className="flex-1 border-b sm:border-b-0 sm:border-r border-[#d0d8f5] px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
+          <h2 className="font-montserrat font-semibold text-sm sm:text-base lg:text-lg text-[#364687] mb-5">Connect with us:</h2>
+          <div className="flex justify-center lg:justify-start gap-6 sm:gap-8 lg:gap-10">
+            
+            {/* Facebook Link */}
+            <a 
+              href="https://www.facebook.com/cjcrsg" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              aria-label="Visit our Facebook Page"
+              className="flex flex-col items-center gap-2 group select-none"
+            >
+              {/* Kept a stable wrapper size */}
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+                <img src="/FACEBOOK.png" alt="facebook_icon" className="w-full h-full object-contain scale-[2.5] sm:scale-[2.8] lg:scale-[3]" />
+              </div>
+              <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Facebook</p>
+            </a>
 
-    {/* Gmail Link */}
-    <a 
-      href="mailto:cjcrsgonline@gmail.com"
-      aria-label="Email us"
-      className="flex flex-col items-center gap-2 group select-none"
-    >
-      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
-        <img src="/GMAIL.png" alt="gmail_icon" className="w-full h-full object-contain" />
-      </div>
-      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Gmail</p>
-    </a>
+            {/* Gmail Link */}
+            <a 
+              href="mailto:cjcrsgonline@gmail.com"
+              aria-label="Email us"
+              className="flex flex-col items-center gap-2 group select-none"
+            >
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+                <img src="/GMAIL.png" alt="gmail_icon" className="w-full h-full object-contain scale-[2.5] sm:scale-[2.8] lg:scale-[3]" />
+              </div>
+              <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Gmail</p>
+            </a>
 
-    {/* Contact Link */}
-    <a 
-      href="tel:09695925076"
-      aria-label="Call us"
-      className="flex flex-col items-center gap-2 group select-none"
-    >
-      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
-        <img src="/CONTACT.png" alt="contact_icon" className="w-full h-full object-contain" />
-      </div>
-      <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Contact</p>
-    </a>
+            {/* Contact Link */}
+            <div className="relative flex flex-col items-center gap-2 group select-none cursor-pointer" onClick={copyPhone}>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:-translate-y-1 group-hover:opacity-80 group-active:translate-y-0 group-active:scale-95">
+                <img src="/CONTACT.png" alt="contact_icon" className="w-full h-full object-contain scale-[2.5] sm:scale-[2.8] lg:scale-[3]" />
+              </div>
+              <p className="font-montserrat text-[11px] sm:text-xs text-[#6b7db3] font-medium transition-colors duration-300 group-hover:text-[#364687]">Contact</p>
+              {copied && (
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#364687] text-white text-[9px] px-2 py-0.5 rounded whitespace-nowrap">
+                  Copied!
+                </span>
+              )}
+            </div>
 
-  </div>
-</div>
+          </div>
+        </div>
 
         {/* Mission & Vision - Desktop/Tablet */}
         <div className="hidden sm:flex flex-1 flex-col justify-center px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
