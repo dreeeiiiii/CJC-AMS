@@ -146,6 +146,9 @@ export const createUsers = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error("CREATE USER ERROR:", error);
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: "Email is already in use" });
+    }
     return res.status(500).json({ error: error.message });
   }
 };

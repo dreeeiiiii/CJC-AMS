@@ -23,7 +23,7 @@ function getSundaysInMonth(year, month) {
   return sundays;
 }
 
-// FIXED (teammate): timezone-safe key — avoids UTC offset shifting the date
+// timezone-safe key — avoids UTC offset shifting the date
 function toKey(date) {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -44,27 +44,46 @@ const MemberPage = () => {
   const [verse, setVerse] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [showStoryModal, setShowStoryModal] = useState(false);
 
-  // FIXED (teammate): attendance now comes from API, not local toggle state
-  const [attendanceMap, setAttendanceMap] = useState({});
-  const [streak, setStreak] = useState(0);
+  // raw attendance records from backend
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // -------------------- FETCH DATA --------------------
+  const firstName = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.firstName || "User";
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "User";
+  }, []);
+
+  // -------------------- FETCH --------------------
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
+        const token = localStorage.getItem("token");
+
         const base = "http://localhost:5000/api";
 
         const [verseRes, testRes, attRes] = await Promise.all([
           fetch(`${base}/content/verse/today`),
           fetch(`${base}/content/testimonies`),
-          fetch(`${base}/attendance/my-summary`),
+          fetch(`${base}/attendance/my-attendance`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
         ]);
 
         if (verseRes.ok) setVerse(await verseRes.json());
@@ -72,10 +91,7 @@ const MemberPage = () => {
 
         if (attRes.ok) {
           const data = await attRes.json();
-          console.log("ATTENDANCE RESPONSE:", data);
-          // FIXED (teammate): safe fallback in case fields are missing
-          setAttendanceMap(data.attendance || {});
-          setStreak(data.streak || 0);
+          setAttendanceHistory(data || []);
         }
       } catch (err) {
         console.error(err);
@@ -88,6 +104,7 @@ const MemberPage = () => {
   }, []);
 
   // Close dropdown on outside click
+
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -98,10 +115,23 @@ const MemberPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // -------------------- DERIVED STATS --------------------
+  // -------------------- BUILD ATTENDANCE MAP (FROM BACKEND DATA) --------------------
+
+  const attendanceMap = useMemo(() => {
+    const map = {};
+
+    attendanceHistory.forEach((record) => {
+      const d = new Date(record.createdAt);
+      map[toKey(d)] = true;
+    });
+
+    return map;
+  }, [attendanceHistory]);
+
+  // -------------------- STATS --------------------
 
   // FIXED (teammate): useMemo to avoid recomputing on every render
-  const { attendedCount, absentCount, attendanceRate } = useMemo(() => {
+  const { attendedCount, absentCount } = useMemo(() => {
     let total = 0;
     let attended = 0;
 
@@ -118,7 +148,6 @@ const MemberPage = () => {
     return {
       attendedCount: attended,
       absentCount: total - attended,
-      attendanceRate: total > 0 ? Math.round((attended / total) * 100) : 0,
     };
   }, [attendanceMap, selectedYear]);
 
@@ -154,7 +183,7 @@ const MemberPage = () => {
             <div className="flex items-start gap-4">
               <span className="text-3xl" role="img" aria-label="waving hand">👋</span>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Hi, Mary!</h3>
+                <h3 className="text-lg font-bold text-gray-900">Hi, {firstName}!</h3>
                 <p className="text-xs text-gray-500 max-w-md mt-0.5">
                   Your Sunday service attendance for the year.
                 </p>
@@ -259,8 +288,7 @@ const MemberPage = () => {
                 {[
                   { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
                   { label: "Absent",   value: absentCount,   color: "text-red-600"   },
-                  // FIXED (teammate): streak from API replaces local rate
-                  { label: "Streak",   value: streak,        color: "text-[#1E3A8A]" },
+                  { label: "Records",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-gray-50 rounded-xl px-4 py-3">
                     <p className="text-xs text-gray-400">{label}</p>

@@ -226,24 +226,55 @@ const AdminMembers = () => {
   })
   const [formErrors, setFormErrors] = useState({})
 
+  // Merged: keep getAuthHeader helper AND define dismissToast/showToast
   const getAuthHeader = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  })
 
-  // Fetch Members
+  const dismissToast = useCallback(() => {
+    setToast(null)
+    setToastType('success')
+    setToastAction(null)
+  }, [])
+
+  const showToast = useCallback((message, type = 'success', action = null) => {
+    setToast(message)
+    setToastType(type)
+    setToastAction(action)
+    setTimeout(() => setToast(null), 5000)
+  }, [])
+
+  // Fetch Members — uses getAuthHeader, includes 401 guard from the other branch
   const fetchMembers = useCallback(async () => {
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5000/api/users', getAuthHeader());
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setMembers(data);
+      setLoading(true)
+      const response = await fetch('http://localhost:5000/api/users', {
+        method: 'GET',
+        headers: getAuthHeader(),
+      })
+
+      if (response.status === 401) {
+        showToast('Unauthorized. Please login again.', 'error')
+        return
+      }
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+      const data = await response.json()
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format')
+      }
+
+      setMembers(data)
     } catch (error) {
-      showToast("Failed to load members", "error");
+      console.error(error)
+      showToast('Failed to load members', 'error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [showToast])
 
   useEffect(() => {
     fetchMembers();
@@ -270,19 +301,6 @@ const AdminMembers = () => {
     return () => {
       clearTimeout(deleteTimeoutRef.current)
     }
-  }, [])
-
-  const dismissToast = useCallback(() => {
-    setToast(null)
-    setToastType('success')
-    setToastAction(null)
-  }, [])
-
-  const showToast = useCallback((message, type = 'success', action = null) => {
-    setToast(message)
-    setToastType(type)
-    setToastAction(action)
-    setTimeout(() => setToast(null), 5000)
   }, [])
 
   // 📌 Combined Filter and Sort Logic
@@ -330,7 +348,7 @@ const AdminMembers = () => {
         : 'http://localhost:5000/api/users'
       const response = await fetch(url, {
         method: editingMemberId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeader(),
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -349,7 +367,7 @@ const AdminMembers = () => {
 
   const resetForm = () => {
     setEditingMemberId(null)
-    setFormData({ firstName: '', middleName: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member', joinDate: '' })
+    setFormData({ firstName: '', middleName: '', lastName: '', email: '', contactNo: '', address: '', gender: '', status: 'New Member', joinDate: '', mode: 'admin' })
     setFormErrors({})
   }
 
@@ -366,7 +384,7 @@ const AdminMembers = () => {
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
         await Promise.all(ids.map(id =>
-          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' })
+          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE', headers: getAuthHeader() })
         ))
         setMembers(prev => prev.filter(m => !ids.includes(m.id)))
         setPendingDeleteIds([])
@@ -450,7 +468,10 @@ const AdminMembers = () => {
     clearTimeout(deleteTimeoutRef.current)
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
-        await fetch(`http://localhost:5000/api/users/${member.id}`, { method: 'DELETE' })
+        await fetch(`http://localhost:5000/api/users/${member.id}`, {
+          method: 'DELETE',
+          headers: getAuthHeader(),
+        })
         setMembers(prev => prev.filter(m => m.id !== member.id))
         setPendingDeleteIds([])
         deletedMembersRef.current = []

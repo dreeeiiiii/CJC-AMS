@@ -6,7 +6,8 @@ import {
   getAttendanceSummary,
   getAllAttendance,
   exportAttendance,
-  deleteAttendance
+  deleteAttendance,
+  getMemberAttendance
 } from "../controllers/attendanceController.js";
 
 import { protect, adminOnly } from "../middleware/auth.js";
@@ -19,6 +20,7 @@ router.post("/", protect, adminOnly, recordAttendance);
 // 📊 DASHBOARD
 router.get("/recent", protect, adminOnly, getRecentActivity);
 router.get("/stats", protect, adminOnly, getAttendanceStats);
+router.get("/my-attendance",protect,getMemberAttendance);
 
 // (optional: if this is personal dashboard)
 router.get("/my-summary", getAttendanceSummary);

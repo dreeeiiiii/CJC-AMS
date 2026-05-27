@@ -1,34 +1,33 @@
-import { Resend } from "resend";
+import 'dotenv/config'; // Automatically loads environment variables from .env
+import nodemailer from 'nodemailer';
 
-const getResend = () => {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    console.warn("RESEND_API_KEY is not set. Skipping email send.");
-    return null;
+// 1. Initialize the transporter with your credentials
+// We use 'as string' because process.env values can technically be undefined
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER as string, 
+    pass: process.env.EMAIL_PASS as string  
   }
-  return new Resend(key);
-};
+});
 
-export const sendOTPEmail = async (email: string, otp: string) => {
+/**
+ * Sends a 6-digit OTP code to a specified email address.
+ * @param targetEmail - The recipient's email address
+ * @param otpCode - The code to send (can be a string or number)
+ */
+export async function sendOTP(targetEmail: string, otpCode: string | number): Promise<void> {
   try {
-    const resend = getResend();
-    if (!resend) return; // silently skip in non-production or when not configured
-
-    await resend.emails.send({
-      from: "CJCSched <onboarding@resend.dev>",
-      to: email,
-      subject: "Password Reset OTP",
-      html: `
-        <div style="font-family: Arial;">
-          <h2>Password Reset Request</h2>
-          <p>Your OTP code is:</p>
-          <h1 style="letter-spacing: 4px;">${otp}</h1>
-          <p>This code will expire in 5 minutes.</p>
-        </div>
-      `,
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,       // Your Gmail address
+      to: targetEmail,                    // The user's destination email
+      subject: 'Your OTP Code',
+      text: `Your code is ${otpCode}`,    // Plain text body
+      html: `<p>Your verification code is: <strong>${otpCode}</strong></p>` // Clean HTML fallback
     });
-  } catch (err) {
-    console.error("Email error:", err);
-    throw new Error("Failed to send OTP email");
+
+    console.log(`OTP sent successfully to ${targetEmail}! Message ID: ${info.messageId}`);
+  } catch (error) {
+    console.error('Failed to send OTP email:', error);
   }
-};
+}
