@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ExternalLink, MoreHorizontal, Pin, CheckCircle } from "lucide-react";
+import { Search, ExternalLink, MoreHorizontal, Pin, CheckCircle, X } from "lucide-react";
 import axios from "axios";
 import MemberLayout from "../../components/memberLayout";
 
@@ -12,6 +12,8 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   // Toggle state for See More / See Less
   const [isExpanded, setIsExpanded] = useState(false);
+  // Lightbox state for full-size image
+  const [lightboxImage, setLightboxImage] = useState(null);
   
   // Character limit before truncating
   const maxLength = 150;
@@ -22,6 +24,14 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   const displayText = isExpanded 
     ? contentText 
     : contentText.slice(0, maxLength) + (isLongText ? "..." : "");
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    if (!lightboxImage) return;
+    const handleKey = (e) => { if (e.key === "Escape") setLightboxImage(null); };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxImage]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
@@ -92,7 +102,8 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
             src={announcement.image}
             alt="Announcement"
             referrerPolicy="no-referrer"
-            className="w-full h-64 object-cover"
+            className="w-full h-64 object-cover cursor-pointer"
+            onClick={() => setLightboxImage(announcement.image)}
             onError={(e) => {
               e.target.style.display = "none";
             }}
@@ -132,6 +143,27 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
           </a>
         )}
       </div>
+
+      {/* Lightbox overlay */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size announcement"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

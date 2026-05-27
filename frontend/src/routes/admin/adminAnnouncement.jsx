@@ -447,7 +447,7 @@ const AdminAnnouncement = () => {
     const unpinned = announcements.filter((a) => !a.pinned && !isScheduled(a))
     const scheduled = announcements.filter((a) => isScheduled(a))
 
-    const ordered = [...pinned, ...unpinned, ...scheduled]
+    const ordered = [...pinned, ...scheduled, ...unpinned]
 
     if (activeFilter === 'All') return ordered
     return ordered.filter((a) => a.category === activeFilter)

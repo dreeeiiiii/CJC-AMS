@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import prisma from "../db.js";
+import { uploadToCloudinary } from "../config/cloudinary.js"
 
 const formatDate = () => {
   return new Date().toLocaleDateString("en-US", {
@@ -82,9 +83,20 @@ export const createAnnouncement = async (req: Request, res: Response): Promise<a
     let imageUrl: string | null = null;
 
     if (req.file) {
-      const baseUrl =
-        process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-      imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      if (process.env.CLOUDINARY_CLOUD_NAME) {
+        const result = await uploadToCloudinary(req.file.buffer, 'announcements');
+        imageUrl = (result as any).secure_url;
+      } else {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(req.file.originalname);
+        const filename = 'announcement-' + uniqueSuffix + ext;
+        const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
+        const dir = path.dirname(filepath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(filepath, req.file.buffer);
+        const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+        imageUrl = `${baseUrl}/uploads/${filename}`;
+      }
     }
 
     const newAnnouncement = await prisma.announcement.create({
