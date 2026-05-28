@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import navbar from "../../components/navbar""";
-import footer from "../../components/footer""";
+import Navbar from "../../components/navbar";
+import Footer from "../../components/footer";
 import axios from "axios";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL;

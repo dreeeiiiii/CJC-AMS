@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import adminNavbar from "../../components/adminNavbar""'
-import footer from "../../components/footer""'
-import modal from "../../components/modal""'
-import testimonyApprovalSidebar from "../../components/testimonyApprovalSidebar""'
+import AdminNavbar from '../../components/adminNavbar'
+import Footer from '../../components/footer'
+import Modal from '../../components/modal'
+import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, Mail,
   MapPin, CheckCircle, X, ChevronDown, Trash2, 

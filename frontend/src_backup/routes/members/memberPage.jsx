@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
-import memberLayout from "../../components/memberLayout""";
+import memberLayout from "../../components/memberLayout";
 import ShareStoryModal from "../../components/ShareStoryModal";
-import testimonyCarousel from "../../components/testimonyCarousel";
+import TestimonyCarousel from "../../components/TestimonyCarousel";
 
 // -------------------- CONSTANTS --------------------
 
@@ -448,7 +448,7 @@ const MemberPage = () => {
           {/* Testimonies */}
           <section className="bg-[#3B4B89] rounded-2xl p-6 shadow-sm text-white text-center flex flex-col">
             <h2 className="text-xl font-bold mb-4">Testimonies</h2>
-            <testimonyCarousel
+            <TestimonyCarousel
               testimonials={testimonials}
               onShareStory={() => setShowStoryModal(true)}
             />

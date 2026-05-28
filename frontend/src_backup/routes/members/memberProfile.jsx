@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Pencil, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock, ContactRound, IdCard } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import memberLayout from "../../components/memberLayout""";
-import modal from "../../components/modal""";
+import MemberLayout from "../../components/memberLayout";
+import Modal from "../../components/modal";
 import { fetchMyProfile, updateMyProfile, changePassword } from "../../api/userApi";
 
 const MemberProfile = () => {
@@ -268,7 +268,7 @@ const MemberProfile = () => {
   };
 
   return (
-    <memberLayout activeNav="profile">
+    <MemberLayout activeNav="profile">
       <div className="px-6 md:px-12 py-10 md:py-14 bg-white min-h-[calc(100vh-4rem)] font-montserrat">
         <h1 className="text-3xl md:text-4xl font-bold text-[#3B4B89] text-center mb-10">
           My Profile
@@ -584,7 +584,7 @@ const MemberProfile = () => {
           </button>
         </div>
       </Modal>
-    </memberLayout>
+    </MemberLayout>
   );
 };
 

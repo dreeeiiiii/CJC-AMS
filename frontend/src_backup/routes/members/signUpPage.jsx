@@ -1,9 +1,9 @@
-import navbar from "../../components/navbar""";
-import footer from "../../components/footer""";
+import Navbar from "../../components/navbar";
+import Footer from "../../components/footer";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Eye, EyeOff, XCircle, CheckCircle, X } from "lucide-react";
-import modal from "../../components/modal"""; 
+import Modal from "../../components/modal"; 
 import axios from "axios";
 
 // 💡 Helper function for backend/network errors

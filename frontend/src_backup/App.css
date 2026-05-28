@@ -1,0 +1,99 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Signika+Negative:wght@300..700&display=swap');
+@theme{
+  --font-montserrat: Montserrat;
+  --breakpoint-xs: 480px;
+}
+@import "tailwindcss";
+
+/* ===== MOBILE-FIRST BASE ===== */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Touch-friendly interactive elements */
+button,
+a,
+.btn-like,
+[role="button"],
+summary {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Icon-only buttons keep square touch area */
+button:has(> svg:only-child),
+a:has(> svg:only-child) {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+/* Constrain full-width content on large screens */
+.max-w-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Table responsive wrapper */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet+ card grid helpers */
+@media (min-width: 768px) {
+  .md\:table-responsive {
+    overflow-x: visible;
+  }
+}
+
+/* Small phone adjustments */
+@media (max-width: 480px) {
+  .hide-xs {
+    display: none !important;
+  }
+  
+  button.table-action,
+  a.table-action {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* Toast position fix for mobile */
+@media (max-width: 640px) {
+  .toast-container {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+  }
+  .toast-container > div {
+    width: 100%;
+  }
+}
+
+/* Modal scroll fix for mobile */
+@media (max-width: 640px) {
+  .modal-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* Animated slide-up */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
