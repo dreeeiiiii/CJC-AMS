@@ -9,6 +9,8 @@ import {
   AlertCircle, Loader2, Download, Undo2, Calendar, Shield,
 } from 'lucide-react'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
   <div className="relative mt-4">
     <input
