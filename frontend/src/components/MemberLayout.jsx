@@ -286,7 +286,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange, isLoading }) 
 
       <main className="md:ml-64 pt-16 min-h-screen transition-all">
         {children}
-        {!isLoading && <Footer />}
+        <Footer />
       </main>
 
       {showBackToTop && !location.pathname.includes("/member/profile") && !lightboxOpen && !modalOpen && !mobileMenuOpen && (
