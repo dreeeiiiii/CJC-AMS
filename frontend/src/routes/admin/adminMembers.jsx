@@ -605,77 +605,82 @@ const AdminMembers = () => {
           {/* Data Management Area */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
             <div className="p-5 border-b border-gray-100">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h3 className="text-xl font-semibold text-[#4A558F]">Members List</h3>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  
-                  {/* Filter & Sort Dropdown */}
+<div className="flex flex-col gap-4">
+<h3 className="text-xl font-semibold text-[#4A558F]">Members List</h3>
 
-                  <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors bg-white">
-                    <Search size={16} className="text-gray-400" />
-                    <input
-                      type="search"
-                      placeholder="Search by name..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full ml-2 focus:outline-none text-sm hidden sm:block"
-                    />
-                  </div>
+{/* Search and Controls - Stacked on mobile, row on desktop */}
+<div className="flex flex-col sm:flex-row sm:items-center gap-3">
+  {/* Search Bar - Full width on mobile */}
+  <div className="w-full sm:flex-1">
+    <div className="flex items-center border border-gray-200 rounded-full px-4 py-2.5 sm:py-2 focus-within:border-[#4A558F] focus-within:ring-2 focus-within:ring-[#4A558F]/20 transition-all bg-white">
+      <Search size={16} className="text-gray-400 flex-shrink-0" />
+      <input
+        type="search"
+        placeholder="Search by name..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full ml-2 focus:outline-none text-sm bg-transparent"
+      />
+    </div>
+  </div>
 
-                  <div className="relative" ref={filterRef}>
-                    <button 
-                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                      className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
-                    >
-                      <Filter size={16} />
-                      <span className="hidden xs:inline">Filter & Sort</span>
-                      <span className="xs:hidden">Filter</span>
-                      <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
-                    </button>
+  {/* Action Buttons Group */}
+  <div className="flex items-center gap-2 sm:gap-3">
+    {/* Filter Dropdown */}
+    <div className="relative" ref={filterRef}>
+      <button 
+        onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+        className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] hover:bg-gray-50 transition-all bg-white whitespace-nowrap"
+      >
+        <Filter size={16} />
+        <span className="hidden xs:inline">Filter & Sort</span>
+        <span className="xs:hidden">Filter</span>
+        <ChevronDown size={14} className={`transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+      </button>
 
-                    {showFilterDropdown && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
-                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter Status</div>
-                        {['All', 'New Member', 'Old Member'].map((opt) => (
-                          <button
-                            key={opt}
-                            onClick={() => { setStatusFilter(opt); setShowFilterDropdown(false); }}
-                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${statusFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                        <div className="my-1 border-t border-gray-100"></div>
-                        <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
-                        {[
-                          { label: 'First Name', val: 'firstName' },
-                          { label: 'Last Name', val: 'lastName' },
-                          { label: 'Newest Registered', val: 'newest' },
-                          { label: 'Oldest Registered', val: 'oldest' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.val}
-                            onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false); }}
-                            className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+      {showFilterDropdown && (
+        <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+          <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter Status</div>
+          {['All', 'New Member', 'Old Member'].map((opt) => (
+            <button
+              key={opt}
+              onClick={() => { setStatusFilter(opt); setShowFilterDropdown(false); }}
+              className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${statusFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              {opt}
+            </button>
+          ))}
+          <div className="my-1 border-t border-gray-100"></div>
+          <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+          {[
+            { label: 'First Name', val: 'firstName' },
+            { label: 'Last Name', val: 'lastName' },
+            { label: 'Newest Registered', val: 'newest' },
+            { label: 'Oldest Registered', val: 'oldest' }
+          ].map((opt) => (
+            <button
+              key={opt.val}
+              onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false); }}
+              className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
 
-
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
-                  >
-                    <Download size={16} />
-                    Export
-                  </button>
-
-                </div>
-              </div>
+    {/* Export Button */}
+    <button
+      onClick={handleExportCSV}
+      className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] hover:bg-gray-50 transition-all bg-white whitespace-nowrap"
+    >
+      <Download size={16} />
+      <span className="hidden xs:inline">Export</span>
+    </button>
+  </div>
+</div>
+</div>
 
               {selectedMembers.length > 0 && (
                 <div className="mt-3 flex items-center justify-between gap-3 bg-[#D9DFF2]/50 rounded-lg px-4 py-2 animate-slide-up">
