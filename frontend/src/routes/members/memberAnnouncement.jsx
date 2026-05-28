@@ -118,23 +118,33 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
       {/* Action Bar */}
       <div className="px-4 py-2 flex items-center justify-between border-t border-gray-200 mt-auto">
         <div className="flex items-center gap-2">
+
+          {/* ✅ FIXED BUTTON LOGIC */}
           <button
-            onClick={() => onAcknowledge?.(announcement.id)}
+            onClick={() => {
+              if (!announcement.selfAcknowledged) {
+                onAcknowledge?.(announcement.id);
+              }
+            }}
+            disabled={announcement.selfAcknowledged}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border min-h-[48px] transition-colors ${
               announcement.selfAcknowledged
-                ? "text-green-700 bg-green-50 border-green-200"
+                ? "text-green-700 bg-green-50 border-green-200 cursor-not-allowed"
                 : "text-gray-500 border-gray-300 hover:bg-green-50 hover:border-green-200 hover:text-green-700"
             }`}
           >
             <CheckCircle size={14} />
             {announcement.selfAcknowledged ? "Acknowledged" : "Got it"}
           </button>
+
           {announcement.acknowledgmentCount > 0 && (
             <span className="text-xs text-gray-400">
-              · {announcement.acknowledgmentCount} {announcement.acknowledgmentCount === 1 ? "person" : "people"}
+              · {announcement.acknowledgmentCount}{" "}
+              {announcement.acknowledgmentCount === 1 ? "person" : "people"}
             </span>
           )}
         </div>
+
         {announcement.link && (
           <a
             href={announcement.link}
@@ -186,8 +196,23 @@ const MemberAnnouncements = () => {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const res = await axios.get(`${BACKEND_API_URL}?limit=1000`);
-        setAnnouncements(res.data.data || []);
+        const token = localStorage.getItem("token");
+
+        const res = await axios.get(`${BACKEND_API_URL}?limit=1000`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // ✅ ENSURE backend value is respected
+        const data = res.data.data || [];
+
+        setAnnouncements(
+          data.map((a) => ({
+            ...a,
+            selfAcknowledged: !!a.selfAcknowledged, // normalize safely
+          }))
+        );
       } catch (error) {
         console.error("Error fetching announcements from backend:", error);
       } finally {
@@ -198,7 +223,6 @@ const MemberAnnouncements = () => {
     fetchAnnouncements();
   }, []);
 
-  // Remove scheduled, apply search + category filter, sort pinned first
   const liveAnnouncements = announcements.filter(
     (ann) => !ann.scheduledAt || new Date(ann.scheduledAt) <= new Date()
   );
@@ -212,31 +236,36 @@ const MemberAnnouncements = () => {
     .filter((ann) => selectedCategory === "All" || ann.category === selectedCategory)
     .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
 
-  // Feature 4 — Acknowledge / un-acknowledge
+  /* ---------------- FIXED ACKNOWLEDGE LOGIC ---------------- */
   const handleAcknowledge = async (id) => {
-    const target = announcements.find((a) => a.id === id);
-    if (!target) return;
-
-    const wasAcknowledged = target.selfAcknowledged;
-    const method = wasAcknowledged ? "DELETE" : "POST";
-
     try {
-      await axios({ method, url: `${API_BASE}/api/announcements/${id}/acknowledge` });
+      const token = localStorage.getItem("token");
+
+      await axios.post(
+        `${API_BASE}/api/announcements/${id}/acknowledge`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // ✅ Only update state flag, DO NOT fake increment count
       setAnnouncements((prev) =>
         prev.map((a) =>
           a.id === id
             ? {
                 ...a,
-                selfAcknowledged: !wasAcknowledged,
-                acknowledgmentCount: wasAcknowledged
-                  ? Math.max(0, (a.acknowledgmentCount || 0) - 1)
-                  : (a.acknowledgmentCount || 0) + 1,
+                selfAcknowledged: true,
+                acknowledgmentCount: a.acknowledgmentCount, // keep DB value
               }
             : a
         )
       );
+
     } catch (error) {
-      console.error("Error toggling acknowledgment:", error);
+      console.error("Error acknowledging:", error);
     }
   };
 
@@ -252,6 +281,7 @@ const MemberAnnouncements = () => {
 
   return (
     <MemberLayout activeNav="announcements">
+
       {/* Header Section */}
       <section className="px-6 md:px-12 py-10 md:py-14 bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto text-center">
@@ -266,7 +296,6 @@ const MemberAnnouncements = () => {
 
       {/* Filter Section */}
       <section className="px-6 md:px-12 py-6 bg-gray-50">
-        {/* Widened container to match the 2-column grid */}
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[auto_1fr_auto] gap-4 items-center">
             <h2 className="text-xl font-semibold text-gray-800 whitespace-nowrap">
@@ -289,6 +318,7 @@ const MemberAnnouncements = () => {
                 const count = cat === "All"
                   ? searchedAnnouncements.length
                   : searchedAnnouncements.filter((a) => a.category === cat).length;
+
                 return (
                   <button
                     key={cat}
@@ -309,24 +339,31 @@ const MemberAnnouncements = () => {
         </div>
       </section>
 
-      {/* Feed Section - Updated to 2 columns on laptop (md:grid-cols-2) */}
+      {/* Feed Section */}
       <section className="px-4 md:px-12 pb-12 bg-gray-50 min-h-screen">
         <div className="max-w-5xl mx-auto pt-4">
           {filteredAnnouncements.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {filteredAnnouncements.map((ann) => (
-                <AnnouncementCard key={ann.id} announcement={ann} onAcknowledge={handleAcknowledge} />
+                <AnnouncementCard
+                  key={ann.id}
+                  announcement={ann}
+                  onAcknowledge={handleAcknowledge}
+                />
               ))}
             </div>
           ) : (
             <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
               <div className="text-6xl mb-4">📢</div>
               <h3 className="text-xl font-semibold text-[#4A558F] mb-2">No announcements found</h3>
-              <p className="text-gray-500 text-sm">We couldn't find any announcements matching your search.</p>
+              <p className="text-gray-500 text-sm">
+                We couldn't find any announcements matching your search.
+              </p>
             </div>
           )}
         </div>
       </section>
+
     </MemberLayout>
   );
 };

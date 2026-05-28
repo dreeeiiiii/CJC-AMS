@@ -236,7 +236,7 @@ const MemberPage = () => {
             {[
               { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
               { label: "Absent",   value: absentCount,   color: "text-red-600"   },
-              { label: "Records",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
+              { label: "Streak",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-50 rounded-xl p-3 md:px-4 md:py-3">
                 <p className="text-xs text-gray-400">{label}</p>
