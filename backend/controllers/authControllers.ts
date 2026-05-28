@@ -167,13 +167,15 @@ export const login = async (req: Request, res: Response) => {
 };
 
 // 📌 Verify User
-export const verifyUser = async (req: AuthRequest, res: Response) => {
+export const verifyUser = async (req: Request, res: Response) => {  // ✅ CHANGED: AuthRequest → Request
+  const authReq = req as AuthRequest;  // ✅ ADDED THIS LINE
+  
   try {
-    if (!req.user) {
+    if (!authReq.user) {  // ✅ CHANGED: req.user → authReq.user
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = authReq.user.id;  // ✅ CHANGED: removed 'as any' and use authReq.user.id
     const user = await prisma.member.findUnique({
       where: { id: userId }
     });

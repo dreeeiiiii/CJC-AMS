@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
+import type { AuthRequest } from "../middleware/auth.js";  // ✅ ONLY ADD THIS
 import fs from "fs";
 import path from "path";
 import prisma from "../db.js";
 import { uploadToCloudinary } from "../config/cloudinary.js"
-
 
 const formatDate = () => {
   return new Date().toLocaleDateString("en-US", {
@@ -18,12 +18,14 @@ const formatDate = () => {
  */
 export const getAnnouncements = async (req: Request, res: Response): Promise<any> => {
   try {
-    if (!req.user) {
+    const authReq = req as AuthRequest;  // ✅ ONLY ADD THIS
+    
+    if (!authReq.user) {  // ✅ ONLY CHANGE req.user → authReq.user
       return res.status(401).json({ error: "Unauthorized" });
     }
     
-    const userId = req.user.id; 
-     const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const userId = authReq.user.id;  // ✅ ONLY CHANGE req.user → authReq.user
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 5, 1), 50);
     const skip = (page - 1) * limit;
 
@@ -37,13 +39,11 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        // --- ADDED THIS SECTION ---
         include: {
           acknowledgments: {
             where: { userId: userId },
           },
         },
-        // --------------------------
       }),
       prisma.announcement.count(),
       prisma.announcement.count({
@@ -64,16 +64,13 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
       }),
     ]);
 
-    // --- TRANSFORM DATA TO ADD selfAcknowledged ---
     const formattedAnnouncements = announcements.map((ann) => {
       const { acknowledgments, ...rest } = ann;
       return {
         ...rest,
-        // If the acknowledgments array has an entry, this user has seen it
         selfAcknowledged: acknowledgments.length > 0,
       };
     });
-    // ----------------------------------------------
 
     const byCategory: Record<string, number> = {};
     for (const row of categoryAgg) {
@@ -81,7 +78,7 @@ export const getAnnouncements = async (req: Request, res: Response): Promise<any
     }
 
     return res.status(200).json({
-      data: formattedAnnouncements, // Use the formatted data here
+      data: formattedAnnouncements,
       hasMore: skip + announcements.length < total,
       stats: {
         total,
@@ -107,7 +104,6 @@ export const createAnnouncement = async (req: Request, res: Response): Promise<a
   try {
     const { title, content, category, author, link, scheduledAt } = req.body;
 
-    // validation
     if (!title || !content) {
       return res.status(400).json({
         error: "Title and content are required",
@@ -179,12 +175,10 @@ export const deleteAnnouncement = async (req: Request, res: Response): Promise<a
       return res.status(404).json({ error: "Announcement not found" });
     }
 
-    // delete image file if exists
     if (announcement.image) {
       const filename = announcement.image.split("/uploads/")[1];
       if (filename) {
         const filePath = path.join(process.cwd(), "public", "uploads", filename);
-
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
@@ -214,8 +208,8 @@ export const acknowledgeAnnouncement = async (
   res: Response
 ): Promise<any> => {
   try {
+    const authReq = req as AuthRequest;  // ✅ ONLY ADD THIS
     const id = req.params.id as string;
-
     const parsedId = parseInt(id, 10);
 
     if (isNaN(parsedId)) {
@@ -224,8 +218,7 @@ export const acknowledgeAnnouncement = async (
       });
     }
 
-    // logged-in member id
-    const userId = req.user?.id;
+    const userId = authReq.user?.id;  // ✅ ONLY CHANGE req.user → authReq.user
 
     if (!userId) {
       return res.status(401).json({
@@ -233,7 +226,6 @@ export const acknowledgeAnnouncement = async (
       });
     }
 
-    // check announcement exists
     const existing = await prisma.announcement.findUnique({
       where: { id: parsedId },
     });
@@ -244,16 +236,14 @@ export const acknowledgeAnnouncement = async (
       });
     }
 
-    // prevent duplicate acknowledgment
-    const alreadyAcknowledged =
-      await prisma.announcementAcknowledgment.findUnique({
-        where: {
-          announcementId_userId: {
-            announcementId: parsedId,
-            userId,
-          },
+    const alreadyAcknowledged = await prisma.announcementAcknowledgment.findUnique({
+      where: {
+        announcementId_userId: {
+          announcementId: parsedId,
+          userId,
         },
-      });
+      },
+    });
 
     if (alreadyAcknowledged) {
       return res.status(400).json({
@@ -261,7 +251,6 @@ export const acknowledgeAnnouncement = async (
       });
     }
 
-    // create acknowledgment
     await prisma.announcementAcknowledgment.create({
       data: {
         announcementId: parsedId,
@@ -269,7 +258,6 @@ export const acknowledgeAnnouncement = async (
       },
     });
 
-    // increment count
     const updated = await prisma.announcement.update({
       where: { id: parsedId },
       data: {
@@ -283,7 +271,6 @@ export const acknowledgeAnnouncement = async (
 
   } catch (error: any) {
     console.error("Acknowledge Error:", error);
-
     return res.status(500).json({
       error: error.message || "Failed to acknowledge announcement",
     });
@@ -298,8 +285,8 @@ export const unacknowledgeAnnouncement = async (
   res: Response
 ): Promise<any> => {
   try {
+    const authReq = req as AuthRequest;  // ✅ ONLY ADD THIS
     const id = req.params.id as string;
-
     const parsedId = parseInt(id, 10);
 
     if (isNaN(parsedId)) {
@@ -308,7 +295,7 @@ export const unacknowledgeAnnouncement = async (
       });
     }
 
-    const userId = req.user?.id;
+    const userId = authReq.user?.id;  // ✅ ONLY CHANGE req.user → authReq.user
 
     if (!userId) {
       return res.status(401).json({
@@ -316,7 +303,6 @@ export const unacknowledgeAnnouncement = async (
       });
     }
 
-    // check announcement exists
     const existing = await prisma.announcement.findUnique({
       where: { id: parsedId },
     });
@@ -327,16 +313,14 @@ export const unacknowledgeAnnouncement = async (
       });
     }
 
-    // check acknowledgment exists
-    const acknowledgment =
-      await prisma.announcementAcknowledgment.findUnique({
-        where: {
-          announcementId_userId: {
-            announcementId: parsedId,
-            userId,
-          },
+    const acknowledgment = await prisma.announcementAcknowledgment.findUnique({
+      where: {
+        announcementId_userId: {
+          announcementId: parsedId,
+          userId,
         },
-      });
+      },
+    });
 
     if (!acknowledgment) {
       return res.status(400).json({
@@ -344,7 +328,6 @@ export const unacknowledgeAnnouncement = async (
       });
     }
 
-    // remove acknowledgment
     await prisma.announcementAcknowledgment.delete({
       where: {
         announcementId_userId: {
@@ -354,7 +337,6 @@ export const unacknowledgeAnnouncement = async (
       },
     });
 
-    // decrement count
     const updated = await prisma.announcement.update({
       where: { id: parsedId },
       data: {
@@ -368,7 +350,6 @@ export const unacknowledgeAnnouncement = async (
 
   } catch (error: any) {
     console.error("Unacknowledge Error:", error);
-
     return res.status(500).json({
       error: error.message || "Failed to unacknowledge announcement",
     });
