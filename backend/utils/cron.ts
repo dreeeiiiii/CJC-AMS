@@ -16,7 +16,7 @@ export const initCronJobs = () => {
         where: {
           accountStatus: 'Active',
           joinDate: { lt: twoMonthsAgo }, // Safety check: ensures we don't flag brand-new signups
-          attendance: {
+          attendances: {
             none: {
               createdAt: {
                 gte: twoMonthsAgo,

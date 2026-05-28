@@ -312,18 +312,25 @@ export const deleteUsers = async (req: Request, res: Response) => {
 };
 
 // 📌 Get authenticated user's own profile
-export const getMyProfile = async (req: AuthRequest, res: Response) => {
+// Change the parameter type from AuthRequest to Request
+export const getMyProfile = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
+    // Cast req to AuthRequest to access user property
+    const authReq = req as AuthRequest;
+    
+    if (!authReq.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const userId = (req.user as any).id;
+    
+    const userId = authReq.user.id;  // No need for 'as any' anymore
     const user = await prisma.member.findUnique({
       where: { id: userId },
     });
+    
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    
     res.status(200).json(user);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -331,12 +338,15 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
 };
 
 // 📌 Update authenticated user's own profile text information 
-export const updateMyProfile = async (req: AuthRequest, res: Response) => {
+export const updateMyProfile = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
+    const authReq = req as AuthRequest;
+    
+    if (!authReq.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const userId = (req.user as any).id;
+    
+    const userId = authReq.user.id;  // Removed 'as any' - cleaner now
     const { firstName, middleName, lastName, email, contactNo, address, gender, group, joinDate } = req.body;
 
     const updateData: any = {
@@ -419,13 +429,15 @@ export const uploadProfileImageController = async (req: AuthRequest, res: Respon
 };
 
 // 📌 Change password for authenticated user
-export const changePassword = async (req: AuthRequest, res: Response) => {
+export const changePassword = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
+    const authReq = req as AuthRequest;
+    
+    if (!authReq.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = authReq.user.id;  // Removed 'as any'
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
