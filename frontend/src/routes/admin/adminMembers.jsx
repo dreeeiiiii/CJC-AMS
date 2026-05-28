@@ -582,10 +582,10 @@ const AdminMembers = () => {
                     <Search size={16} className="text-gray-400" />
                     <input
                       type="search"
-                      placeholder="Search..."
+                      placeholder="Search by name..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full ml-2 focus:outline-none text-sm"
+                      className="w-full ml-2 focus:outline-none text-sm hidden sm:block"
                     />
                   </div>
 

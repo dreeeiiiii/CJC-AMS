@@ -596,7 +596,7 @@ const AdminVisitors = () => {
                       placeholder="Search by name, church..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full ml-2 focus:outline-none text-sm"
+                      className="w-full ml-2 focus:outline-none text-sm hidden sm:block"
                     />
                   </div>
                   <div className="relative" ref={filterRef}>
@@ -644,7 +644,7 @@ const AdminVisitors = () => {
                     onClick={handleExportCSV}
                     className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white"
                   >
-                    <Download size={16} /> <span className="hidden xs:inline">Export</span>
+                    <Download size={16} /> <span className="hidden sm:inline">Export</span>
                   </button>
                 </div>
               </div>

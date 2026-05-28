@@ -21,10 +21,16 @@ export const getAllUsers = async (req: Request, res: Response) => {
         profileImage: true,
         joinDate: true,
         createdAt: true,
+        _count: { select: { testimonies: true } },
       },
       orderBy: { createdAt: 'desc' } // Shows newest members first
     });
-    res.status(200).json(users);
+    const enriched = users.map(u => ({
+      ...u,
+      testimonyCount: u._count?.testimonies ?? 0,
+      _count: undefined,
+    }));
+    res.status(200).json(enriched);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -36,13 +42,15 @@ export const getUsersById = async (req: Request, res: Response) => {
   try {
     const user = await prisma.member.findUnique({
       where: { id: Number(id) },
+      include: { _count: { select: { testimonies: true } } },
     });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.status(200).json(user);
+    const { _count, ...rest } = user;
+    res.status(200).json({ ...rest, testimonyCount: _count?.testimonies ?? 0 });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

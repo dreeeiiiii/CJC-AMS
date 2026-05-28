@@ -1,5 +1,12 @@
 import type { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import prisma from "../db.js";
+
+interface DecodedToken {
+  id: number;
+  email: string;
+  role: string;
+}
 
 export const submitTestimony = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -21,11 +28,26 @@ export const submitTestimony = async (req: Request, res: Response): Promise<any>
     const sanitizedName = fullName.trim().replace(/<[^>]*>/g, "");
     const sanitizedTestimony = trimmedTestimony.replace(/<[^>]*>/g, "");
 
+    let memberId: number | null = null
+    const authHeader = req.headers.authorization
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const secret = process.env.JWT_TOKEN_SECRET
+        if (secret) {
+          const decoded = jwt.verify(authHeader.split(" ")[1]!, secret) as unknown as DecodedToken
+          memberId = decoded.id
+        }
+      } catch {
+        // invalid token — proceed as anonymous
+      }
+    }
+
     const newTestimony = await prisma.testimony.create({
       data: {
         name: sanitizedName,
         quote: sanitizedTestimony,
         status: "pending",
+        memberId,
       },
     });
 
@@ -41,8 +63,13 @@ export const submitTestimony = async (req: Request, res: Response): Promise<any>
 
 export const getAllTestimonies = async (req: Request, res: Response): Promise<any> => {
   try {
+    const { status } = req.query;
+    const where: any = {};
+    if (status && status !== "all") {
+      where.status = status as string;
+    }
     const testimonies = await prisma.testimony.findMany({
-      where: { status: "pending" },
+      where,
       orderBy: { createdAt: "desc" },
     });
     return res.status(200).json(testimonies);
