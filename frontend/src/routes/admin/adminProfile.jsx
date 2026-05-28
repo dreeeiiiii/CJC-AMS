@@ -435,77 +435,89 @@ const AdminProfile = () => {
 
       <Footer />
 
-      <Modal isOpen={editMode} onClose={handleEditToggle} title="Edit Profile">
+<Modal isOpen={editMode} onClose={handleEditToggle} title="Edit Profile">
 <div className="p-6 space-y-4">
-{emailError && (
-  <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-    {emailError}
-  </div>
-)}
+  {emailError && (
+    <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+      {emailError}
+    </div>
+  )}
 
-{[
-  { label: "First Name", key: "firstName" },
-  { label: "Middle Name", key: "middleName" },
-  { label: "Last Name", key: "lastName" },
-  { label: "Email", key: "email", type: "email" },
-  { label: "Contact Number", key: "contact" },
-  { label: "Address", key: "address" }
-].map((field) => (
-  <div key={field.key}>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+  {[
+    { label: "First Name", key: "firstName" },
+    { label: "Middle Name", key: "middleName" },
+    { label: "Last Name", key: "lastName" },
+    { label: "Email", key: "email", type: "email" },
+    { label: "Contact Number", key: "contact" },
+    { label: "Address", key: "address" }
+  ].map((field) => (
+    <div key={field.key}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+      <input
+        type={field.type || "text"}
+        value={editForm[field.key]}
+        onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none"
+      />
+    </div>
+  ))}
+
+  {/* Gender Dropdown */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+    <select
+      value={editForm.gender}
+      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none bg-white"
+    >
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+  </div>
+
+  {/* Group Dropdown */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Group</label>
+    <select
+      value={editForm.group}
+      onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
+      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none bg-white"
+    >
+      <option value="">Select Group</option>
+      <option value="General">General</option>
+      <option value="Kids">Kids</option>
+      <option value="Campus">Campus</option>
+      <option value="YA">YA</option>
+      <option value="Mommies">Mommies</option>
+      <option value="Daddies">Daddies</option>
+    </select>
+  </div>
+
+  {/* Member Since (date) - keep at the bottom */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
     <input
-      type={field.type || "text"}
-      value={editForm[field.key]}
-      onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
+      type="date"
+      value={editForm.joinDate}
+      onChange={(e) => setEditForm({ ...editForm, joinDate: e.target.value })}
       className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none"
     />
   </div>
-))}
+</div>
 
-{/* Gender Dropdown */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-  <select
-    value={editForm.gender}
-    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none bg-white"
+{/* ✅ SAVE BUTTON SECTION */}
+<div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+  <button
+    onClick={handleSave}
+    className={`px-6 py-3 rounded-lg text-sm font-medium text-white transition ${
+      saved ? "bg-green-500" : "bg-[#364687] hover:bg-[#2d3a6a]"
+    }`}
   >
-    <option value="">Select Gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-  </select>
+    {saved ? "Saved!" : "Save Changes"}
+  </button>
 </div>
-
-{/* Group Dropdown */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Group</label>
-  <select
-    value={editForm.group}
-    onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none bg-white"
-  >
-    <option value="">Select Group</option>
-    <option value="General">General</option>
-    <option value="Kids">Kids</option>
-    <option value="Campus">Campus</option>
-    <option value="YA">YA</option>
-    <option value="Mommies">Mommies</option>
-    <option value="Daddies">Daddies</option>
-  </select>
-</div>
-
-{/* Member Since (date) - keep at the bottom */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
-  <input
-    type="date"
-    value={editForm.joinDate}
-    onChange={(e) => setEditForm({ ...editForm, joinDate: e.target.value })}
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#364687] focus:border-transparent outline-none"
-  />
-</div>
-</div>
-      </Modal>
+</Modal>
 
       <Modal
         isOpen={showChangePassword}
