@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// CHANGED: Now uses VITE_API_URL instead of dynamic routing
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const registerUser = async (name, email, password) => {
   try {

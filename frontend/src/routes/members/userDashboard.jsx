@@ -3,7 +3,7 @@ import Navbar from "../../components/navbar";
 import Footer from "../../components/footer";
 import axios from "axios";
 
-const BACKEND_URL = "http://localhost:5000"; // Backend root
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 const UserDashboard = () => {
   const [loading, setLoading] = useState(true);

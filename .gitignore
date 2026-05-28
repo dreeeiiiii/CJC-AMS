@@ -1,2 +1,3 @@
 frontend/cjc/.env
 backend/.env
+node_modules/

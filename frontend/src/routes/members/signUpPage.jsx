@@ -2,20 +2,47 @@ import Navbar from "../../components/navbar";
 import Footer from "../../components/footer";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, XCircle, CheckCircle, X } from "lucide-react";
+import Modal from "../../components/Modal"; 
+import axios from "axios";
+
+// 💡 Helper function for backend/network errors
+const getFriendlyErrorMessage = (err) => {
+    if (err.message === "Network Error" || !err.response) {
+        return "Oops! We're having trouble reaching our servers right now. Please check your internet connection.";
+    }
+    const status = err.response?.status;
+    const backendMessage = err.response?.data?.message || "";
+
+    switch (status) {
+        case 400:
+            return "It looks like some information is missing or invalid. Please check your details and try again.";
+        case 409:
+            return "An account with this email already exists. Would you like to log in instead?";
+        case 500:
+        case 502:
+        case 503:
+            return "Something went wrong on our end. We're looking into it, please try again a little later!";
+        default:
+            return backendMessage || "Something unexpected happened while trying to create your account. Please try again.";
+    }
+};
 
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
+    middleName: "", // Optional
     email: "",
     password: "",
-    contact: "",
+    contactNo: "", // 👈 Changed from 'contact' to 'contactNo'
     address: "",
     gender: "",
   });
-  const [message, setMessage] = useState(""); // to show confirmation or error
-  const [isError, setIsError] = useState(false); // to style message on error/success
+
+  // 🔄 Replaced message strings with a robust popup state
+  const [popup, setPopup] = useState({ show: false, message: "", isError: false });
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -27,106 +54,176 @@ export const Signup = () => {
   };
 
   const handleGenderChange = (value) => {
+    const formatted = value.charAt(0).toUpperCase() + value.slice(1);
     setFormData((prev) => ({
       ...prev,
-      gender: prev.gender === value ? "" : value,
+      gender: prev.gender === formatted ? "" : formatted,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(""); // clear previous message
-    setIsError(false);
+    
+    // 🛑 1. Check for empty required fields! (Updated contact to contactNo)
+    const { firstName, lastName, contactNo, address, gender, email, password } = formData;
+    if (!firstName.trim() || !lastName.trim() || !contactNo.trim() || !address.trim() || !gender || !email.trim() || !password.trim()) {
+        setPopup({
+            show: true,
+            isError: true,
+            message: "It looks like you missed a spot! Please fill in all required fields. (Middle Name is optional)"
+        });
+        return; // Stop the function here
+    }
+
+    setPopup({ show: false, message: "", isError: false });
+
+    const submissionData = {
+      type: "member",
+      ...formData
+    };
 
     try {
-      const res = await fetch("http://localhost:5000/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      const API_URL = import.meta.env.VITE_API_URL;
+      await axios.post(`${API_URL}/auth/register`, submissionData);
+
+      // 🎉 Show success popup
+      setPopup({
+          show: true,
+          isError: false,
+          message: "Account created successfully! Redirecting you to login..."
       });
 
-      const data = await res.json();
-      console.log("✅ Response:", data);
+      setTimeout(() => {
+        navigate("/login");
+      }, 2500);
 
-      if (!res.ok) {
-        setMessage(data.message || "Something went wrong");
-        setIsError(true);
-      } else {
-        setMessage("Account created successfully! Redirecting to login...");
-        setIsError(false);
-
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
-      }
     } catch (error) {
-      console.error("❌ Error:", error);
-      setMessage("Error connecting to server");
-      setIsError(true);
+      console.error("❌ Signup Error:", error);
+      // 🚨 Show friendly error popup
+      setPopup({
+          show: true,
+          isError: true,
+          message: getFriendlyErrorMessage(error)
+      });
     }
   };
+
+  const closePopup = () => setPopup({ show: false, message: "", isError: false });
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-15 lg:gap-30 max-w-screen-xl p-6 font-montserrat">
-          <div className="text-white flex flex-col justify-center items-center text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900 relative px-4 py-10">
+        
+        <Modal isOpen={popup.show} onClose={popup.isError ? closePopup : undefined}>
+            <div className="p-6 flex flex-col items-center text-center font-montserrat">
+                {popup.isError ? (
+                    <XCircle className="text-red-400 w-16 h-16 mb-4" />
+                ) : (
+                    <CheckCircle className="text-green-400 w-16 h-16 mb-4" />
+                )}
+
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {popup.isError ? "Signup Issue" : "Welcome!"}
+                </h3>
+                <p className="text-gray-600 mb-6">{popup.message}</p>
+                
+                {popup.isError && (
+                    <button 
+                        onClick={closePopup}
+                        className="w-full bg-indigo-500 text-white font-semibold py-2 rounded-xl hover:bg-indigo-600 transition"
+                    >
+                        Got it
+                    </button>
+                )}
+            </div>
+        </Modal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 w-full max-w-screen-xl font-montserrat">
+          {/* Hero text — hidden on small screens, shown on md+ */}
+          <div className="hidden md:flex text-white flex-col justify-center items-center text-center px-4">
             <h1 className="text-3xl lg:text-4xl font-bold mb-4">Create your account</h1>
-            <p className="text-xl lg:text-2xl mb-6">
+            <p className="text-lg lg:text-2xl mb-6">
               To become a part of our community, please sign up using your personal information.
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-lg mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-lg mx-auto">
+            {/* Show hero text inside card on mobile only */}
+            <div className="md:hidden text-center mb-6">
+              <h1 className="text-2xl font-bold text-indigo-800 mb-2">Create your account</h1>
+              <p className="text-sm text-gray-500">To become a part of our community, please sign up using your personal information.</p>
+            </div>
+
             <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4 text-sm">
+              
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <input
+                  type="text"
+                  name="firstName"
+                  placeholder="First Name"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full px-3 sm:px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
+                />
+                <input
+                  type="text"
+                  name="lastName"
+                  placeholder="Last Name"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-3 sm:px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
+                />
+              </div>
+
               <input
                 type="text"
-                name="name"
-                placeholder="Full Name"
-                value={formData.name}
+                name="middleName"
+                placeholder="Middle Name (Optional)"
+                value={formData.middleName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
+
               <input
                 type="text"
-                name="contact"
+                name="contactNo" 
                 placeholder="Contact No."
-                value={formData.contact}
+                value={formData.contactNo} 
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
+              
               <input
                 type="text"
                 name="address"
                 placeholder="Address"
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
 
-              <div className="flex space-x-8">
-                <span className="text-md font-medium pl-4">Gender:</span>
-                <label>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
+                <span className="text-sm font-medium">Gender:</span>
+                <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    value="female"
-                    checked={formData.gender === "female"}
+                    checked={formData.gender === "Female"}
                     onChange={() => handleGenderChange("female")}
+                    className="accent-indigo-400"
                   />
-                  Female
+                  <span>Female</span>
                 </label>
-                <label>
+                <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    value="male"
-                    checked={formData.gender === "male"}
+                    checked={formData.gender === "Male"}
                     onChange={() => handleGenderChange("male")}
+                    className="accent-indigo-400"
                   />
-                  Male
+                  <span>Male</span>
                 </label>
               </div>
 
@@ -136,7 +233,7 @@ export const Signup = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
               />
 
               <div className="relative">
@@ -146,34 +243,23 @@ export const Signup = () => {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2.5 border rounded-lg focus:outline-indigo-400 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3"
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500"
                 >
-                  {showPassword ? <Eye /> : <EyeOff />}
+                  {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                 </button>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white py-2 rounded-xl"
+                className="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl transition-colors text-base"
               >
                 Sign Up
               </button>
-
-              {/* Message below form */}
-              {message && (
-                <p
-                  className={`mt-4 text-center ${
-                    isError ? "text-red-600" : "text-green-600"
-                  } font-semibold`}
-                >
-                  {message}
-                </p>
-              )}
 
               <p className="text-sm text-center">
                 Already have an account?{" "}
