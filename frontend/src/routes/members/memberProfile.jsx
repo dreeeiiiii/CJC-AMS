@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Pencil, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock, ContactRound, IdCard } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import MemberLayout from "../../components/memberLayout";
-import Modal from "../../components/Modal";
+import Modal from "../../components/modal";
 import { fetchMyProfile, updateMyProfile, changePassword } from "../../api/userApi";
 
 const MemberProfile = () => {

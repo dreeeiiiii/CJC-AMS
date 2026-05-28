@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "./confirmDialog";
 
 const Navbar = () => {
   const navigate = useNavigate();

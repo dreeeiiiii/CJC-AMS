@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import AdminNavbar from "../../components/adminNavbar"
 import Footer from '../../components/footer'
-import Modal from '../../components/Modal'
+import Modal from '../../components/modal'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 

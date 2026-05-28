@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, ChevronDown, Home, Bell, User, LogOut, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchMyProfile } from "../api/userApi";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "./confirmDialog";
 import Footer from "./footer";
 
 const MemberLayout = ({ children, activeNav = "home", onNavChange, isLoading }) => {

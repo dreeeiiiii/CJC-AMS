@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import Modal from '../../components/Modal'
+import Modal from '../../components/modal'
 import { 
   Search, Filter, Download, Plus, ArrowLeft, User, Phone,
   Building2, Calendar, CheckCircle, X, ChevronDown, 

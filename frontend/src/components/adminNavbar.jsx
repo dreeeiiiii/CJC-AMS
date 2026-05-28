@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LogOut, ChevronDown, User, Menu, X, ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "./confirmDialog";
 
 const AdminNavbar = () => {
   const navigate = useNavigate();

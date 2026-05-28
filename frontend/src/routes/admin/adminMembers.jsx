@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
-import Modal from '../../components/Modal'
+import Modal from '../../components/modal'
 import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, Mail,
