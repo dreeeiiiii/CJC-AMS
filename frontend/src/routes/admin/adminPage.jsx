@@ -47,6 +47,20 @@ const [loadingInactive, setLoadingInactive] = useState(false)
   const filterRef = useRef(null)
   const inputRef = useRef(null)
 
+
+
+  const fetchInactiveMembers = async () => {
+    setLoadingInactive(true)
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/users/inactive`, getAuthHeader())
+      setInactiveMembers(response.data.data)
+      setShowInactiveModal(true)
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to fetch inactive members', 'error')
+    } finally {
+      setLoadingInactive(false)
+    }
+  }
   // Compute consecutive weekly attendance streak per member name
   const computeStreaks = (records) => {
     const getWeekKey = (dateStr) => {
@@ -65,18 +79,7 @@ const [loadingInactive, setLoadingInactive] = useState(false)
     })
 
     // Add this function with your other functions
-const fetchInactiveMembers = async () => {
-  setLoadingInactive(true)
-  try {
-    const response = await axios.get(`${API_BASE_URL}/api/users/inactive`, getAuthHeader())
-    setInactiveMembers(response.data.data)
-    setShowInactiveModal(true)
-  } catch (error) {
-    showToast(error.response?.data?.message || 'Failed to fetch inactive members', 'error')
-  } finally {
-    setLoadingInactive(false)
-  }
-}
+
 
     const streaks = {}
     Object.entries(memberWeeks).forEach(([name, weeksSet]) => {
