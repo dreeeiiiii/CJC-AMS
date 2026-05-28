@@ -218,6 +218,9 @@ const AdminMembers = () => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const filterRef = useRef(null)
 
+  // New state for pagination
+  const [displayCount, setDisplayCount] = useState(50)
+
   // Form state
   const [formData, setFormData] = useState({
     firstName: '',
@@ -256,7 +259,7 @@ const AdminMembers = () => {
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/users', {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
         method: 'GET',
         headers: getAuthHeader(),
       })
@@ -304,6 +307,11 @@ const AdminMembers = () => {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(50)
+  }, [debouncedSearch, statusFilter, sortBy])
+
   useEffect(() => {
     return () => {
       clearTimeout(deleteTimeoutRef.current)
@@ -326,6 +334,14 @@ const AdminMembers = () => {
       if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt)
       return 0
     })
+
+  // Get only the records to display based on displayCount
+  const displayedMembers = filteredMembers.slice(0, displayCount)
+  const hasMoreMembers = displayCount < filteredMembers.length
+
+  const handleShowMore = () => {
+    setDisplayCount(prev => prev + 30)
+  }
 
   const newMembersCount = members.filter(m => m.status === 'New Member').length
   const oldMembersCount = members.filter(m => m.status === 'Old Member').length
@@ -360,8 +376,8 @@ const AdminMembers = () => {
     if (!validateForm()) return
     try {
       const url = editingMemberId
-        ? `http://localhost:5000/api/users/${editingMemberId}`
-        : 'http://localhost:5000/api/users'
+        ? `${API_BASE_URL}/api/users/${editingMemberId}`
+        : `${API_BASE_URL}/api/users`
       const response = await fetch(url, {
         method: editingMemberId ? 'PUT' : 'POST',
         headers: getAuthHeader(),
@@ -400,7 +416,7 @@ const AdminMembers = () => {
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
         await Promise.all(ids.map(id =>
-          fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE', headers: getAuthHeader() })
+          fetch(`${API_BASE_URL}/api/users/${id}`, { method: 'DELETE', headers: getAuthHeader() })
         ))
         setMembers(prev => prev.filter(m => !ids.includes(m.id)))
         setPendingDeleteIds([])
@@ -456,10 +472,10 @@ const AdminMembers = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedMembers.length === filteredMembers.length) {
+    if (selectedMembers.length === displayedMembers.length) {
       setSelectedMembers([])
     } else {
-      setSelectedMembers(filteredMembers.map(m => m.id))
+      setSelectedMembers(displayedMembers.map(m => m.id))
     }
   }
 
@@ -484,7 +500,7 @@ const AdminMembers = () => {
     clearTimeout(deleteTimeoutRef.current)
     deleteTimeoutRef.current = setTimeout(async () => {
       try {
-        await fetch(`http://localhost:5000/api/users/${member.id}`, {
+        await fetch(`${API_BASE_URL}/api/users/${member.id}`, {
           method: 'DELETE',
           headers: getAuthHeader(),
         })
@@ -685,84 +701,99 @@ const AdminMembers = () => {
                   <p className="text-gray-500 text-sm">No members found.</p>
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-[#D9DFF2]/50">
-                    <tr className="text-left">
-                      <th className="py-3 px-5 w-10">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300"
-                          checked={filteredMembers.length > 0 && selectedMembers.length === filteredMembers.length}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Middle</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Email</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Member Since</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMembers.map((member, index) => {
-                      const isPendingDelete = pendingDeleteIds.includes(member.id)
-                      return (
-                      <tr
-                        key={member.id}
-                        onClick={(e) => !isPendingDelete && handleRowClick(member, e)}
-                        className={`border-b border-gray-100 transition-colors ${
-                          isPendingDelete
-                            ? 'bg-red-50'
-                            : index % 2 === 0
-                              ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
-                              : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
-                        }`}
-                      >
-                        <td className="py-3 px-5">
+                <>
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#D9DFF2]/50">
+                      <tr className="text-left">
+                        <th className="py-3 px-5 w-10">
                           <input
                             type="checkbox"
                             className="rounded border-gray-300"
-                            checked={selectedMembers.includes(member.id)}
-                            onChange={() => toggleSelect(member.id)}
-                            disabled={isPendingDelete}
+                            checked={displayedMembers.length > 0 && selectedMembers.length === displayedMembers.length}
+                            onChange={toggleSelectAll}
                           />
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName} {member.lastName}</span>
-                            {member.role === "ADMIN" && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">
-                                <Shield size={10} />
-                                Admin
+                        </th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Middle</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Email</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Member Since</th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                      {displayedMembers.map((member, index) => {
+                        const isPendingDelete = pendingDeleteIds.includes(member.id)
+                        return (
+                          <tr
+                            key={member.id}
+                            onClick={(e) => !isPendingDelete && handleRowClick(member, e)}
+                            className={`border-b border-gray-100 transition-colors ${
+                              isPendingDelete
+                                ? 'bg-red-50'
+                                : index % 2 === 0
+                                  ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
+                                  : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
+                            }`}
+                          >
+                            <td className="py-3 px-5">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={selectedMembers.includes(member.id)}
+                                onChange={() => toggleSelect(member.id)}
+                                disabled={isPendingDelete}
+                              />
+                             </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName} {member.lastName}</span>
+                                {member.role === "ADMIN" && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">
+                                    <Shield size={10} />
+                                    Admin
+                                  </span>
+                                )}
+                              </div>
+                             </td>
+                            <td className="py-3 px-4 text-gray-700 hidden sm:table-cell">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
+                            <td className="py-3 px-4 hidden sm:table-cell">
+                              <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.email}</span>
+                             </td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                member.status === 'Old Member' ? 'bg-[#D9DFF2] text-[#4A558F]' : 'bg-green-100 text-green-700'
+                              }`}>
+                                <CheckCircle size={12} /> {member.status}
                               </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 hidden sm:table-cell">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
-                        <td className="py-3 px-4 hidden sm:table-cell">
-                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.email}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                            member.status === 'Old Member' ? 'bg-[#D9DFF2] text-[#4A558F]' : 'bg-green-100 text-green-700'
-                          }`}>
-                            <CheckCircle size={12} /> {member.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 hidden sm:table-cell">
-                          <span className="text-gray-500">{new Date(member.joinDate).toLocaleDateString()}</span>
-                          {isPendingDelete && (
-                            <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
-                              <Loader2 size={12} className="animate-spin" />
-                              Deleting...
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                             </td>
+                            <td className="py-3 px-4 hidden sm:table-cell">
+                              <span className="text-gray-500">{new Date(member.joinDate).toLocaleDateString()}</span>
+                              {isPendingDelete && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                                  <Loader2 size={12} className="animate-spin" />
+                                  Deleting...
+                                </div>
+                              )}
+                             </td>
+                            </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  
+                  {/* Show More Button */}
+                  {hasMoreMembers && (
+                    <div className="flex justify-center py-6 border-t border-gray-100">
+                      <button
+                        onClick={handleShowMore}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#D9DFF2] hover:bg-[#C8CFE6] text-[#4A558F] font-medium rounded-full transition-colors duration-200 text-sm"
+                      >
+                        Show More
+                        <ChevronDown size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -880,4 +911,4 @@ const AdminMembers = () => {
   )
 }
 
-export default AdminMembers;
+export default AdminMembers

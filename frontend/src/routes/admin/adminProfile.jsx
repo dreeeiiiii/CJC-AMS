@@ -190,7 +190,7 @@ const AdminProfile = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/api/upload-profile`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

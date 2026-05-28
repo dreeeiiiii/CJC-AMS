@@ -25,7 +25,7 @@ const AdminAttendance = () => {
   // New state for pagination
   const [displayCount, setDisplayCount] = useState(50)
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
+  const API_BASE_URL = import.meta.env.VITE_API_URL
   const getAuthHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
   })
@@ -40,7 +40,7 @@ const AdminAttendance = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     fetchRecords()

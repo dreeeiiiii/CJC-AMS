@@ -16,35 +16,35 @@ export const VerifyReset = () => {
   const email =
     location.state?.email || localStorage.getItem("resetEmail");
 
-  const handleVerify = async (e) => {
-    e.preventDefault();
-
-    if (!email) {
-      alert("Session expired. Please restart password reset.");
-      navigate("/messageReset");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await axios.post("http://localhost:5000/api/verify-otp", {
-        email,
-        otp,
-      });
-
-      // clear stored email after success
-      localStorage.removeItem("resetEmail");
-
-      navigate("/resetPassword", { state: { email } });
-
-    } catch (err) {
-      console.error(err);
-      alert("Invalid or expired OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleVerify = async (e) => {
+      e.preventDefault();
+  
+      if (!email) {
+        alert("Session expired. Please restart password reset.");
+        navigate("/messageReset");
+        return;
+      }
+  
+      try {
+        setLoading(true);
+  
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/verify-otp`, {
+          email,
+          otp,
+        });
+  
+        // clear stored email after success
+        localStorage.removeItem("resetEmail");
+  
+        navigate("/resetPassword", { state: { email } });
+  
+      } catch (err) {
+        console.error(err);
+        alert("Invalid or expired OTP");
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <>

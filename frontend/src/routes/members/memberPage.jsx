@@ -115,7 +115,7 @@ const MemberPage = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const base = "http://localhost:5000/api";
+        const base = `${import.meta.env.VITE_API_URL}/api`;
 
         const [verseRes, testRes, attRes] = await Promise.all([
           fetch(`${base}/content/verse/today`),
@@ -143,7 +143,6 @@ const MemberPage = () => {
 
     fetchAll();
   }, []);
-
   // Close dropdown on outside click
 
   useEffect(() => {

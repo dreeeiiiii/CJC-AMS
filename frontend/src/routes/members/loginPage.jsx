@@ -40,7 +40,7 @@ export const Login = () => {
     const [errorPopup, setErrorPopup] = useState({ show: false, message: "" });
     const navigate = useNavigate();
 
-    const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const BACKEND_URL = import.meta.env.VITE_API_URL;
     
 
     const handleAuthSuccess = (token, user) => {

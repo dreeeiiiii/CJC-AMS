@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
       }
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const API_URL = import.meta.env.VITE_API_URL;
         const response = await fetch(`${API_URL}/auth/verify`, {
           headers: {
             Authorization: `Bearer ${token}`,

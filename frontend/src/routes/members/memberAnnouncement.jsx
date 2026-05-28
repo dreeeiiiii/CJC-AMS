@@ -3,11 +3,8 @@ import { Search, ExternalLink, MoreHorizontal, Pin, CheckCircle, X } from "lucid
 import axios from "axios";
 import MemberLayout from "../../components/memberLayout";
 
-const BACKEND_API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api/announcements` 
-  : "http://localhost:5000/api/announcements"; 
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL;
+const BACKEND_API_URL = `${API_BASE}/api/announcements`;
 
 const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   // Toggle state for See More / See Less

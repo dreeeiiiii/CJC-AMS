@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Loader2, AlertCircle, CheckCircle, XCircle, Trash2 } from 'lucide-react'
 import axios from 'axios'
 
-const API = 'http://localhost:5000'
+const API = import.meta.env.VITE_API_URL
 
 const initials = (name) =>
   name

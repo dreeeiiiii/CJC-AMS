@@ -16,40 +16,40 @@ export const ResetPassword = () => {
   const email =
     location.state?.email || localStorage.getItem("resetEmail");
 
-  const handleReset = async (e) => {
-    e.preventDefault();
-
-    if (!email) {
-      alert("Session expired. Please restart reset process.");
-      navigate("/messageReset");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await axios.post("http://localhost:5000/api/reset-password", {
-        email,
-        password,
-      });
-
-      localStorage.removeItem("resetEmail");
-
-      alert("Password reset successful!");
-      navigate("/login");
-
-    } catch (err) {
-      console.error(err);
-      alert("Failed to reset password");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleReset = async (e) => {
+      e.preventDefault();
+  
+      if (!email) {
+        alert("Session expired. Please restart reset process.");
+        navigate("/messageReset");
+        return;
+      }
+  
+      if (password !== confirmPassword) {
+        alert("Passwords do not match");
+        return;
+      }
+  
+      try {
+        setLoading(true);
+  
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/reset-password`, {
+          email,
+          password,
+        });
+  
+        localStorage.removeItem("resetEmail");
+  
+        alert("Password reset successful!");
+        navigate("/login");
+  
+      } catch (err) {
+        console.error(err);
+        alert("Failed to reset password");
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <>

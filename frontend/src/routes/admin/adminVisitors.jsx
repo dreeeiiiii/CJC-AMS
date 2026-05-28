@@ -10,8 +10,7 @@ import {
   UserPlus
 } from 'lucide-react'
 
-const API_URL = 'http://localhost:5000/api/visitors';
-
+const API_URL = `${import.meta.env.VITE_API_URL}/api/visitors`;
 // ─── Floating Label Input ───────────────────────────────────────────────────
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', error, icon: Icon, ...props }) => (
   <div className="relative mt-4">
@@ -238,6 +237,9 @@ const AdminVisitors = () => {
   const deleteTimeoutRef = useRef(null)
   const deletedVisitorsRef = useRef([])
 
+  // New state for pagination
+  const [displayCount, setDisplayCount] = useState(50)
+
   const [formData, setFormData] = useState({
     fullName: '',
     originalChurch: '',
@@ -313,6 +315,11 @@ const AdminVisitors = () => {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(50)
+  }, [debouncedSearch, categoryFilter, sortBy])
+
   useEffect(() => {
     return () => { clearTimeout(deleteTimeoutRef.current) }
   }, [])
@@ -340,6 +347,14 @@ const AdminVisitors = () => {
         return 0
       })
   }, [visitors, debouncedSearch, categoryFilter, sortBy])
+
+  // Get only the records to display based on displayCount
+  const displayedVisitors = filteredVisitors.slice(0, displayCount)
+  const hasMoreVisitors = displayCount < filteredVisitors.length
+
+  const handleShowMore = () => {
+    setDisplayCount(prev => prev + 30)
+  }
 
   // --- Form Handlers ---
   const handleInputChange = (e) => {
@@ -457,9 +472,9 @@ const AdminVisitors = () => {
   // --- Selection & Bulk Delete ---
   const toggleSelectAll = () => {
     setSelectedVisitors(
-      selectedVisitors.length === filteredVisitors.length
+      selectedVisitors.length === displayedVisitors.length
         ? []
-        : filteredVisitors.map(v => v.id)
+        : displayedVisitors.map(v => v.id)
     )
   }
 
@@ -678,91 +693,106 @@ const AdminVisitors = () => {
                   <p className="text-gray-500 text-sm">No visitors found.</p>
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-[#D9DFF2]/50">
-                    <tr className="text-left">
-                      <th className="py-3 px-5 w-10">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300"
-                          checked={filteredVisitors.length > 0 && selectedVisitors.length === filteredVisitors.length}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Church</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Invited By</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredVisitors.map((visitor, index) => {
-                      const isPendingDelete = pendingDeleteIds.includes(visitor.id)
-                      return (
-                        <tr
-                          key={visitor.id}
-                          onClick={(e) => !isPendingDelete && handleRowClick(visitor, e)}
-                          className={`border-b border-gray-100 transition-colors ${
-                            isPendingDelete
-                              ? 'bg-red-50'
-                              : index % 2 === 0
-                                ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
-                                : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
-                          }`}
-                        >
-                          <td className="py-3 px-5">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300"
-                              checked={selectedVisitors.includes(visitor.id)}
-                              onChange={() => toggleSelect(visitor.id)}
-                              disabled={isPendingDelete}
-                            />
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <span className={`font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>
-                                {visitor.firstName} {visitor.lastName || visitor.fullName}
-                              </span>
-                              {visitor.isFirstTime && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                  First Time
+                <>
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#D9DFF2]/50">
+                      <tr className="text-left">
+                        <th className="py-3 px-5 w-10">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300"
+                            checked={displayedVisitors.length > 0 && selectedVisitors.length === displayedVisitors.length}
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium hidden sm:table-cell">Church</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium hide-xs hidden sm:table-cell">Invited By</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedVisitors.map((visitor, index) => {
+                        const isPendingDelete = pendingDeleteIds.includes(visitor.id)
+                        return (
+                          <tr
+                            key={visitor.id}
+                            onClick={(e) => !isPendingDelete && handleRowClick(visitor, e)}
+                            className={`border-b border-gray-100 transition-colors ${
+                              isPendingDelete
+                                ? 'bg-red-50'
+                                : index % 2 === 0
+                                  ? 'bg-white hover:bg-[#D9DFF2]/20 cursor-pointer'
+                                  : 'bg-gray-50/50 hover:bg-[#D9DFF2]/20 cursor-pointer'
+                            }`}
+                          >
+                            <td className="py-3 px-5">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={selectedVisitors.includes(visitor.id)}
+                                onChange={() => toggleSelect(visitor.id)}
+                                disabled={isPendingDelete}
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium ${isPendingDelete ? 'text-red-700' : 'text-gray-700'}`}>
+                                  {visitor.firstName} {visitor.lastName || visitor.fullName}
                                 </span>
+                                {visitor.isFirstTime && (
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                    First Time
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 hidden sm:table-cell">
+                              <div className="flex items-center gap-1.5 text-gray-600">
+                                <Building2 size={14} className="text-gray-400" />
+                                {visitor.churchAffiliation || visitor.originalChurch}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 hide-xs hidden sm:table-cell">
+                              <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
+                                {visitor.invitedBy || 'Walk-in'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 text-gray-600 text-xs sm:text-sm">
+                                <Calendar size={14} className="text-gray-400 hidden sm:inline" />
+                                {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
+                              </div>
+                              {isPendingDelete ? (
+                                <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                                  <Loader2 size={12} className="animate-spin" /> Deleting...
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
+                                  <Clock size={12} />
+                                  {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
                               )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 hidden sm:table-cell">
-                            <div className="flex items-center gap-1.5 text-gray-600">
-                              <Building2 size={14} className="text-gray-400" />
-                              {visitor.churchAffiliation || visitor.originalChurch}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 hide-xs hidden sm:table-cell">
-                            <span className={visitor.invitedBy ? "text-[#4A558F] font-medium" : "text-gray-400 italic text-xs"}>
-                              {visitor.invitedBy || 'Walk-in'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 text-gray-600 text-xs sm:text-sm">
-                              <Calendar size={14} className="text-gray-400 hidden sm:inline" />
-                              {new Date(visitor.visitedAt || visitor.dateOfAttendance).toLocaleDateString()}
-                            </div>
-                            {isPendingDelete ? (
-                              <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
-                                <Loader2 size={12} className="animate-spin" /> Deleting...
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-gray-400 text-[10px] mt-0.5">
-                                <Clock size={12} />
-                                {new Date(visitor.visitedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  
+                  {/* Show More Button */}
+                  {hasMoreVisitors && (
+                    <div className="flex justify-center py-6 border-t border-gray-100">
+                      <button
+                        onClick={handleShowMore}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#D9DFF2] hover:bg-[#C8CFE6] text-[#4A558F] font-medium rounded-full transition-colors duration-200 text-sm"
+                      >
+                        Show More
+                        <ChevronDown size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -890,8 +920,6 @@ const AdminVisitors = () => {
       )}
 
       <Footer />
-
-
     </>
   )
 }
