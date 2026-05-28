@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import navbar from "../../components/navbar"
-import footer from "../../components/footer"
+import Navbar from "../../components/Navbar"
+import Footer from "../../components/Footer"
 import { FaArrowLeft } from "react-icons/fa";
 
 export const MessageReset = () => {

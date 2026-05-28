@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, ExternalLink, MoreHorizontal, Pin, CheckCircle, X } from "lucide-react";
 import axios from "axios";
-import memberLayout from "../../components/memberLayout"
+import MemberLayout from "../../components/MemberLayout"
 
 const API_BASE = import.meta.env.VITE_API_URL;
 const BACKEND_API_URL = `${API_BASE}/api/announcements`;

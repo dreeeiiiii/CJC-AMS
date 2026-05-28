@@ -1,9 +1,9 @@
-import navbar from "../../components/navbar"
-import footer from "../../components/footer"
+import Navbar from "../../components/Navbar"
+import Footer from "../../components/Footer"
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from "react";
 import { Eye, EyeOff, XCircle } from "lucide-react";
-import modal from "../../components/modal"
+import Modal from "../../components/Modal"
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
 

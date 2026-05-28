@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, IdCard, Eye, EyeOff, Lock, ContactRound } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import adminNavbar from "../../components/adminNavbar"
-import modal from "../../components/modal"
-import footer from "../../components/footer"
+import AdminNavbar from "../../components/AdminNavbar"
+import Modal from "../../components/Modal"
+import Footer from "../../components/Footer"
 import { fetchMyProfile, updateMyProfile, changePassword } from "../../api/userApi";
 
 const AdminProfile = () => {

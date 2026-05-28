@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
-import adminNavbar from "../../components/adminNavbar"
-import footer from "../../components/footer"
+import AdminNavbar from "../../components/AdminNavbar"
+import Footer from "../../components/Footer"
 import { 
   Search, Printer, Trash2, CheckCircle, Loader2, 
   Undo2, AlertCircle, X, Filter, ChevronDown

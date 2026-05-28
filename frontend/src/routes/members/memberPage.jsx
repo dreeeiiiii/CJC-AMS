@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
-import memberLayout from "../../components/memberLayout""";
+import MemberLayout from "../../components/MemberLayout";
 import ShareStoryModal from "../../components/ShareStoryModal";
-import testimonyCarousel from "../../components/testimonyCarousel";
+import TestimonyCarousel from "../../components/TestimonyCarousel";
 
 // -------------------- CONSTANTS --------------------
 
