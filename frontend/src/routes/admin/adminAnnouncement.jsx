@@ -602,7 +602,7 @@ const AdminAnnouncement = () => {
                       >
                         <option value="General">General</option>
                         <option value="Event">Event</option>
-                        <option value="Urgent">Urgent</option>
+                        <option value="Youth">Youth</option>
                         <option value="Update">Update</option>
                       </select>
                     </div>
@@ -772,7 +772,7 @@ const AdminAnnouncement = () => {
               {/* Feature 3 - Category Filter Tabs */}
               {announcements.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  {['All', 'General', 'Event', 'Urgent', 'Update'].map((cat) => {
+                  {['All', 'General', 'Event', 'Youth', 'Update'].map((cat) => {
                     const count = cat === 'All'
                       ? stats.total
                       : (stats.byCategory?.[cat] || 0)

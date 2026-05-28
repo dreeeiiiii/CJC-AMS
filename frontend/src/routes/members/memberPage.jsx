@@ -156,6 +156,34 @@ const MemberPage = () => {
     };
   }, [attendanceMap, selectedYear]);
 
+  // -------------------- STREAK --------------------
+
+  const streak = useMemo(() => {
+    let count = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const current = new Date(today);
+    current.setDate(current.getDate() - current.getDay());
+
+    while (true) {
+      if (attendanceMap[toKey(current)] === true) {
+        count++;
+        current.setDate(current.getDate() - 7);
+      } else {
+        break;
+      }
+    }
+
+    return count;
+  }, [attendanceMap]);
+
+  // -------------------- BODY CLASS FOR MODAL STATE --------------------
+
+  useEffect(() => {
+    document.body.classList.toggle("modal-open", showStoryModal);
+    return () => document.body.classList.remove("modal-open");
+  }, [showStoryModal]);
+
   // -------------------- ENCOURAGEMENT MESSAGE --------------------
 
   const encouragement = useMemo(() => {
@@ -263,7 +291,7 @@ const MemberPage = () => {
             {[
               { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
               { label: "Absent",   value: absentCount,   color: "text-red-600"   },
-              { label: "Streak",  value: attendanceHistory.length, color: "text-[#1E3A8A]" },
+              { label: "Streak",  value: streak, color: "text-[#1E3A8A]" },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-50 rounded-xl p-3 md:px-4 md:py-3">
                 <p className="text-xs text-gray-400">{label}</p>

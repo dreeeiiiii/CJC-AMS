@@ -4,7 +4,7 @@ import Footer from '../../components/footer'
 import Modal from '../../components/Modal'
 import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
-  Search, Filter, Plus, ArrowLeft, User, Phone, 
+  Search, Filter, Plus, ArrowLeft, User, Phone, Mail,
   MapPin, CheckCircle, X, ChevronDown, Trash2, 
   AlertCircle, Loader2, Download, Undo2, Calendar, Shield,
 } from 'lucide-react'
@@ -802,7 +802,7 @@ const AdminMembers = () => {
                 <FloatingLabelInput label="Middle Name" name="middleName" value={formData.middleName} onChange={handleInputChange} placeholder="Middle" />
               </div>
               <FloatingLabelInput label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Dela Cruz" error={formErrors.lastName} />
-              <FloatingLabelInput label="Email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email...." error={formErrors.email} />
+              <FloatingLabelInput label="Email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email...." error={formErrors.email} icon={Mail} />
               <FloatingLabelInput label="Contact No." name="contactNo" value={formData.contactNo} onChange={handleInputChange} type="tel" placeholder="09XXXXXXXXX" error={formErrors.contactNo} icon={Phone} />
               <FloatingLabelInput label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main St, City" icon={MapPin} />
             

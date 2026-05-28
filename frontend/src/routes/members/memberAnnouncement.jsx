@@ -14,6 +14,9 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   // Lightbox state for full-size image
   const [lightboxImage, setLightboxImage] = useState(null);
+  // Share menu toggle
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Character limit before truncating
   const maxLength = 150;
@@ -24,6 +27,28 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   const displayText = isExpanded 
     ? contentText 
     : contentText.slice(0, maxLength) + (isLongText ? "..." : "");
+
+  const handleShare = () => {
+    const text = [
+      announcement.title && `📢 ${announcement.title}`,
+      announcement.content && announcement.content.slice(0, 200),
+      ``,
+      `Category: ${announcement.category} · ${announcement.author}`,
+      `From CJCRSG Church Announcements`,
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setMenuOpen(false);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [menuOpen]);
 
   useEffect(() => {
     document.body.style.overflow = lightboxImage ? "hidden" : "";
@@ -74,9 +99,32 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
         </div>
         
         {/* FB Options Icon */}
-        <button className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors">
-          <MoreHorizontal size={20} />
-        </button>
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors"
+          >
+            <MoreHorizontal size={20} />
+          </button>
+          {menuOpen && (
+            <div
+              className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={handleShare}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Share
+              </button>
+            </div>
+          )}
+          {copied && (
+            <div className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap z-20">
+              Copied!
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content Text with See More toggle */}
@@ -160,7 +208,7 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
 
       {lightboxImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Full size announcement image"
@@ -191,7 +239,7 @@ const MemberAnnouncements = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const categories = ["All", "General", "Event", "Urgent", "Update"];
+  const categories = ["All", "General", "Event", "Youth", "Update"];
 
   useEffect(() => {
     const fetchAnnouncements = async () => {

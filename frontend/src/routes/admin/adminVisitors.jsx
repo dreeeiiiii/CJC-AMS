@@ -4,9 +4,10 @@ import AdminNavbar from '../../components/adminNavbar'
 import Footer from '../../components/footer'
 import Modal from '../../components/Modal'
 import { 
-  Search, Filter, Download, Plus, ArrowLeft, User, 
+  Search, Filter, Download, Plus, ArrowLeft, User, Phone,
   Building2, Calendar, CheckCircle, X, ChevronDown, 
-  Loader2, AlertCircle, Clock, Trash2, Undo2, FileText
+  Loader2, AlertCircle, Clock, Trash2, Undo2, FileText,
+  UserPlus
 } from 'lucide-react'
 
 const API_URL = 'http://localhost:5000/api/visitors';
@@ -241,6 +242,7 @@ const AdminVisitors = () => {
     fullName: '',
     originalChurch: '',
     invitedBy: '',
+    contactNo: '',
     dateOfVisit: new Date().toISOString().split('T')[0],
     purposeOfVisit: '',        
   })
@@ -383,6 +385,7 @@ const AdminVisitors = () => {
       fullName: '',
       originalChurch: '',
       invitedBy: '',
+      contactNo: '',
       dateOfVisit: new Date().toISOString().split('T')[0],
       purposeOfVisit: '',
     })
@@ -441,6 +444,7 @@ const AdminVisitors = () => {
         : visitor.fullName || '',
       originalChurch: visitor.churchAffiliation || visitor.originalChurch || '',
       invitedBy: visitor.invitedBy || '',
+      contactNo: visitor.contactNo || '',
       dateOfVisit: visitor.visitedAt
         ? new Date(visitor.visitedAt).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0],
@@ -809,6 +813,15 @@ const AdminVisitors = () => {
                 name="invitedBy"
                 value={formData.invitedBy}
                 onChange={handleInputChange}
+                icon={UserPlus}
+              />
+              <FloatingLabelInput
+                label="Contact No. (Optional)"
+                name="contactNo"
+                value={formData.contactNo}
+                onChange={handleInputChange}
+                type="tel"
+                icon={Phone}
               />
               <FloatingLabelInput
                 label="Date of Visit"
