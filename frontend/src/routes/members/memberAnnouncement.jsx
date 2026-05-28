@@ -7,6 +7,11 @@ const API_BASE = import.meta.env.VITE_API_URL;
 const BACKEND_API_URL = `${API_BASE}/api/announcements`;
 
 const AnnouncementCard = ({ announcement, onAcknowledge }) => {
+  // Local state for optimistic UI
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localAcknowledged, setLocalAcknowledged] = useState(announcement.selfAcknowledged);
+  const [localCount, setLocalCount] = useState(announcement.acknowledgmentCount);
+  
   // Toggle state for See More / See Less
   const [isExpanded, setIsExpanded] = useState(false);
   // Lightbox state for full-size image
@@ -14,6 +19,13 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
   // Share menu toggle
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Watch for changes to announcement props to sync local state
+  useEffect(() => {
+    setLocalAcknowledged(announcement.selfAcknowledged);
+    setLocalCount(announcement.acknowledgmentCount);
+    setIsProcessing(false);
+  }, [announcement.selfAcknowledged, announcement.acknowledgmentCount]);
   
   // Character limit before truncating
   const maxLength = 150;
@@ -164,28 +176,43 @@ const AnnouncementCard = ({ announcement, onAcknowledge }) => {
       <div className="px-4 py-2 flex items-center justify-between border-t border-gray-200 mt-auto">
         <div className="flex items-center gap-2">
 
-          {/* ✅ FIXED BUTTON LOGIC */}
+          {/* Optimistic UI Button with smooth delay */}
           <button
             onClick={() => {
-              if (!announcement.selfAcknowledged) {
+              if (!localAcknowledged && !isProcessing) {
+                // Optimistically update local state
+                setLocalAcknowledged(true);
+                setLocalCount(prev => prev + 1);
+                setIsProcessing(true);
+                // Call the handler with local update
                 onAcknowledge?.(announcement.id);
               }
             }}
-            disabled={announcement.selfAcknowledged}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border min-h-[48px] transition-colors ${
-              announcement.selfAcknowledged
+            disabled={localAcknowledged || isProcessing}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border min-h-[48px] transition-all duration-200 ${
+              localAcknowledged
                 ? "text-green-700 bg-green-50 border-green-200 cursor-not-allowed"
-                : "text-gray-500 border-gray-300 hover:bg-green-50 hover:border-green-200 hover:text-green-700"
+                : isProcessing
+                ? "text-gray-400 bg-gray-100 border-gray-200 cursor-wait"
+                : "text-gray-500 border-gray-300 hover:bg-green-50 hover:border-green-200 hover:text-green-700 active:scale-95"
             }`}
           >
-            <CheckCircle size={14} />
-            {announcement.selfAcknowledged ? "Acknowledged" : "Got it"}
+            {isProcessing ? (
+              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <CheckCircle size={14} />
+            )}
+            {localAcknowledged
+              ? "Acknowledged"
+              : isProcessing
+              ? "Acknowledging..."
+              : "Got it"}
           </button>
 
-          {announcement.acknowledgmentCount > 0 && (
+          {localCount > 0 && (
             <span className="text-xs text-gray-400">
-              · {announcement.acknowledgmentCount}{" "}
-              {announcement.acknowledgmentCount === 1 ? "person" : "people"}
+              · {localCount}{" "}
+              {localCount === 1 ? "person" : "people"}
             </span>
           )}
         </div>
@@ -283,9 +310,24 @@ const MemberAnnouncements = () => {
 
   /* ---------------- FIXED ACKNOWLEDGE LOGIC ---------------- */
   const handleAcknowledge = async (id) => {
+    // Optimistic update - UI updates instantly
+    setAnnouncements((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              selfAcknowledged: true,
+              acknowledgmentCount: a.acknowledgmentCount + 1,
+              isProcessing: true,
+            }
+          : a
+      )
+    );
+  
     try {
       const token = localStorage.getItem("token");
-
+  
+      // Actual API call
       await axios.post(
         `${API_BASE}/api/announcements/${id}/acknowledge`,
         {},
@@ -295,22 +337,37 @@ const MemberAnnouncements = () => {
           },
         }
       );
-
-      // ✅ Only update state flag, DO NOT fake increment count
+  
+      // After success, remove processing state (keep the optimistic data)
       setAnnouncements((prev) =>
         prev.map((a) =>
           a.id === id
             ? {
                 ...a,
-                selfAcknowledged: true,
-                acknowledgmentCount: a.acknowledgmentCount, // keep DB value
+                isProcessing: false,
               }
             : a
         )
       );
-
+  
     } catch (error) {
+      // On error - revert the optimistic update
       console.error("Error acknowledging:", error);
+      setAnnouncements((prev) =>
+        prev.map((a) =>
+          a.id === id
+            ? {
+                ...a,
+                selfAcknowledged: false,
+                acknowledgmentCount: a.acknowledgmentCount - 1,
+                isProcessing: false,
+              }
+            : a
+        )
+      );
+      
+      // Show error toast if needed
+      // showToast("Failed to acknowledge. Please try again.", "error");
     }
   };
 
