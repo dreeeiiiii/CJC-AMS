@@ -159,43 +159,43 @@ const AdminPage = () => {
   }
 
   // --- Normalizing API Data For Table Display ---
+  // --- Normalizing API Data For Table Display ---
   const normalizedRecords = useMemo(() => {
-    return attendanceRecords.map(rec => {
-        const name = rec.name || (rec.member ? `${rec.member.firstName} ${rec.member.lastName}` : 'Unknown Member');
-        const status = rec.status || rec.member?.status || 'Old Member';
-        
-        // ✅ Convert to Philippine Time (Asia/Manila)
-        let phTime;
-        if (rec.createdAt) {
-            const utcDate = new Date(rec.createdAt);
-            phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-        } else if (rec.date) {
-            phTime = new Date(rec.date);
-        } else {
-            phTime = new Date();
-        }
-        
-        const dateString = phTime.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit' 
-        });
-        const timeString = phTime.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
-        });
-
-        return {
-            id: rec.id,
-            name,
-            status,
-            date: dateString,
-            time: timeString,
-            rawDateTime: phTime
-        };
-    });
-}, [attendanceRecords]);
+      return attendanceRecords.map(rec => {
+          const name = rec.name || (rec.member ? `${rec.member.firstName} ${rec.member.lastName}` : 'Unknown Member');
+          const status = rec.status || rec.member?.status || 'Old Member';
+          
+          // ✅ Use the backend's formatted date and time directly
+          // No conversion needed - backend already sends correct Philippine time
+          const dateString = rec.date || "N/A";
+          const timeString = rec.time || "12:00 AM";
+          
+          // Create a date object for sorting (combine date and time)
+          let sortDate = new Date();
+          if (rec.date && rec.time) {
+              // Parse the date and time for sorting
+              const [month, day, year] = rec.date.split('/');
+              const timeMatch = rec.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+              if (timeMatch) {
+                  let hours = parseInt(timeMatch[1]);
+                  const minutes = parseInt(timeMatch[2]);
+                  const isPM = timeMatch[3].toUpperCase() === 'PM';
+                  if (isPM && hours !== 12) hours += 12;
+                  if (!isPM && hours === 12) hours = 0;
+                  sortDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hours, minutes);
+              }
+          }
+  
+          return {
+              id: rec.id,
+              name,
+              status,
+              date: dateString,
+              time: timeString,
+              rawDateTime: sortDate
+          };
+      });
+  }, [attendanceRecords]);
 
   // --- Memoized Table Filtering & Sorting ---
   const filteredRecords = useMemo(() => {
