@@ -8,7 +8,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 
   CalendarCheck, ChevronRight, CheckCircle, User, ArrowLeft, 
-  QrCode, Camera, X, Check, RefreshCw
+  QrCode, Camera, X, Check, RefreshCw, Loader2
 } from 'lucide-react'
 
 const AdminPage = () => {
