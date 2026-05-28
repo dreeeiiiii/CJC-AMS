@@ -21,6 +21,9 @@ const AdminAttendance = () => {
   const [toastAction, setToastAction] = useState(null)
   const deleteTimeoutRef = useRef(null)
   const deletedRecordsRef = useRef([])
+  
+  // New state for pagination
+  const [displayCount, setDisplayCount] = useState(50)
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
   const getAuthHeader = () => ({
@@ -70,11 +73,19 @@ const AdminAttendance = () => {
     return nameMatch && dateMatch && grpMatch
   })
 
+  // Get only the records to display based on displayCount
+  const displayedRecords = filteredRecords.slice(0, displayCount)
+  const hasMoreRecords = displayCount < filteredRecords.length
+
+  const handleShowMore = () => {
+    setDisplayCount(prev => prev + 30)
+  }
+
   const toggleSelectAll = () => {
-    if (selectedRecords.length === filteredRecords.length) {
+    if (selectedRecords.length === displayedRecords.length) {
       setSelectedRecords([])
     } else {
-      setSelectedRecords(filteredRecords.map(r => r.id))
+      setSelectedRecords(displayedRecords.map(r => r.id))
     }
   }
 
@@ -185,7 +196,7 @@ const AdminAttendance = () => {
               <tbody>${rows}</tbody>
             </table>
             <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-            <script>window.print();window.close();<${'/'}script>
+            <script>window.print();window.close();</script>
           </body>
         </html>
       `)
@@ -330,81 +341,96 @@ const AdminAttendance = () => {
                   <p className="text-gray-500 text-sm">No attendance records found.</p>
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-[#D9DFF2]/50">
-                    <tr className="text-left">
-                      <th className="py-3 px-5 w-10">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300"
-                          checked={filteredRecords.length > 0 && selectedRecords.length === filteredRecords.length}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Group</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
-                      <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRecords.map((record, index) => {
-                      const isPendingDelete = pendingDeleteIds.includes(record.id)
-                      return (
-                        <tr
-                          key={record.id}
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                            isPendingDelete
-                              ? 'bg-red-50'
-                              : index % 2 === 0
-                                ? 'bg-white'
-                                : 'bg-gray-50/50'
-                          }`}
-                        >
-                          <td className="py-3 px-5">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300"
-                              checked={selectedRecords.includes(record.id)}
-                              onChange={() => toggleSelect(record.id)}
-                              disabled={isPendingDelete}
-                            />
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{record.name}</span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              record.group === 'Mommies'
-                                ? 'bg-pink-100 text-pink-700'
-                                : record.group === 'Daddies'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : record.group === 'Campus'
-                                    ? 'bg-green-100 text-green-700'
-                                    : record.group === 'YA'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : record.group === 'Kids'
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {record.group}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-gray-500">{record.date}</td>
-                          <td className="py-3 px-4 text-gray-500">
-                            {record.time}
-                            {isPendingDelete && (
-                              <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
-                                <Loader2 size={12} className="animate-spin" />
-                                Deleting...
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <>
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#D9DFF2]/50">
+                      <tr className="text-left">
+                        <th className="py-3 px-5 w-10">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300"
+                            checked={displayedRecords.length > 0 && selectedRecords.length === displayedRecords.length}
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Group</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
+                        <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedRecords.map((record, index) => {
+                        const isPendingDelete = pendingDeleteIds.includes(record.id)
+                        return (
+                          <tr
+                            key={record.id}
+                            className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                              isPendingDelete
+                                ? 'bg-red-50'
+                                : index % 2 === 0
+                                  ? 'bg-white'
+                                  : 'bg-gray-50/50'
+                            }`}
+                          >
+                            <td className="py-3 px-5">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={selectedRecords.includes(record.id)}
+                                onChange={() => toggleSelect(record.id)}
+                                disabled={isPendingDelete}
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{record.name}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                record.group === 'Mommies'
+                                  ? 'bg-pink-100 text-pink-700'
+                                  : record.group === 'Daddies'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : record.group === 'Campus'
+                                      ? 'bg-green-100 text-green-700'
+                                      : record.group === 'YA'
+                                        ? 'bg-purple-100 text-purple-700'
+                                        : record.group === 'Kids'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {record.group}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-gray-500">{record.date}</td>
+                            <td className="py-3 px-4 text-gray-500">
+                              {record.time}
+                              {isPendingDelete && (
+                                <div className="flex items-center gap-1.5 text-red-500 text-[10px] mt-0.5">
+                                  <Loader2 size={12} className="animate-spin" />
+                                  Deleting...
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  
+                  {/* Show More Button */}
+                  {hasMoreRecords && (
+                    <div className="flex justify-center py-6 border-t border-gray-100">
+                      <button
+                        onClick={handleShowMore}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#D9DFF2] hover:bg-[#C8CFE6] text-[#4A558F] font-medium rounded-full transition-colors duration-200 text-sm"
+                      >
+                        Show More
+                        <ChevronDown size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -433,8 +459,6 @@ const AdminAttendance = () => {
       )}
 
       {!loading && <Footer />}
-
-
     </>
   )
 }
