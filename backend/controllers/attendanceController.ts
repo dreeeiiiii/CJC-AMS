@@ -121,16 +121,20 @@ export const getRecentActivity = async (req: Request, res: Response) => {
                 displayStatus = isNew ? "New Member" : "Old Member";
             }
 
+            // ✅ Format time
+            const createdAt = new Date(record.createdAt);
+            const timeString = createdAt.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+
             return {
                 id: record.id,
                 name: `${firstName} ${lastName}`,
                 status: displayStatus,
                 date: record.createdAt.toISOString().split("T")[0],
-                time: record.createdAt.toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true
-                })
+                time: timeString  // 👈 Add this field
             };
         });
 
@@ -209,16 +213,25 @@ export const getAllAttendance = async (req: Request, res: Response) => {
                 group = "Visitor";
             }
 
+            // ✅ Add formatted time
+            const createdAt = new Date(record.createdAt);
+            const dateString = createdAt.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+            const timeString = createdAt.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+
             return {
                 id: record.id,
                 name: `${firstName} ${lastName}`,
                 group,
-                date: record.createdAt.toISOString().split("T")[0],
-                time: record.createdAt.toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true
-                })
+                date: dateString,
+                time: timeString  // 👈 Add this field
             };
         });
 
