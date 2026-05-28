@@ -121,16 +121,14 @@ export const getRecentActivity = async (req: Request, res: Response) => {
                 displayStatus = isNew ? "New Member" : "Old Member";
             }
 
-            // ✅ Convert UTC to Philippine Time
-            const utcDate = new Date(record.createdAt);
-            const phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-            
-            const dateString = phTime.toLocaleDateString('en-US', { 
+            // ✅ Use the stored time directly (already in Philippine time from recordAttendance)
+            const createdAt = new Date(record.createdAt);
+            const dateString = createdAt.toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: '2-digit', 
                 day: '2-digit' 
             });
-            const timeString = phTime.toLocaleTimeString('en-US', { 
+            const timeString = createdAt.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit', 
                 hour12: true 
@@ -191,21 +189,8 @@ export const getAllAttendance = async (req: Request, res: Response) => {
         const records = await prisma.attendance.findMany({
             orderBy: { createdAt: "desc" },
             include: {
-                member: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        group: true,
-                        createdAt: true
-                    }
-                },
-                visitor: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        category: true
-                    }
-                }
+                member: { select: { firstName: true, lastName: true, group: true } },
+                visitor: { select: { firstName: true, lastName: true, category: true } }
             }
         });
 
@@ -214,22 +199,13 @@ export const getAllAttendance = async (req: Request, res: Response) => {
             const lastName = record.member?.lastName || record.visitor?.lastName || "User";
 
             let group = "General";
-            if (record.member?.group) {
-                group = record.member.group;
-            } else if (record.visitor) {
-                group = "Visitor";
-            }
+            if (record.member?.group) group = record.member.group;
+            else if (record.visitor) group = "Visitor";
 
-            // ✅ Convert UTC to Philippine Time
-            const utcDate = new Date(record.createdAt);
-            const phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-            
-            const dateString = phTime.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: '2-digit', 
-                day: '2-digit' 
-            });
-            const timeString = phTime.toLocaleTimeString('en-US', { 
+            // ✅ Use the stored time directly (already in Philippine time)
+            const date = new Date(record.createdAt);
+            const dateString = date.toLocaleDateString('en-US');
+            const timeString = date.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit', 
                 hour12: true 
@@ -249,7 +225,6 @@ export const getAllAttendance = async (req: Request, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 /**
  * DELETE /api/attendance/:id
  */
