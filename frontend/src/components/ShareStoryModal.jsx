@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X, Loader2, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { submitTestimony } from "../api/testimonyApi";
-import Modal from "./modal";
+import Modal from "./Modal";
 
 const ShareStoryModal = ({ isOpen, onClose }) => {
   const [fullName, setFullName] = useState("");

@@ -1,5 +1,5 @@
 import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
-import Modal from "./modal";
+import Modal from "./Modal";
 
 const variantConfig = {
   danger: {
