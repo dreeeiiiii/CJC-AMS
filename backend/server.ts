@@ -23,6 +23,7 @@ import visitorRoutes from "./routes/visitorRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import testimonyRoutes from "./routes/testimonyRoutes.js";
 import forgotPasswordRoutes from "./routes/forgotPasswordRoutes.js";
+import { googleLogin } from "./controllers/googleAuthControllers.js";
 
 const app = express();
 
