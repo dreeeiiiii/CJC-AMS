@@ -1,45 +1,45 @@
-generator client {
-  provider = "prisma-client-js"
-}
+  generator client {
+    provider = "prisma-client-js"
+  }
 
-datasource db {
-  provider = "postgresql"
-}
+  datasource db {
+    provider = "postgresql"
+  }
 
-// -------------------- ENUMS --------------------
+  // -------------------- ENUMS --------------------
 
-enum AccountStatus {
-  ACTIVE
-  INACTIVE
-}
+  enum AccountStatus {
+    ACTIVE
+    INACTIVE
+  }
 
-enum Role {
-  MEMBER
-  ADMIN
-  VISITOR
-}
+  enum Role {
+    MEMBER
+    ADMIN
+    VISITOR
+  }
 
-enum Category {
-  Invited
-  WalkIn
-}
+  enum Category {
+    Invited
+    WalkIn
+  }
 
-enum Gender {
-  Male
-  Female
-}
+  enum Gender {
+    Male
+    Female
+  }
 
-enum Group {
-  General
-  Kids
-  Campus
-  YA
-  Mommies
-  Daddies
-}
+  enum Group {
+    General
+    Kids
+    Campus
+    YA
+    Mommies
+    Daddies
+  }
 
 
-// -------------------- MEMBER PROFILE (NO AUTH HERE) --------------------
+  // -------------------- MEMBER PROFILE (NO AUTH HERE) --------------------
 
 model Member {
   id           Int      @id @default(autoincrement())
@@ -55,7 +55,7 @@ model Member {
   gender       Gender
 
   status       String   @default("New Member")
-  accountStatus String  @default("Active")     
+  accountStatus String  @default("Active")
   joinDate     DateTime @default(now())
   group        Group    @default(General)
   profileImage String?
@@ -64,125 +64,143 @@ model Member {
   updatedAt    DateTime @updatedAt
 
   // relations
-  account      UserAccount?  
+  account      UserAccount?
   attendances  Attendance[]
   testimonies  Testimony[]
+
+  announcementAcknowledgments AnnouncementAcknowledgment[]
 }
+  // -------------------- AUTH SYSTEM --------------------
 
-// -------------------- AUTH SYSTEM --------------------
+  model UserAccount {
+    id             Int            @id @default(autoincrement())
 
-model UserAccount {
-  id             Int            @id @default(autoincrement())
+    email          String         @unique
+    password       String
 
-  email          String         @unique
-  password       String
+    role           Role           @default(MEMBER)
 
-  role           Role           @default(MEMBER)
+    accountStatus  AccountStatus  @default(ACTIVE)
 
-  accountStatus  AccountStatus  @default(ACTIVE)
+    lastLoginAt    DateTime?
+    createdAt      DateTime       @default(now())
+    updatedAt      DateTime       @updatedAt
 
-  lastLoginAt    DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+    memberId       Int            @unique
+    member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  }
 
-  memberId       Int            @unique
-  member         Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
-}
+  // -------------------- VISITORS --------------------
 
-// -------------------- VISITORS --------------------
+  model Visitor {
+    id                Int      @id @default(autoincrement())
 
-model Visitor {
-  id                Int      @id @default(autoincrement())
+    firstName         String
+    lastName          String
+    middleName        String?
 
-  firstName         String
-  lastName          String
-  middleName        String?
+    contactNo         String?
+    address           String?
+    gender            Gender   @default(Male)
+    email             String?
+    category          Category @default(WalkIn)
 
-  contactNo         String?
-  address           String?
-  gender            Gender   @default(Male)
-  email             String?
-  category          Category @default(WalkIn)
+    churchAffiliation String?
+    invitedBy         String?
+    purposeOfVisit    String?
 
-  churchAffiliation String?
-  invitedBy         String?
-  purposeOfVisit    String?
+    role              Role     @default(VISITOR)
+    visitedAt         DateTime @default(now())
 
-  role              Role     @default(VISITOR)
-  visitedAt         DateTime @default(now())
+    attendances       Attendance[]
+  }
 
-  attendances       Attendance[]
-}
+  // -------------------- CONTENT --------------------
 
-// -------------------- CONTENT --------------------
+  model Announcement {
+    id        Int      @id @default(autoincrement())
+    title     String
+    content   String
+    image     String?
+    timestamp String
+    category  String   @default("General")
+    author    String   @default("CJCRSG Phils. Inc.")
+    link      String?
 
-model Announcement {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
-  image     String?
-  timestamp String
-  category  String   @default("General")
-  author    String   @default("CJCRSG Phils. Inc.")
-  link      String?
-  pinned              Boolean    @default(false)
-  scheduledAt         DateTime?
-  acknowledgmentCount Int        @default(0)
+    pinned              Boolean    @default(false)
+    scheduledAt         DateTime?
+    acknowledgmentCount Int        @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-model Verse {
-  id        Int      @id @default(autoincrement())
-  content   String   @db.Text
-  reference String
-  topic     String?
-  isActive  Boolean  @default(false)
+    acknowledgments AnnouncementAcknowledgment[]
+  }
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  model Verse {
+    id        Int      @id @default(autoincrement())
+    content   String   @db.Text
+    reference String
+    topic     String?
+    isActive  Boolean  @default(false)
 
-// -------------------- TESTIMONY --------------------
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+  }
 
-model Testimony {
-  id        Int      @id @default(autoincrement())
-  quote     String   @db.Text
-  status    String   @default("pending")
+  // -------------------- TESTIMONY --------------------
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  model Testimony {
+    id        Int      @id @default(autoincrement())
+    quote     String   @db.Text
+    status    String   @default("pending")
 
-  memberId  Int?     
-  member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  name      String?
-  avatar    String?
-}
+    memberId  Int?     
+    member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-// -------------------- ATTENDANCE --------------------
+    name      String?
+    avatar    String?
+  }
 
-model Attendance {
-  id         Int      @id @default(autoincrement())
+  // -------------------- ATTENDANCE --------------------
 
-  memberId   Int?
-  visitorId  Int?
+  model Attendance {
+    id         Int      @id @default(autoincrement())
 
-  recordedBy Int
+    memberId   Int?
+    visitorId  Int?
 
-  createdAt  DateTime @default(now())
+    recordedBy Int
 
-  member     Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  visitor    Visitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
-}
+    createdAt  DateTime @default(now())
 
-// -------------------Forgot password -------------------
+    member     Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+    visitor    Visitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  }
 
-model PasswordReset {
-  id        String   @id @default(cuid())
-  email     String
-  otp       String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
+  // -------------------Forgot password -------------------
+
+  model PasswordReset {
+    id        String   @id @default(cuid())
+    email     String
+    otp       String
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+  }
+  model AnnouncementAcknowledgment {
+    id             Int          @id @default(autoincrement())
+
+    announcementId Int
+    userId         Int
+
+    createdAt      DateTime     @default(now())
+
+    announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+    user           Member       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([announcementId, userId])
+  }
