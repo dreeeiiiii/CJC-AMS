@@ -121,9 +121,16 @@ export const getRecentActivity = async (req: Request, res: Response) => {
                 displayStatus = isNew ? "New Member" : "Old Member";
             }
 
-            // ✅ Format time
-            const createdAt = new Date(record.createdAt);
-            const timeString = createdAt.toLocaleTimeString('en-US', { 
+            // ✅ Convert UTC to Philippine Time
+            const utcDate = new Date(record.createdAt);
+            const phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            
+            const dateString = phTime.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+            const timeString = phTime.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit', 
                 hour12: true 
@@ -133,8 +140,8 @@ export const getRecentActivity = async (req: Request, res: Response) => {
                 id: record.id,
                 name: `${firstName} ${lastName}`,
                 status: displayStatus,
-                date: record.createdAt.toISOString().split("T")[0],
-                time: timeString  // 👈 Add this field
+                date: dateString,
+                time: timeString
             };
         });
 
@@ -213,14 +220,16 @@ export const getAllAttendance = async (req: Request, res: Response) => {
                 group = "Visitor";
             }
 
-            // ✅ Add formatted time
-            const createdAt = new Date(record.createdAt);
-            const dateString = createdAt.toLocaleDateString('en-US', { 
+            // ✅ Convert UTC to Philippine Time
+            const utcDate = new Date(record.createdAt);
+            const phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            
+            const dateString = phTime.toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: '2-digit', 
                 day: '2-digit' 
             });
-            const timeString = createdAt.toLocaleTimeString('en-US', { 
+            const timeString = phTime.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit', 
                 hour12: true 
@@ -231,7 +240,7 @@ export const getAllAttendance = async (req: Request, res: Response) => {
                 name: `${firstName} ${lastName}`,
                 group,
                 date: dateString,
-                time: timeString  // 👈 Add this field
+                time: timeString
             };
         });
 
