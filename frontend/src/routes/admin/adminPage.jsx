@@ -23,9 +23,8 @@ const AdminPage = () => {
   const [showScanner, setShowScanner] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState([]) 
   const [adminName, setAdminName] = useState('Admin')
-  // Add these states with your other states
-const [showInactiveModal, setShowInactiveModal] = useState(false)
-const [inactiveMembers, setInactiveMembers] = useState([])
+  // Add these states with your other state
+  const [inactiveMembers, setInactiveMembers] = useState([])
 const [loadingInactive, setLoadingInactive] = useState(false)
   
   const [stats, setStats] = useState({
@@ -53,8 +52,9 @@ const [loadingInactive, setLoadingInactive] = useState(false)
     setLoadingInactive(true)
     try {
       const response = await axios.get(`${API_BASE_URL}/api/users/inactive`, getAuthHeader())
+      // Instead of showing modal, set activity filter to show in table
       setInactiveMembers(response.data.data)
-      setShowInactiveModal(true)
+      setActivityFilter('Inactive')
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to fetch inactive members', 'error')
     } finally {
@@ -219,12 +219,38 @@ const [loadingInactive, setLoadingInactive] = useState(false)
       });
   }, [attendanceRecords]);
 
+  // --- Display records (combine attendance and inactive members) ---
+const displayRecords = useMemo(() => {
+  if (activityFilter === 'Inactive' && inactiveMembers.length > 0) {
+    // Show inactive members in the table
+    return inactiveMembers.map(member => ({
+      id: `inactive-${member.id}`,
+      name: member.fullName,
+      status: member.status,
+      date: 'N/A',
+      time: 'N/A',
+      rawDateTime: new Date(0),
+      isInactiveRow: true
+    }));
+  }
+  return normalizedRecords;
+}, [activityFilter, inactiveMembers, normalizedRecords]);
+
+  // --- Memoized Table Filtering & Sorting ---
   // --- Memoized Table Filtering & Sorting ---
   const filteredRecords = useMemo(() => {
-    return normalizedRecords
+    // ✅ Use displayRecords instead of normalizedRecords
+    return displayRecords
       .filter(row => {
         const matchesSearch = !tableSearch || row.name.toLowerCase().includes(tableSearch.toLowerCase())
         const matchesType = typeFilter === 'All' || row.status === typeFilter
+        
+        // For inactive rows (from the API), we don't use activityMap
+        if (row.isInactiveRow) {
+          const matchesActivity = activityFilter === 'Inactive' || activityFilter === 'All'
+          return matchesSearch && matchesType && matchesActivity
+        }
+        
         const isActive = memberStatus.activityMap?.[row.name] ?? false
         const matchesActivity = activityFilter === 'All' ||
           (activityFilter === 'Active' && isActive) ||
@@ -236,7 +262,7 @@ const [loadingInactive, setLoadingInactive] = useState(false)
         if (sortBy === 'date-asc') return a.rawDateTime - b.rawDateTime
         return b.rawDateTime - a.rawDateTime
       })
-  }, [normalizedRecords, tableSearch, typeFilter, activityFilter, sortBy, memberStatus.activityMap])
+  }, [displayRecords, tableSearch, typeFilter, activityFilter, sortBy, memberStatus.activityMap])
 
   // --- Live Data Fetching ---
   const fetchDashboardData = async () => {
@@ -595,23 +621,33 @@ const [loadingInactive, setLoadingInactive] = useState(false)
     
     <div className="my-1 border-t border-gray-100"></div>
     <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
-    {['All', 'Active', 'Inactive'].map((opt) => (
-      <button
-        key={opt}
-        onClick={() => { 
-          if (opt === 'Inactive') {
-            fetchInactiveMembers();  // Call API for inactive members
-            setShowFilterDropdown(false);
-          } else {
-            setActivityFilter(opt);
-            setShowFilterDropdown(false);
-          }
-        }}
-        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-      >
-        {opt}
-      </button>
-    ))}
+    <button
+      onClick={() => { 
+        setActivityFilter('All');
+        setShowFilterDropdown(false);
+      }}
+      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+    >
+      All
+    </button>
+    <button
+      onClick={() => { 
+        setActivityFilter('Active');
+        setShowFilterDropdown(false);
+      }}
+      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Active' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+    >
+      Active
+    </button>
+    <button
+      onClick={() => { 
+        fetchInactiveMembers();
+        setShowFilterDropdown(false);
+      }}
+      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Inactive' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+    >
+      Inactive
+    </button>
     
     <div className="my-1 border-t border-gray-100"></div>
     <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
@@ -813,54 +849,6 @@ Use Camera Scanner
           </div>
         </div>
       </Modal>
-
-      {/* Inactive Members Modal */}
-<Modal isOpen={showInactiveModal} onClose={() => setShowInactiveModal(false)}>
-  <div className="font-montserrat">
-    <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-[#F8F9FD]">
-      <button onClick={() => setShowInactiveModal(false)} className="p-3 hover:bg-gray-200/80 rounded-xl transition-colors">
-        <ArrowLeft size={20} className="text-[#4A558F]" />
-      </button>
-      <h3 className="text-sm md:text-base font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-widest">
-        Inactive Members (Last 4 Weeks)
-      </h3>
-    </div>
-
-    <div className="p-6">
-      {loadingInactive ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="animate-spin text-[#4A558F]" size={32} />
-        </div>
-      ) : inactiveMembers.length === 0 ? (
-        <div className="text-center py-8">
-          <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-          <p className="text-gray-500">No inactive members found. All members have attended in the last 4 weeks!</p>
-        </div>
-      ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {inactiveMembers.map((member) => (
-            <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="w-10 h-10 rounded-full bg-[#D9DFF2] flex items-center justify-center overflow-hidden">
-                {member.profileImage ? (
-                  <img src={member.profileImage} alt={member.fullName} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={20} className="text-[#4A558F]" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-gray-800">{member.fullName}</p>
-                <p className="text-xs text-gray-500">{member.email}</p>
-              </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${member.status === 'New Member' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                {member.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-</Modal>
     </>
   )
 }

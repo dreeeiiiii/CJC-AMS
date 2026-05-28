@@ -65,16 +65,25 @@ const AdminAttendance = () => {
 
   const groups = [...new Set(records.map(r => r.group))].sort()
 
+  // ✅ UPDATED: Accurate date filtering for calendar (YYYY-MM-DD format)
   const filteredRecords = records.filter(record => {
     const search = searchTerm.toLowerCase()
     const nameMatch = record.name.toLowerCase().includes(search)
     
-    // Convert record.date (MM/DD/YYYY) to YYYY-MM-DD for comparison with date input
+    // Convert record.date from "MM/DD/YYYY" to "YYYY-MM-DD" for comparison with date picker
     let dateMatch = true
     if (dateFilter) {
-      const [month, day, year] = record.date.split('/')
-      const recordDateFormatted = `${year}-${month}-${day}`
-      dateMatch = recordDateFormatted === dateFilter
+      // Split record.date (format: MM/DD/YYYY)
+      const parts = record.date.split('/')
+      if (parts.length === 3) {
+        const month = parts[0].padStart(2, '0')
+        const day = parts[1].padStart(2, '0')
+        const year = parts[2]
+        const recordDateFormatted = `${year}-${month}-${day}`
+        dateMatch = recordDateFormatted === dateFilter
+      } else {
+        dateMatch = false
+      }
     }
     
     const grpMatch = groupFilter.length === 0 || groupFilter.includes(record.group)
