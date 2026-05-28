@@ -268,25 +268,27 @@ const AdminPage = () => {
 
           const onScanSuccess = async (decodedText) => {
             try {
-              const cleanId = decodedText.trim();
-              if (isNaN(Number(cleanId))) {
-                showToast('Invalid QR payload format', 'error');
-                return;
-              }
-
-              await axios.post(
-                `${API_BASE_URL}/api/attendance`, 
-                { memberId: Number(cleanId) }, 
-                getAuthHeader()
-              );
-              
-              showToast('Attendance Recorded via QR!');
-              closeModal();
-              fetchDashboardData();
+                // Extract just the numbers from any format
+                const numbers = decodedText.match(/\d+/g);
+                if (!numbers) {
+                    showToast('Invalid QR payload format', 'error');
+                    return;
+                }
+                const memberId = parseInt(numbers[0], 10);
+                
+                await axios.post(
+                    `${API_BASE_URL}/api/attendance`, 
+                    { memberId: memberId }, 
+                    getAuthHeader()
+                );
+                
+                showToast('Attendance Recorded via QR!');
+                closeModal();
+                fetchDashboardData();
             } catch (error) {
-              showToast(error.response?.data?.message || 'Invalid QR Code', 'error');
+                showToast(error.response?.data?.message || 'Invalid QR Code', 'error');
             }
-          };
+        };
 
           scanner.render(onScanSuccess, (err) => {});
         } catch (initErr) {
