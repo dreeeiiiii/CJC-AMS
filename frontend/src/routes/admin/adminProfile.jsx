@@ -39,6 +39,7 @@ const AdminProfile = () => {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -97,9 +98,28 @@ const AdminProfile = () => {
     setEditForm({ ...userData });
     setEditMode(!editMode);
     setSaved(false);
+    setEmailError("");
   };
 
   const handleSave = async () => {
+    setEmailError("");
+
+    if (!editForm.firstName.trim() || !editForm.lastName.trim() || !editForm.email.trim()) {
+      setEmailError("First name, last name, and email are required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editForm.email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    if (editForm.contact.trim() && !/^0\d{10}$/.test(editForm.contact.trim())) {
+      setEmailError("Please enter a valid 11-digit mobile number");
+      return;
+    }
+
     const prevUserData = { ...userData };
 
     const mergedData = {
@@ -112,6 +132,7 @@ const AdminProfile = () => {
       joinDate: editForm.joinDate || undefined,
     };
 
+    // Optimistic UI updates
     const optimisticData = { ...userData, ...editForm };
     setUserData(optimisticData);
     setEditForm(optimisticData);
@@ -413,6 +434,11 @@ const AdminProfile = () => {
 
       <Modal isOpen={editMode} onClose={handleEditToggle} title="Edit Profile">
         <div className="p-6 space-y-4">
+          {emailError && (
+            <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+              {emailError}
+            </div>
+          )}
           {[
             { label: "First Name", key: "firstName" },
             { label: "Middle Name", key: "middleName" },

@@ -334,9 +334,18 @@ const AdminMembers = () => {
     const errors = {}
     if (!formData.firstName.trim()) errors.firstName = 'First name is required'
     if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
-    if (!formData.contactNo.trim()) errors.contactNo = 'Contact number is required'
-    if (!formData.email.trim()) errors.email = 'Email is required'
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = 'Please enter a valid email address'
+    }
     if (!formData.gender) errors.gender = 'Please select a gender'
+    if (formData.contactNo && !/^09\d{9}$/.test(formData.contactNo.trim())) {
+      errors.contactNo = 'Enter a valid 11-digit mobile number (09XXXXXXXXX)'
+    }
+    if (editingMemberId && !formData.joinDate) {
+      errors.joinDate = 'Member Since date is required'
+    }
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -816,7 +825,7 @@ const AdminMembers = () => {
               </div>
 
               {editingMemberId && (
-                <FloatingLabelInput label="Member Since" name="joinDate" value={formData.joinDate} onChange={handleInputChange} type="date" />
+                <FloatingLabelInput label="Member Since" name="joinDate" value={formData.joinDate} onChange={handleInputChange} type="date" error={formErrors.joinDate} />
               )}
 
               <div className="flex gap-3 mt-8">

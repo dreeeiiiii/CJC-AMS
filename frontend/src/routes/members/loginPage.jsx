@@ -113,7 +113,7 @@ export const Login = () => {
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-l from-indigo-400 to-indigo-900 relative px-4 py-10">
                 
                 <Modal isOpen={errorPopup.show} onClose={closePopup}>
-                    <div className="p-6 flex flex-col items-center text-center">
+                    <div className="p-6 flex flex-col items-center text-center font-montserrat">
                         <XCircle className="text-red-400 w-16 h-16 mb-4" />
                         <h3 className="text-xl font-bold text-gray-800 mb-2">Login Issue</h3>
                         <p className="text-gray-600 mb-6">{errorPopup.message}</p>

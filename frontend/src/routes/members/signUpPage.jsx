@@ -70,7 +70,7 @@ export const Signup = () => {
         setPopup({
             show: true,
             isError: true,
-            message: "It looks like you missed a spot! Please fill in all required fields (Middle Name is optional)."
+            message: "It looks like you missed a spot! Please fill in all required fields. (Middle Name is optional)"
         });
         return; // Stop the function here
     }
@@ -116,7 +116,7 @@ export const Signup = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-900 relative px-4 py-10">
         
         <Modal isOpen={popup.show} onClose={popup.isError ? closePopup : undefined}>
-            <div className="p-6 flex flex-col items-center text-center">
+            <div className="p-6 flex flex-col items-center text-center font-montserrat">
                 {popup.isError ? (
                     <XCircle className="text-red-400 w-16 h-16 mb-4" />
                 ) : (
