@@ -69,11 +69,13 @@ export const recordAttendance = async (req: Request, res: Response) => {
             });
         }
 
+        // ✅ FIX: Use Philippine time for createdAt
         const record = await prisma.attendance.create({
             data: {
                 memberId: memberId ? Number(memberId) : null,
                 visitorId: visitorId ? Number(visitorId) : null,
-                recordedBy: adminId
+                recordedBy: adminId,
+                createdAt: phTime  // 👈 ADD THIS LINE
             },
             include: {
                 member: true,
