@@ -9,13 +9,27 @@ interface DecodedToken {
   exp?: number;
 }
 
+// Export this interface for use in controllers
+export interface AuthRequest extends Request {
+  user: {
+    id: number;
+    email: string;
+    role: string;
+  };
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: DecodedToken;
+      user?: {
+        id: number;
+        email: string;
+        role: string;
+      };
     }
   }
 }
+
 // 1. Protect Middleware (Ensures user is logged in)
 export const protect = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -45,8 +59,8 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     
     // req.user is now globally recognized!
     req.user = {
-      ...decoded,
       id: Number(decoded.id),
+      email: decoded.email,
       role: decoded.role.toUpperCase()
     }; 
     next();
@@ -61,8 +75,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
 
 // 2. Admin Only Middleware (Ensures user has ADMIN role)
 export const adminOnly = (req: Request, res: Response, next: NextFunction) => {
-  // Use ?. to safely check if user exists AND if role exists
-  if (req.user?.role?.toUpperCase() === "ADMIN") {
+  if (req.user?.role === "ADMIN") {
     next();
   } else {
     res.status(403).json({ message: "Access denied: Admins only" });

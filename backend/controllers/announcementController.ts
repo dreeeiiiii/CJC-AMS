@@ -5,16 +5,6 @@ import prisma from "../db.js";
 import { uploadToCloudinary } from "../config/cloudinary.js"
 
 
-
-declare module "express-serve-static-core" {
-  interface Request {
-    user?: {
-      id: number;
-      role?: string;
-    };
-  }
-}
-
 const formatDate = () => {
   return new Date().toLocaleDateString("en-US", {
     month: "long",
