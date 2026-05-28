@@ -43,6 +43,42 @@ function getDailyBg() {
   return `/BG-${day + 1}.jpg`;
 }
 
+// -------------------- STREAK CALCULATION HELPERS --------------------
+
+function calculateCurrentStreak(attendanceMap) {
+  // Get current date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Find the most recent Sunday (or today if it's Sunday)
+  let currentDate = new Date(today);
+  if (currentDate.getDay() !== 0) {
+    // Go back to most recent Sunday
+    currentDate.setDate(currentDate.getDate() - currentDate.getDay());
+  }
+  
+  let streak = 0;
+  let checking = true;
+  let safetyCounter = 0;
+  
+  // Keep going backwards through Sundays
+  while (checking && safetyCounter < 100) {
+    const dateKey = toKey(currentDate);
+    
+    // If this Sunday is attended
+    if (attendanceMap[dateKey] === true) {
+      streak++;
+      // Move to previous Sunday (7 days earlier)
+      currentDate.setDate(currentDate.getDate() - 7);
+    } else {
+      checking = false;
+    }
+    safetyCounter++;
+  }
+  
+  return streak;
+}
+
 // -------------------- COMPONENT --------------------
 
 const MemberPage = () => {
@@ -132,6 +168,12 @@ const MemberPage = () => {
 
     return map;
   }, [attendanceHistory]);
+
+  // -------------------- CALCULATE STREAK --------------------
+
+  const currentStreak = useMemo(() => {
+    return calculateCurrentStreak(attendanceMap);
+  }, [attendanceMap]);
 
   // -------------------- STATS --------------------
 
@@ -291,7 +333,7 @@ const MemberPage = () => {
             {[
               { label: "Attended", value: attendedCount, color: "text-[#1E3A8A]" },
               { label: "Absent",   value: absentCount,   color: "text-red-600"   },
-              { label: "Streak",  value: streak, color: "text-[#1E3A8A]" },
+              { label: "Streak",  value: currentStreak, color: "text-[#1E3A8A]" },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-50 rounded-xl p-3 md:px-4 md:py-3">
                 <p className="text-xs text-gray-400">{label}</p>
