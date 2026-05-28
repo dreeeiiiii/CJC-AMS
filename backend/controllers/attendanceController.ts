@@ -17,16 +17,16 @@ export const recordAttendance = async (req: Request, res: Response) => {
     }
 
     try {
-        // Philippines Sunday check
+        // Philippines Friday check (for testing)
         const now = new Date();
         const phTime = new Date(
             now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
         );
         const day = phTime.getDay();
 
-        if (day !== 0) {
+        if (day !== 5) {  // 5 = Friday
             return res.status(403).json({
-                message: "Attendance can only be recorded on Sundays (Philippine Time)."
+                message: "Attendance can only be recorded on Fridays (Philippine Time)."
             });
         }
 
@@ -40,16 +40,16 @@ export const recordAttendance = async (req: Request, res: Response) => {
             await updateMemberAccountStatus(Number(memberId));
         }
 
-        const sundayStart = new Date(phTime);
-        sundayStart.setHours(0, 0, 0, 0);
+        const fridayStart = new Date(phTime);
+        fridayStart.setHours(0, 0, 0, 0);
 
-        const sundayEnd = new Date(phTime);
-        sundayEnd.setHours(23, 59, 59, 999);
+        const fridayEnd = new Date(phTime);
+        fridayEnd.setHours(23, 59, 59, 999);
 
         const lookupQuery: any = {
             createdAt: {
-                gte: sundayStart,
-                lte: sundayEnd
+                gte: fridayStart,
+                lte: fridayEnd
             }
         };
 
@@ -65,7 +65,7 @@ export const recordAttendance = async (req: Request, res: Response) => {
 
         if (existing) {
             return res.status(400).json({
-                message: "Attendance already recorded for this Sunday"
+                message: "Attendance already recorded for this Friday"
             });
         }
 
@@ -87,7 +87,6 @@ export const recordAttendance = async (req: Request, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 /**
  * GET /api/attendance/recent
  */

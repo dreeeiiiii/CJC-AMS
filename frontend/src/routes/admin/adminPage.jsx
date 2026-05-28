@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import axios from 'axios'
-import AdminNavbar from "../../components/AdminNavbar"
-import Footer from "../../components/Footer"
-import Modal from "../../components/Modal"
+import adminNavbar from "../../components/adminNavbar"
+import footer from "../../components/footer"
+import modal from "../../components/modal"
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   Search, Filter, Download, ChevronDown, UserPlus, Users, 
@@ -389,7 +389,7 @@ const AdminPage = () => {
     new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
   )
   
-  const isSundayPH = nowPH.getDay() === 0
+  const isFridayPH = nowPH.getDay() === 5  // 5 = Friday
   return (
     <>
       <AdminNavbar />
@@ -702,21 +702,21 @@ const AdminPage = () => {
                 </div>
 
 <button
-  onClick={handleAddAttendance}
-  disabled={!selectedMember || !isSundayPH}
-  className={`w-full mt-6 rounded-xl py-3.5 transition-all shadow-md text-sm font-bold uppercase tracking-widest ${
-    selectedMember && isSundayPH
-      ? 'bg-[#4A558F] text-white hover:bg-[#3a4575] active:scale-[0.98]'
-      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-  }`}
+onClick={handleAddAttendance}
+disabled={!selectedMember || !isFridayPH}
+className={`w-full mt-6 rounded-xl py-3.5 transition-all shadow-md text-sm font-bold uppercase tracking-widest ${
+  selectedMember && isFridayPH
+    ? 'bg-[#4A558F] text-white hover:bg-[#3a4575] active:scale-[0.98]'
+    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+}`}
 >
-  Confirm Attendance
+Confirm Attendance
 </button>
 
 <p className="text-xs text-center text-gray-500 mt-3 font-medium">
-  Attendance is only available every Sunday
-  <br />
-  12:00 AM - 11:59 PM (Philippine Time)
+Attendance is only available every Friday
+<br />
+12:00 AM - 11:59 PM (Philippine Time)
 </p>
 
                 <div className="relative my-6 flex py-1 items-center font-medium">
@@ -727,9 +727,9 @@ const AdminPage = () => {
 
 <button
 onClick={() => setShowScanner(true)}
-disabled={!isSundayPH}
+disabled={!isFridayPH}
 className={`w-full py-3.5 font-bold text-sm rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 shadow-sm uppercase tracking-wider ${
-  isSundayPH
+  isFridayPH
     ? 'bg-[#D9DFF2] text-[#4A558F] hover:bg-[#4A558F] hover:text-white active:scale-[0.98]'
     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
 }`}
