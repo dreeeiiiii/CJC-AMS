@@ -1,8 +1,6 @@
 import "dotenv/config";
 import express from "express";
-// Rule: Use 'import type' for interfaces/types
 import type { Request, Response } from "express";
-import type { AuthRequest } from "./middleware/auth.js";
 import { initCronJobs } from './utils/cron.js';
 
 import cors from "cors";
@@ -10,42 +8,54 @@ import bodyParser from "body-parser";
 import multer from "multer";
 import path from "path";  
 import { fileURLToPath } from "url";
-import fs from "fs"; // 🚀 Added to safely verify and create directories
+import fs from "fs";
 
-// Rule: Add .js extensions to local relative imports
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import prisma from "./db.js";
 import { protect } from "./middleware/auth.js";
 import { uploadToCloudinary } from "./config/cloudinary.js";
 
-// Import your routes with .js extensions
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import contentRoutes from "./routes/contentRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import visitorRoutes from "./routes/visitorRoutes.js";
-import announcementRoutes from "./routes/announcementRoutes.js"; // 🚀 Imported modular routes
+import announcementRoutes from "./routes/announcementRoutes.js";
 import testimonyRoutes from "./routes/testimonyRoutes.js";
 import forgotPasswordRoutes from "./routes/forgotPasswordRoutes.js";
-
-// Environment variables are loaded at startup via dotenv/config
 
 const app = express();
 
 // --- ESM Directory Setup ---
-// Required to serve static files in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 🚀 Bulletproof directory handling: creates public/uploads if it doesn't exist yet
-const uploadDir = path.join(__dirname, "public", "uploads");
+// Directory from .env
+const uploadDir = path.join(__dirname, process.env.UPLOAD_DIR || "public", "uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// --- Middleware ---
+// --- CORS - ONLY from FRONTEND_URL in .env (NO FALLBACK) ---
+if (!process.env.FRONTEND_URL) {
+  console.error("❌ FRONTEND_URL is not set in .env. CORS will block all requests!");
+  process.exit(1);
+}
+
+const allowedOrigins = [process.env.FRONTEND_URL];
+
 app.use(cors({
-  origin: "http://localhost:5173", // Allow your frontend
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('❌ Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
@@ -53,30 +63,29 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
-// Serve the uploads folder dynamically using the absolute path
+// Serve static files
 app.use('/uploads', express.static(uploadDir));
 
-// --- Multer Configuration: Profiles (memory storage for Cloudinary upload) ---
+// Multer configuration
 const uploadProfile = multer({ storage: multer.memoryStorage() });
 
-
-// --- Swagger Documentation ---
+// Swagger Documentation
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// --- Routes ---
+// Routes
 app.use("/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/visitors", visitorRoutes);
-app.use("/api/announcements", announcementRoutes); // 🚀 Cleanly mounted announcement router here
+app.use("/api/announcements", announcementRoutes);
 app.use("/api/testimonies", testimonyRoutes);
 app.use("/api", forgotPasswordRoutes);
 
 /**
- * Profile Image Upload Route (Cloudinary with local disk fallback)
+ * Profile Image Upload Route (using Cloudinary from .env)
  */
-app.post('/api/upload-profile', protect as any, uploadProfile.single('profileImage'), async (req: AuthRequest, res: Response): Promise<any> => {
+app.post('/api/upload-profile', protect as any, uploadProfile.single('profileImage'), async (req: Request, res: Response): Promise<any> => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image uploaded" });
@@ -89,17 +98,21 @@ app.post('/api/upload-profile', protect as any, uploadProfile.single('profileIma
     const userId = (req.user as any).id;
     let imageUrl: string;
 
+    // Cloudinary is configured via .env
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       const result = await uploadToCloudinary(req.file.buffer, 'profiles');
       imageUrl = (result as any).secure_url;
     } else {
+      // Fallback to local storage - but BASE_URL must be in .env
+      if (!process.env.BASE_URL) {
+        throw new Error("BASE_URL not configured in .env for local file serving");
+      }
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = path.extname(req.file.originalname);
       const filename = 'profile-' + uniqueSuffix + ext;
       const filepath = path.join(uploadDir, filename);
       fs.writeFileSync(filepath, req.file.buffer);
-      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-      imageUrl = `${baseUrl}/uploads/${filename}`;
+      imageUrl = `${process.env.BASE_URL}/uploads/${filename}`;
     }
 
     const updatedMember = await prisma.member.update({
@@ -123,7 +136,6 @@ app.post('/api/upload-profile', protect as any, uploadProfile.single('profileIma
  */
 app.get('/test', async (req: Request, res: Response) => {
   try {
-    // prisma.member is correct based on your Member model in schema.prisma
     const members = await prisma.member.findMany(); 
     res.json(members);
   } catch (error: any) {
@@ -135,6 +147,8 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   initCronJobs();
-  console.log(`🚀 Server ready at: http://localhost:${PORT}`);
-  console.log(`📑 API Docs available at: http://localhost:${PORT}/api-docs`);
+  console.log(`🚀 Server ready on port: ${PORT}`);
+  console.log(`📑 API Docs available at: ${process.env.BASE_URL || 'http://localhost:' + PORT}/api-docs`);
+  console.log(`🔗 Frontend URL from .env: ${process.env.FRONTEND_URL}`);
+  console.log(`✅ CORS allowing: ${allowedOrigins.join(', ')}`);
 });
