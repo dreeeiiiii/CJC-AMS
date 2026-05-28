@@ -850,7 +850,7 @@ const AdminMembers = () => {
         </div>
       )}
 
-      <Footer />
+      {!loading && <Footer />}
 
 
     </>

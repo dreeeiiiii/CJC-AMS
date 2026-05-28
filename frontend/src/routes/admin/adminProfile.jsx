@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock } from "lucide-react";
+import { Pencil, X, Download, User, Camera, Check, Loader2, Calendar, Shield, IdCard, Eye, EyeOff, Lock, ContactRound } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import AdminNavbar from "../../components/adminNavbar";
 import Modal from "../../components/Modal";
@@ -335,7 +335,7 @@ const AdminProfile = () => {
               {/* Contact Details */}
               <div className="flex-1 space-y-5">
                 <h3 className="text-lg font-semibold text-[#364687] flex items-center gap-2">
-                  <Users size={18} />
+                  <IdCard size={18} />
                   Contact Details
                 </h3>
                 <div className="space-y-4">
@@ -357,7 +357,7 @@ const AdminProfile = () => {
               <div className="lg:w-72 flex-shrink-0 space-y-6">
                 <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                   <h3 className="text-sm font-semibold text-[#364687] flex items-center gap-2 mb-4">
-                    <Calendar size={16} />
+                    <ContactRound size={16} />
                     Account Info
                   </h3>
                   <div className="space-y-3 text-sm">

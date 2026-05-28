@@ -38,7 +38,7 @@ const ConfirmDialog = ({
         >
           <Icon size={24} className={config.iconColor} />
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">{title}</h3>
+        <h3 className="text-lg font-montserrat font-semibold text-gray-800 mb-2">{title}</h3>
         <p className="text-sm text-gray-500 mb-6">{message}</p>
         <div className="flex gap-3 justify-center">
           <button

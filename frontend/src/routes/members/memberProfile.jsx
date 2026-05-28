@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock } from "lucide-react";
+import { Pencil, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock, ContactRound, IdCard } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import MemberLayout from "../../components/MemberLayout";
 import Modal from "../../components/Modal";
@@ -299,8 +299,8 @@ const MemberProfile = () => {
             <div className="text-center md:text-left flex-1">
               <h2 className="text-2xl md:text-3xl font-bold text-[#3B4B89]">{formattedFullName}</h2>
               <span className="inline-block mt-2 px-3 py-1 bg-[#3B4B89]/10 text-[#3B4B89] text-xs font-semibold uppercase tracking-wider rounded-full">
-                <Shield size={12} className="inline mr-1" />
-                CJC Member
+                <Users size={12} className="inline mr-1" />
+                 Member
               </span>
 
               <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm">
@@ -336,7 +336,7 @@ const MemberProfile = () => {
           <div className="border-t border-gray-200 pt-8"></div>
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
             <div className="flex-1 space-y-5">
-              <h3 className="text-lg font-semibold text-[#3B4B89] flex items-center gap-2 mb-4"><Users size={18} />Contact Details</h3>
+              <h3 className="text-lg font-semibold text-[#3B4B89] flex items-center gap-2 mb-4"><IdCard size={18} />Contact Details</h3>
               <div className="space-y-4">
                 {[
                   { label: "Email Address", value: userData.email },
@@ -355,7 +355,7 @@ const MemberProfile = () => {
             <div className="lg:w-72 flex-shrink-0 space-y-6">
               <div className="bg-[#F0F2F9] rounded-2xl p-5 border border-gray-200">
                 <h3 className="text-sm font-semibold text-[#3B4B89] flex items-center gap-2 mb-4">
-                  <Calendar size={16} />
+                  <ContactRound size={16} />
                   Account Info
                 </h3>
                 <div className="space-y-3 text-sm">

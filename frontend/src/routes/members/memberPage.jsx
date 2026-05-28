@@ -156,11 +156,33 @@ const MemberPage = () => {
     };
   }, [attendanceMap, selectedYear]);
 
+  // -------------------- ENCOURAGEMENT MESSAGE --------------------
+
+  const encouragement = useMemo(() => {
+    if (selectedYear !== CURRENT_YEAR) return null;
+    if (attendedCount === 0) {
+      return {
+        text: "We haven't seen you yet this year. Come join us! ❤️",
+        bg: "bg-rose-50 border-rose-200 text-rose-700",
+      };
+    }
+    if (attendedCount > absentCount) {
+      return {
+        text: "Great job! You've been consistently attending. Keep it up! 🎉",
+        bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      };
+    }
+    return {
+      text: "You've missed a few Sundays. Your presence matters—keep showing up! 🙏",
+      bg: "bg-amber-50 border-amber-200 text-amber-700",
+    };
+  }, [attendedCount, absentCount, selectedYear]);
+
   // -------------------- LOADING --------------------
 
   if (loading) {
     return (
-      <MemberLayout activeNav="home">
+      <MemberLayout activeNav="home" isLoading={loading}>
         <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="animate-spin text-[#3B4B89]" size={48} />
         </div>
@@ -171,13 +193,13 @@ const MemberPage = () => {
   // -------------------- UI --------------------
 
   return (
-    <MemberLayout activeNav="home">
+    <MemberLayout activeNav="home" isLoading={loading}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         {/* PAGE HEADER */}
         <div>
           <h1 className="text-3xl font-bold text-[#1E3A8A] tracking-tight">My Attendance</h1>
-          <p className="text-sm text-gray-500 mt-1">Track and manage your Sunday service attendance.</p>
+          <p className="text-sm text-gray-500 mt-1">Track and monitor your Sunday service attendance in CJCRSG.</p>
         </div>
 
         {/* ATTENDANCE SECTION */}
@@ -192,6 +214,11 @@ const MemberPage = () => {
                 <p className="text-xs text-gray-500 max-w-md mt-0.5">
                   Your Sunday service attendance for the year.
                 </p>
+                {encouragement && (
+                  <div className={`mt-3 px-4 py-3 rounded-xl border text-sm font-medium ${encouragement.bg}`}>
+                    {encouragement.text}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -432,7 +432,7 @@ const AdminAttendance = () => {
         </div>
       )}
 
-      <Footer />
+      {!loading && <Footer />}
 
 
     </>

@@ -6,7 +6,7 @@ import { fetchMyProfile } from "../api/userApi";
 import ConfirmDialog from "./ConfirmDialog";
 import Footer from "./footer";
 
-const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
+const MemberLayout = ({ children, activeNav = "home", onNavChange, isLoading }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -284,7 +284,7 @@ const MemberLayout = ({ children, activeNav = "home", onNavChange }) => {
 
       <main className="md:ml-64 pt-16 min-h-screen transition-all">
         {children}
-        <Footer />
+        {!isLoading && <Footer />}
       </main>
 
       {showBackToTop && !location.pathname.includes("/member/profile") && !lightboxOpen && !mobileMenuOpen && (
