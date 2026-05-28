@@ -268,7 +268,7 @@ const MemberProfile = () => {
   };
 
   return (
-    <memberLayout activeNav="profile">
+    <MemberLayout activeNav="profile">
       <div className="px-6 md:px-12 py-10 md:py-14 bg-white min-h-[calc(100vh-4rem)] font-montserrat">
         <h1 className="text-3xl md:text-4xl font-bold text-[#3B4B89] text-center mb-10">
           My Profile
@@ -584,7 +584,7 @@ const MemberProfile = () => {
           </button>
         </div>
       </Modal>
-    </memberLayout>
+    </MemberLayout>
   );
 };
 

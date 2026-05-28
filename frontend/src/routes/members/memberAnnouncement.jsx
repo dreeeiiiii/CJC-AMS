@@ -316,16 +316,16 @@ const MemberAnnouncements = () => {
 
   if (loading) {
     return (
-      <memberLayout activeNav="announcements" isLoading={loading}>
+      <MemberLayout activeNav="announcements" isLoading={loading}>
         <div className="flex justify-center items-center h-96">
           <div className="w-12 h-12 border-4 border-[#3B4B89] border-t-transparent rounded-full animate-spin"></div>
         </div>
-      </memberLayout>
+      </MemberLayout>
     );
   }
 
   return (
-    <memberLayout activeNav="announcements" isLoading={loading}>
+    <MemberLayout activeNav="announcements" isLoading={loading}>
 
       {/* Header Section */}
       <section className="px-6 md:px-12 py-10 md:py-14 bg-white border-b border-gray-100">
@@ -409,7 +409,7 @@ const MemberAnnouncements = () => {
         </div>
       </section>
 
-    </memberLayout>
+    </MemberLayout>
   );
 };
 
