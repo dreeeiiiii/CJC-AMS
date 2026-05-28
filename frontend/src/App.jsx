@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/navbar';
-import Footer from './components/footer';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import AdminPage from './routes/admin/adminPage';
 import { Signup } from './routes/members/signUpPage';
 import { Login } from './routes/members/loginPage';
@@ -16,8 +16,8 @@ import Announcements from './routes/admin/adminAnnouncement';
 import Members from './routes/admin/adminMembers';
 import Attendance from './routes/admin/adminAttendance';
 import AdminProfile from './routes/admin/adminProfile';
-import ProtectedRoute from './components/protectedRoutes'; 
-import ErrorPage from './components/errorPage';
+import ProtectedRoute from './components/ProtectedRoutes'; 
+import ErrorPage from './components/ErrorPage';
 import { Target, Eye } from 'lucide-react';
 
 const Home = () => {
