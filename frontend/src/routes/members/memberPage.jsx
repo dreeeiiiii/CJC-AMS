@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
-import MemberLayout from "../../components/MemberLayout";
+import memberLayout from "../../components/memberLayout";
 import ShareStoryModal from "../../components/ShareStoryModal";
 import TestimonyCarousel from "../../components/TestimonyCarousel";
 
@@ -251,18 +251,18 @@ const MemberPage = () => {
 
   if (loading) {
     return (
-      <MemberLayout activeNav="home" isLoading={loading}>
+      <memberLayout activeNav="home" isLoading={loading}>
         <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="animate-spin text-[#3B4B89]" size={48} />
         </div>
-      </MemberLayout>
+      </memberLayout>
     );
   }
 
   // -------------------- UI --------------------
 
   return (
-    <MemberLayout activeNav="home" isLoading={loading}>
+    <memberLayout activeNav="home" isLoading={loading}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         {/* PAGE HEADER */}
@@ -461,7 +461,7 @@ const MemberPage = () => {
         isOpen={showStoryModal}
         onClose={() => setShowStoryModal(false)}
       />
-    </MemberLayout>
+    </memberLayout>
   );
 };
 
