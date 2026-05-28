@@ -144,17 +144,17 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
             <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2 pb-1.5 border-b border-gray-100">
               Attendance Summary
             </p>
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-                <p className="text-[10px] text-gray-400 font-medium mb-1">Total</p>
-                <p className="text-xl font-bold text-[#1a2a5e]">{member.totalAttendance ?? 0}</p>
-                <p className="text-[10px] text-gray-400">sessions</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-                <p className="text-[10px] text-gray-400 font-medium mb-1">This Month</p>
-                <p className="text-xl font-bold text-[#1a2a5e]">{member.monthlyAttendance ?? 0}</p>
-                <p className="text-[10px] text-gray-400">sessions</p>
-              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                  <p className="text-[10px] text-gray-400 font-medium mb-1">Total Attendance</p>
+                  <p className="text-xl font-bold text-[#1a2a5e]">{member.totalAttendance ?? 0}</p>
+                  <p className="text-[10px] text-gray-400">sundays</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                  <p className="text-[10px] text-gray-400 font-medium mb-1">Streak</p>
+                  <p className="text-xl font-bold text-[#1a2a5e]">{member.streak ?? 0}</p>
+                  <p className="text-[10px] text-gray-400">{member.streak === 1 ? 'week' : 'weeks'}</p>
+                </div>
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
                 <p className="text-[10px] text-gray-400 font-medium mb-1">Testimonies</p>
                 <p className="text-xl font-bold text-[#1a2a5e]">{member.testimonyCount ?? 0}</p>

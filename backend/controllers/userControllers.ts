@@ -23,11 +23,54 @@ export const getAllUsers = async (req: Request, res: Response) => {
         createdAt: true,
         _count: { select: { testimonies: true } },
       },
-      orderBy: { createdAt: 'desc' } // Shows newest members first
+      orderBy: { createdAt: 'desc' }
     });
+
+    // Compute attendance stats for all members in one pass
+    const getSunday = (d: Date): number => {
+      const date = new Date(d);
+      date.setDate(date.getDate() - date.getDay());
+      date.setHours(0, 0, 0, 0);
+      return date.getTime();
+    };
+
+    const allAttendance = await prisma.attendance.findMany({
+      select: { memberId: true, createdAt: true },
+      where: { memberId: { not: null } },
+    });
+
+    const memberDates: Record<number, Date[]> = {};
+    for (const rec of allAttendance) {
+      const mid = rec.memberId!;
+      if (!memberDates[mid]) memberDates[mid] = [];
+      memberDates[mid].push(rec.createdAt);
+    }
+
+    const computeStreak = (dates: Date[]): number => {
+      const weekSet = new Set<number>();
+      for (const d of dates) weekSet.add(getSunday(d));
+      const sorted = Array.from(weekSet).sort((a, b) => a - b);
+      if (sorted.length === 0) return 0;
+      let maxStreak = 1;
+      let current = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const diff = (sorted[i]! - sorted[i - 1]!) / (1000 * 60 * 60 * 24);
+        if (diff === 7) { current++; maxStreak = Math.max(maxStreak, current); }
+        else { current = 1; }
+      }
+      return maxStreak;
+    };
+
+    const streakCache: Record<number, number> = {};
+    for (const mid of Object.keys(memberDates)) {
+      streakCache[Number(mid)] = computeStreak(memberDates[Number(mid)]!);
+    }
+
     const enriched = users.map(u => ({
       ...u,
       testimonyCount: u._count?.testimonies ?? 0,
+      totalAttendance: memberDates[u.id]?.length ?? 0,
+      streak: streakCache[u.id] ?? 0,
       _count: undefined,
     }));
     res.status(200).json(enriched);
@@ -49,8 +92,39 @@ export const getUsersById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const getSunday = (d: Date): number => {
+      const date = new Date(d);
+      date.setDate(date.getDate() - date.getDay());
+      date.setHours(0, 0, 0, 0);
+      return date.getTime();
+    };
+
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: { memberId: user.id },
+      select: { createdAt: true },
+    });
+
+    const weekSet = new Set<number>();
+    for (const rec of attendanceRecords) weekSet.add(getSunday(rec.createdAt));
+    const sorted = Array.from(weekSet).sort((a, b) => a - b);
+    let streak = 0;
+    if (sorted.length > 0) {
+      streak = 1;
+      let current = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const diff = (sorted[i]! - sorted[i - 1]!) / (1000 * 60 * 60 * 24);
+        if (diff === 7) { current++; streak = Math.max(streak, current); }
+        else { current = 1; }
+      }
+    }
+
     const { _count, ...rest } = user;
-    res.status(200).json({ ...rest, testimonyCount: _count?.testimonies ?? 0 });
+    res.status(200).json({
+      ...rest,
+      testimonyCount: _count?.testimonies ?? 0,
+      totalAttendance: attendanceRecords.length,
+      streak,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
