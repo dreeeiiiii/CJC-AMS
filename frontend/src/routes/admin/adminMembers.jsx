@@ -6,7 +6,7 @@ import TestimonyApprovalSidebar from '../../components/testimonyApprovalSidebar'
 import { 
   Search, Filter, Plus, ArrowLeft, User, Phone, 
   MapPin, CheckCircle, X, ChevronDown, Trash2, 
-  AlertCircle, Loader2, Download, Undo2, Calendar,
+  AlertCircle, Loader2, Download, Undo2, Calendar, Shield,
 } from 'lucide-react'
 
 const FloatingLabelInput = ({ label, name, value, onChange, type = 'text', placeholder, error, icon: Icon, ...props }) => (
@@ -63,6 +63,12 @@ const MemberDetailModal = ({ member, onClose, onDelete, onEdit }) => {
               <p className="text-white font-semibold text-base">{fullName}</p>
               <p className="text-white/60 text-xs mt-0.5">ID: {member.id}</p>
               <div className="flex gap-2 mt-1.5">
+                {member.role === "ADMIN" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-400/20 text-purple-200 text-[10px] font-semibold rounded-full">
+                    <Shield size={10} />
+                    Admin
+                  </span>
+                )}
                 <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full ${
                   member.status === 'Old Member'
                     ? 'bg-white/10 text-white/70'
@@ -722,7 +728,15 @@ const AdminMembers = () => {
                           />
                         </td>
                         <td className="py-3 px-4">
-                          <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName} {member.lastName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={isPendingDelete ? 'text-red-700' : 'text-gray-700'}>{member.firstName} {member.lastName}</span>
+                            {member.role === "ADMIN" && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">
+                                <Shield size={10} />
+                                Admin
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-gray-700 hidden sm:table-cell">{member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '-'}</td>
                         <td className="py-3 px-4 hidden sm:table-cell">

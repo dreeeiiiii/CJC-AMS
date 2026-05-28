@@ -381,7 +381,7 @@ const AdminPage = () => {
   const getStatusStyles = (status) => {
     const normalized = status?.toLowerCase() || '';
     if (normalized === 'new member') return 'bg-green-100 text-green-700';
-    if (normalized === 'old member') return 'bg-indigo-100 text-indigo-700';
+    if (normalized === 'old member') return 'bg-[#D9DFF2] text-[#4A558F]';
     return 'bg-gray-100 text-gray-500';
   }
 
