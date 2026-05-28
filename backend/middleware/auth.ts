@@ -9,12 +9,15 @@ interface DecodedToken {
   exp?: number;
 }
 
-export interface AuthRequest extends Request {
-  user?: DecodedToken;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: DecodedToken;
+    }
+  }
 }
-
 // 1. Protect Middleware (Ensures user is logged in)
-export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const protect = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -40,6 +43,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
       return res.status(401).json({ message: "Token payload is invalid" });
     }
     
+    // req.user is now globally recognized!
     req.user = {
       ...decoded,
       id: Number(decoded.id),
@@ -56,8 +60,9 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
 };
 
 // 2. Admin Only Middleware (Ensures user has ADMIN role)
-export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role.toUpperCase() === "ADMIN") {
+export const adminOnly = (req: Request, res: Response, next: NextFunction) => {
+  // Use ?. to safely check if user exists AND if role exists
+  if (req.user?.role?.toUpperCase() === "ADMIN") {
     next();
   } else {
     res.status(403).json({ message: "Access denied: Admins only" });

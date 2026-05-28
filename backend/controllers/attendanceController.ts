@@ -20,20 +20,53 @@ export const recordAttendance = async (req: AuthRequest, res: Response) => {
     if (!adminId) {
         return res.status(401).json({ message: "Unauthorized: Admin ID missing" });
     }
-    if (memberId) {
-        await updateMemberAccountStatus(Number(memberId));
-    }
 
     try {
-        if (!memberId && !visitorId) {
-            return res.status(400).json({ message: "Member or Visitor ID required" });
+        // =========================
+        // PHILIPPINES SUNDAY CHECK
+        // =========================
+        const now = new Date();
+
+        // Convert to Philippines time
+        const phTime = new Date(
+            now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        );
+
+        const day = phTime.getDay(); // Sunday = 0
+
+        if (day !== 0) {
+            return res.status(403).json({
+                message: "Attendance can only be recorded on Sundays (Philippine Time)."
+            });
         }
 
-        const todayStart = new Date();
-        todayStart.setUTCHours(0, 0, 0, 0);
+        if (!memberId && !visitorId) {
+            return res.status(400).json({
+                message: "Member or Visitor ID required"
+            });
+        }
+
+        if (memberId) {
+            await updateMemberAccountStatus(Number(memberId));
+        }
+
+        // =========================
+        // START OF PH SUNDAY
+        // =========================
+        const sundayStart = new Date(phTime);
+        sundayStart.setHours(0, 0, 0, 0);
+
+        // =========================
+        // END OF PH SUNDAY
+        // =========================
+        const sundayEnd = new Date(phTime);
+        sundayEnd.setHours(23, 59, 59, 999);
 
         const lookupQuery: any = {
-            createdAt: { gte: todayStart }
+            createdAt: {
+                gte: sundayStart,
+                lte: sundayEnd
+            }
         };
 
         if (memberId) {
@@ -47,7 +80,9 @@ export const recordAttendance = async (req: AuthRequest, res: Response) => {
         });
 
         if (existing) {
-            return res.status(400).json({ message: "Attendance already recorded for today" });
+            return res.status(400).json({
+                message: "Attendance already recorded for this Sunday"
+            });
         }
 
         const record = await prisma.attendance.create({
@@ -63,6 +98,7 @@ export const recordAttendance = async (req: AuthRequest, res: Response) => {
         });
 
         res.status(201).json(record);
+
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
