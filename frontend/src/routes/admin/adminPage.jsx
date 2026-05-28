@@ -579,166 +579,187 @@ const displayRecords = useMemo(() => {
           </div>
         </div>
 
-        {/* --- RECENT ACTIVITY TABLE --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <h3 className="text-xl font-semibold text-[#4A558F]">Recent Activity</h3>
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 flex-1 sm:flex-none sm:w-64 focus-within:border-[#4A558F] transition-colors bg-white">
-                <Search size={16} className="text-gray-400" />
-                <input
-                  type="search"
-                  placeholder="Search by name..."
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                  className="w-full ml-2 focus:outline-none text-sm"
-                />
-              </div>
-
-              <div className="relative" ref={filterRef}>
-                <button
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] transition-all bg-white"
-                >
-                  <Filter size={16} />
-                  <span className="hidden xs:inline">Filter & Sort</span>
-                  <span className="xs:hidden">Filter</span>
-                  <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-{showFilterDropdown && (
-  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2">
-    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
-    {['All', 'New Member', 'Old Member'].map((opt) => (
-      <button
-        key={opt}
-        onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
-        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-      >
-        {opt}
-      </button>
-    ))}
+{/* --- RECENT ACTIVITY TABLE --- */}
+<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+  <div className="flex flex-col gap-4 mb-6">
+    <h3 className="text-xl font-semibold text-[#4A558F]">Recent Activity</h3>
     
-    <div className="my-1 border-t border-gray-100"></div>
-    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
-    <button
-      onClick={() => { 
-        setActivityFilter('All');
-        setShowFilterDropdown(false);
-      }}
-      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-    >
-      All
-    </button>
-    <button
-      onClick={() => { 
-        setActivityFilter('Active');
-        setShowFilterDropdown(false);
-      }}
-      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Active' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-    >
-      Active
-    </button>
-    <button
-      onClick={() => { 
-        fetchInactiveMembers();
-        setShowFilterDropdown(false);
-      }}
-      className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Inactive' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-    >
-      Inactive
-    </button>
-    
-    <div className="my-1 border-t border-gray-100"></div>
-    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
-    {[
-      { label: 'Newest First', val: 'date-desc' },
-      { label: 'Oldest First', val: 'date-asc' },
-      { label: 'Name A-Z', val: 'name' }
-    ].map((opt) => (
-      <button
-        key={opt.val}
-        onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
-        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-      >
-        {opt.label}
-      </button>
-    ))}
-  </div>
-)}
-              </div>
-
-              <button onClick={handleExport} className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white">
-                <Download size={16} />
-                Export
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="py-3 px-4 text-gray-600 font-medium">Name</th>
-                  <th className="py-3 px-4 text-gray-600 font-medium">Member type</th>
-                  <th className="py-3 px-4 text-gray-600 font-medium">Status</th>
-                  <th className="py-3 px-4 text-gray-600 font-medium">Date</th>
-                  <th className="py-3 px-4 text-gray-600 font-medium">Time</th>
-                  <th className="py-3 px-4 text-gray-600 font-medium">Streak</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRecords.length > 0 ? (
-                  filteredRecords.map((row) => {
-                    const isActive = memberStatus.activityMap?.[row.name] ?? false
-                    return (
-                      <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4 text-gray-700 font-medium">{row.name}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusStyles(row.status)}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${isActive ? 'bg-[#4A558F]' : 'bg-[#D9DFF2] border border-gray-300'}`}></span>
-                          <span className={`ml-1.5 text-xs font-semibold ${isActive ? 'text-[#4A558F]' : 'text-gray-400'}`}>
-                            {isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-500">{row.date}</td>
-                        <td className="py-3 px-4 text-gray-500">{row.time}</td>
-                        <td className="py-3 px-4">
-                          {(() => {
-                            const s = streakMap[row.name] || 0
-                            if (s >= 4) return (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-600">
-                                🔥 {s} wks
-                              </span>
-                            )
-                            if (s >= 2) return (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-600">
-                                ⚡ {s} wks
-                              </span>
-                            )
-                            return (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                                {s} wk
-                              </span>
-                            )
-                          })()}
-                        </td>
-                      </tr>
-                    )
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="py-10 text-center text-gray-400">No activity recorded today.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+    {/* Search and Controls - Stacked on mobile, row on larger screens */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      
+      {/* Search Bar - Full width on mobile, fixed width on desktop */}
+      <div className="w-full sm:flex-1">
+        <div className="flex items-center border border-gray-200 rounded-full px-4 py-2.5 sm:py-2 focus-within:border-[#4A558F] focus-within:ring-2 focus-within:ring-[#4A558F]/20 transition-all bg-white">
+          <Search size={16} className="text-gray-400 flex-shrink-0" />
+          <input
+            type="search"
+            placeholder="Search by name..."
+            value={tableSearch}
+            onChange={(e) => setTableSearch(e.target.value)}
+            className="w-full ml-2 focus:outline-none text-sm bg-transparent"
+          />
         </div>
+      </div>
+
+      {/* Action Buttons Group */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        
+        {/* Filter Dropdown */}
+        <div className="relative" ref={filterRef}>
+          <button
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:border-[#4A558F] hover:bg-gray-50 transition-all bg-white whitespace-nowrap"
+          >
+            <Filter size={16} />
+            <span className="hidden xs:inline text-sm">Filter & Sort</span>
+            <span className="xs:hidden text-sm">Filter</span>
+            <ChevronDown size={14} className={`transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showFilterDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 animate-slide-up">
+              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
+              {['All', 'New Member', 'Old Member'].map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
+                  className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {opt}
+                </button>
+              ))}
+              
+              <div className="my-1 border-t border-gray-100"></div>
+              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
+              <button
+                onClick={() => { 
+                  setActivityFilter('All');
+                  setShowFilterDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'All' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => { 
+                  setActivityFilter('Active');
+                  setShowFilterDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Active' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => { 
+                  fetchInactiveMembers();
+                  setShowFilterDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === 'Inactive' ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                Inactive
+              </button>
+              
+              <div className="my-1 border-t border-gray-100"></div>
+              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+              {[
+                { label: 'Newest First', val: 'date-desc' },
+                { label: 'Oldest First', val: 'date-asc' },
+                { label: 'Name A-Z', val: 'name' }
+              ].map((opt) => (
+                <button
+                  key={opt.val}
+                  onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
+                  className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Export Button */}
+        <button 
+          onClick={handleExport} 
+          className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] hover:bg-gray-50 transition-all bg-white whitespace-nowrap"
+        >
+          <Download size={16} />
+          <span className="hidden xs:inline">Export</span>
+        </button>
+        
+      </div>
+    </div>
+  </div>
+
+  {/* Table - Horizontal scroll on mobile */}
+  <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+    <table className="w-full text-sm min-w-[500px]">
+      <thead>
+        <tr className="border-b border-gray-200 text-left">
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Name</th>
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Member type</th>
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Status</th>
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Date</th>
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Time</th>
+          <th className="py-3 px-3 sm:px-4 text-gray-600 font-medium text-xs sm:text-sm">Streak</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredRecords.length > 0 ? (
+          filteredRecords.map((row) => {
+            const isActive = memberStatus.activityMap?.[row.name] ?? false
+            return (
+              <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <td className="py-3 px-3 sm:px-4 text-gray-700 font-medium text-xs sm:text-sm break-words max-w-[150px] sm:max-w-none">{row.name}</td>
+                <td className="py-3 px-3 sm:px-4">
+                  <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${getStatusStyles(row.status)} whitespace-nowrap`}>
+                    {row.status}
+                  </span>
+                </td>
+                <td className="py-3 px-3 sm:px-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`inline-block w-2 h-2 rounded-full ${isActive ? 'bg-[#4A558F]' : 'bg-[#D9DFF2] border border-gray-300'}`}></span>
+                    <span className={`text-[10px] sm:text-xs font-semibold ${isActive ? 'text-[#4A558F]' : 'text-gray-400'}`}>
+                      {isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-3 px-3 sm:px-4 text-gray-500 text-[10px] sm:text-xs whitespace-nowrap">{row.date}</td>
+                <td className="py-3 px-3 sm:px-4 text-gray-500 text-[10px] sm:text-xs whitespace-nowrap">{row.time}</td>
+                <td className="py-3 px-3 sm:px-4">
+                  {(() => {
+                    const s = streakMap[row.name] || 0
+                    if (s >= 4) return (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-orange-100 text-orange-600 whitespace-nowrap">
+                        🔥 {s} wks
+                      </span>
+                    )
+                    if (s >= 2) return (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-yellow-50 text-yellow-600 whitespace-nowrap">
+                        ⚡ {s} wks
+                      </span>
+                    )
+                    return (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-gray-100 text-gray-500 whitespace-nowrap">
+                        {s} wk
+                      </span>
+                    )
+                  })()}
+                </td>
+              </tr>
+            )
+          })
+        ) : (
+          <tr>
+            <td colSpan="6" className="py-10 text-center text-gray-400 text-sm">
+              No activity recorded today.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
       </div>
 
       <Footer />
