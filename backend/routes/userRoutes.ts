@@ -6,7 +6,8 @@
     updateUsers,
     deleteUsers,
     getMyProfile,
-    updateMyProfile
+    updateMyProfile,
+    getInactiveMembers 
   } from "../controllers/userControllers.js";
 
   import { protect, adminOnly } from "../middleware/auth.js";
@@ -25,5 +26,7 @@
   router.post("/", protect, adminOnly, createUsers);
   router.put("/:id", protect, adminOnly, updateUsers);
   router.delete("/:id", protect, adminOnly, deleteUsers);
+  router.get("/inactive", protect, adminOnly, getInactiveMembers);
+
 
   export default router;

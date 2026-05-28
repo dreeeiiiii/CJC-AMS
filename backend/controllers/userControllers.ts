@@ -500,3 +500,75 @@ export const searchMembers = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+// In backend/controllers/userControllers.ts
+
+/**
+ * GET /api/users/inactive
+ * Get members who haven't attended in the last 4 weeks
+ */
+export const getInactiveMembers = async (req: Request, res: Response) => {
+  try {
+    // Get all members
+    const members = await prisma.member.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        middleName: true,
+        email: true,
+        status: true,
+        profileImage: true,
+        createdAt: true
+      }
+    });
+
+    // Calculate date 4 weeks ago
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    // Get all attendance records from last 4 weeks
+    const recentAttendance = await prisma.attendance.findMany({
+      where: {
+        createdAt: {
+          gte: fourWeeksAgo
+        },
+        memberId: { not: null }
+      },
+      select: {
+        memberId: true
+      }
+    });
+
+    // Get unique member IDs who attended in last 4 weeks
+    const activeMemberIds = new Set(recentAttendance.map(a => a.memberId));
+
+    // Filter inactive members
+    const inactiveMembers = members.filter(member => !activeMemberIds.has(member.id));
+
+    // Format the response
+    const formattedMembers = inactiveMembers.map(member => ({
+      id: member.id,
+      fullName: `${member.firstName} ${member.middleName ? member.middleName.charAt(0) + '. ' : ''}${member.lastName}`,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      status: member.status,
+      profileImage: member.profileImage,
+      registeredDate: member.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formattedMembers.length,
+      data: formattedMembers
+    });
+
+  } catch (error: any) {
+    console.error("Get Inactive Members Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch inactive members",
+      error: error.message 
+    });
+  }
+};

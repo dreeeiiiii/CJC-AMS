@@ -7,7 +7,7 @@ DATABASE_URL = "postgresql://neondb_owner:npg_ByDe0ouNHkc2@ep-bold-lake-a10aqox5
 
 # Paths to your CSV files
 MEMBERS_PATH = r"C:\Users\dreiiiii\Downloads\Members.csv"
-ATTENDANCE_PATH = r"C:\Users\dreiiiii\Downloads\Attendances.csv"
+ATTENDANCE_PATH = r"C:\Users\dreiiiii\Downloads\Attendanceso.csv"
 
 # Default password that all users will have
 DEFAULT_PASSWORD = "newmember"

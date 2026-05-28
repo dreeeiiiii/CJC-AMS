@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import axios from 'axios'
+import { createPortal } from 'react-dom';
 import AdminNavbar from "../../components/AdminNavbar"
 import Footer from "../../components/Footer"
 import Modal from "../../components/Modal"
@@ -22,6 +23,10 @@ const AdminPage = () => {
   const [showScanner, setShowScanner] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState([]) 
   const [adminName, setAdminName] = useState('Admin')
+  // Add these states with your other states
+const [showInactiveModal, setShowInactiveModal] = useState(false)
+const [inactiveMembers, setInactiveMembers] = useState([])
+const [loadingInactive, setLoadingInactive] = useState(false)
   
   const [stats, setStats] = useState({
     newAttendeesWeek: 0,
@@ -58,6 +63,20 @@ const AdminPage = () => {
       if (!memberWeeks[r.name]) memberWeeks[r.name] = new Set()
       memberWeeks[r.name].add(getWeekKey(r.date))
     })
+
+    // Add this function with your other functions
+const fetchInactiveMembers = async () => {
+  setLoadingInactive(true)
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/users/inactive`, getAuthHeader())
+    setInactiveMembers(response.data.data)
+    setShowInactiveModal(true)
+  } catch (error) {
+    showToast(error.response?.data?.message || 'Failed to fetch inactive members', 'error')
+  } finally {
+    setLoadingInactive(false)
+  }
+}
 
     const streaks = {}
     Object.entries(memberWeeks).forEach(([name, weeksSet]) => {
@@ -413,11 +432,12 @@ const AdminPage = () => {
     <>
       <AdminNavbar />
 
-      {toast && (
-        <div className={`toast-container fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg font-montserrat text-sm text-white transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#4A558F]'}`}>
-          {toast.message}
-        </div>
-      )}
+{toast && createPortal(
+  <div className={`fixed top-5 right-5 z-[9999] px-4 py-3 rounded-xl shadow-lg font-montserrat text-sm text-white transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#4A558F]'}`}>
+    {toast.message}
+  </div>,
+  document.body
+)}
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 font-montserrat">
         <div className="flex flex-col lg:flex-row gap-6">
@@ -557,46 +577,56 @@ const AdminPage = () => {
                   <ChevronDown size={14} className={`transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
-                {showFilterDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2">
-                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
-                    {['All', 'New Member', 'Old Member'].map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                    <div className="my-1 border-t border-gray-100"></div>
-                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
-                    {['All', 'Active', 'Inactive'].map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => { setActivityFilter(opt); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                    <div className="my-1 border-t border-gray-100"></div>
-                    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
-                    {[
-                      { label: 'Newest First', val: 'date-desc' },
-                      { label: 'Oldest First', val: 'date-asc' },
-                      { label: 'Name A-Z', val: 'name' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.val}
-                        onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
-                        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+{showFilterDropdown && (
+  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden p-2">
+    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Member Type</div>
+    {['All', 'New Member', 'Old Member'].map((opt) => (
+      <button
+        key={opt}
+        onClick={() => { setTypeFilter(opt); setShowFilterDropdown(false) }}
+        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${typeFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+      >
+        {opt}
+      </button>
+    ))}
+    
+    <div className="my-1 border-t border-gray-100"></div>
+    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activity</div>
+    {['All', 'Active', 'Inactive'].map((opt) => (
+      <button
+        key={opt}
+        onClick={() => { 
+          if (opt === 'Inactive') {
+            fetchInactiveMembers();  // Call API for inactive members
+            setShowFilterDropdown(false);
+          } else {
+            setActivityFilter(opt);
+            setShowFilterDropdown(false);
+          }
+        }}
+        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${activityFilter === opt ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+      >
+        {opt}
+      </button>
+    ))}
+    
+    <div className="my-1 border-t border-gray-100"></div>
+    <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sort By</div>
+    {[
+      { label: 'Newest First', val: 'date-desc' },
+      { label: 'Oldest First', val: 'date-asc' },
+      { label: 'Name A-Z', val: 'name' }
+    ].map((opt) => (
+      <button
+        key={opt.val}
+        onClick={() => { setSortBy(opt.val); setShowFilterDropdown(false) }}
+        className={`w-full text-left px-3 py-3 rounded-lg text-sm transition-colors ${sortBy === opt.val ? 'bg-[#D9DFF2] text-[#4A558F] font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+)}
               </div>
 
               <button onClick={handleExport} className="flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-full text-sm text-gray-600 hover:text-[#4A558F] hover:border-[#4A558F] transition-all bg-white">
@@ -780,6 +810,54 @@ Use Camera Scanner
           </div>
         </div>
       </Modal>
+
+      {/* Inactive Members Modal */}
+<Modal isOpen={showInactiveModal} onClose={() => setShowInactiveModal(false)}>
+  <div className="font-montserrat">
+    <div className="flex items-center gap-4 p-5 border-b border-gray-100 bg-[#F8F9FD]">
+      <button onClick={() => setShowInactiveModal(false)} className="p-3 hover:bg-gray-200/80 rounded-xl transition-colors">
+        <ArrowLeft size={20} className="text-[#4A558F]" />
+      </button>
+      <h3 className="text-sm md:text-base font-bold text-[#4A558F] flex-1 text-center mr-8 uppercase tracking-widest">
+        Inactive Members (Last 4 Weeks)
+      </h3>
+    </div>
+
+    <div className="p-6">
+      {loadingInactive ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="animate-spin text-[#4A558F]" size={32} />
+        </div>
+      ) : inactiveMembers.length === 0 ? (
+        <div className="text-center py-8">
+          <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
+          <p className="text-gray-500">No inactive members found. All members have attended in the last 4 weeks!</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {inactiveMembers.map((member) => (
+            <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="w-10 h-10 rounded-full bg-[#D9DFF2] flex items-center justify-center overflow-hidden">
+                {member.profileImage ? (
+                  <img src={member.profileImage} alt={member.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <User size={20} className="text-[#4A558F]" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">{member.fullName}</p>
+                <p className="text-xs text-gray-500">{member.email}</p>
+              </div>
+              <span className={`text-xs px-2 py-1 rounded-full ${member.status === 'New Member' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                {member.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</Modal>
     </>
   )
 }
