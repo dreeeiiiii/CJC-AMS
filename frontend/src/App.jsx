@@ -6,8 +6,8 @@ import AdminPage from './routes/admin/adminPage';
 import { Signup } from './routes/members/signUpPage';
 import { Login } from './routes/members/loginPage';
 import { MessageReset } from './routes/auth/messageResetPage';
-import { VerifyReset } from './routes/auth/VerifyResetPage';
-import { ResetPassword } from './routes/auth/ResetPasswordPage';
+import { VerifyReset } from './routes/auth/verifyResetPage';
+import { ResetPassword } from './routes/auth/resetPasswordPage';
 import MemberPage from './routes/members/memberPage';
 import MemberProfile from './routes/members/memberProfile';
 import MemberAnnouncements from './routes/members/memberAnnouncement';
@@ -16,8 +16,8 @@ import Announcements from './routes/admin/adminAnnouncement';
 import Members from './routes/admin/adminMembers';
 import Attendance from './routes/admin/adminAttendance';
 import AdminProfile from './routes/admin/adminProfile';
-import ProtectedRoute from './components/ProtectedRoutes'; 
-import ErrorPage from './components/ErrorPage';
+import ProtectedRoute from './components/protectedRoutes'; 
+import ErrorPage from './components/errorPage';
 import { Target, Eye } from 'lucide-react';
 
 const Home = () => {
