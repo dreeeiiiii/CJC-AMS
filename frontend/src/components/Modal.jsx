@@ -17,6 +17,8 @@ const Modal = ({ isOpen, onClose, children, title, size = "md" }) => {
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const trapFocus = useCallback((e) => {
     if (!contentRef.current) return;
@@ -39,15 +41,11 @@ const Modal = ({ isOpen, onClose, children, title, size = "md" }) => {
     }
   }, []);
 
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === "Escape") onClose?.();
-      trapFocus(e);
-    },
-    [onClose, trapFocus]
-  );
-
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onCloseRef.current?.();
+      trapFocus(e);
+    };
     if (isOpen) {
       previousFocusRef.current = document.activeElement;
       document.body.style.overflow = "hidden";
@@ -62,7 +60,7 @@ const Modal = ({ isOpen, onClose, children, title, size = "md" }) => {
       document.removeEventListener("keydown", handleKeyDown);
       if (isOpen) previousFocusRef.current?.focus();
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, trapFocus]);
 
   const handleDragEnd = (_, info) => {
     if (info.offset.y > 80 || info.velocity.y > 200) onClose?.();
