@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
-import navbar from "../../components/navbar""";
-import footer from "../../components/footer""";
+import navbar from "../../components/navbar"
+import footer from "../../components/footer"
 import { FaArrowLeft } from "react-icons/fa";
 
 export const ResetPassword = () => {

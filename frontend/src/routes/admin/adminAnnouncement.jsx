@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import adminNavbar from "../../components/adminNavbar""'
-import footer from "../../components/footer""'
-import confirmDialog from "../../components/confirmDialog""'
+import adminNavbar from "../../components/adminNavbar"
+import footer from "../../components/footer"
+import confirmDialog from "../../components/confirmDialog"
 import {
   ImagePlus,
   Send,

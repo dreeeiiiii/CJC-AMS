@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Pencil, Download, User, Camera, Check, Loader2, Calendar, Shield, Users, Eye, EyeOff, Lock, ContactRound, IdCard } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import memberLayout from "../../components/memberLayout""";
-import modal from "../../components/modal""";
+import memberLayout from "../../components/memberLayout"
+import modal from "../../components/modal"
 import { fetchMyProfile, updateMyProfile, changePassword } from "../../api/userApi";
 
 const MemberProfile = () => {
