@@ -161,24 +161,41 @@ const AdminPage = () => {
   // --- Normalizing API Data For Table Display ---
   const normalizedRecords = useMemo(() => {
     return attendanceRecords.map(rec => {
-      const name = rec.name || (rec.member ? `${rec.member.firstName} ${rec.member.lastName}` : 'Unknown Member');
-      const status = rec.status || rec.member?.status || 'Old Member';
-      
-      // Parse dates safely from database timestamps
-      const ts = rec.createdAt ? new Date(rec.createdAt) : (rec.date ? new Date(rec.date) : new Date());
-      const dateString = ts.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-      const timeString = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const name = rec.name || (rec.member ? `${rec.member.firstName} ${rec.member.lastName}` : 'Unknown Member');
+        const status = rec.status || rec.member?.status || 'Old Member';
+        
+        // ✅ Convert to Philippine Time (Asia/Manila)
+        let phTime;
+        if (rec.createdAt) {
+            const utcDate = new Date(rec.createdAt);
+            phTime = new Date(utcDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+        } else if (rec.date) {
+            phTime = new Date(rec.date);
+        } else {
+            phTime = new Date();
+        }
+        
+        const dateString = phTime.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+        });
+        const timeString = phTime.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        });
 
-      return {
-        id: rec.id,
-        name,
-        status,
-        date: dateString,
-        time: timeString,
-        rawDateTime: ts
-      };
+        return {
+            id: rec.id,
+            name,
+            status,
+            date: dateString,
+            time: timeString,
+            rawDateTime: phTime
+        };
     });
-  }, [attendanceRecords]);
+}, [attendanceRecords]);
 
   // --- Memoized Table Filtering & Sorting ---
   const filteredRecords = useMemo(() => {
