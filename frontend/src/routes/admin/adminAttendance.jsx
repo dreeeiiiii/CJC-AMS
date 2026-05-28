@@ -68,7 +68,15 @@ const AdminAttendance = () => {
   const filteredRecords = records.filter(record => {
     const search = searchTerm.toLowerCase()
     const nameMatch = record.name.toLowerCase().includes(search)
-    const dateMatch = !dateFilter || record.date === dateFilter
+    
+    // Convert record.date (MM/DD/YYYY) to YYYY-MM-DD for comparison with date input
+    let dateMatch = true
+    if (dateFilter) {
+      const [month, day, year] = record.date.split('/')
+      const recordDateFormatted = `${year}-${month}-${day}`
+      dateMatch = recordDateFormatted === dateFilter
+    }
+    
     const grpMatch = groupFilter.length === 0 || groupFilter.includes(record.group)
     return nameMatch && dateMatch && grpMatch
   })
