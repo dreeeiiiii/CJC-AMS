@@ -251,18 +251,18 @@ const MemberPage = () => {
 
   if (loading) {
     return (
-      <memberLayout activeNav="home" isLoading={loading}>
+      <MemberLayout activeNav="home" isLoading={loading}>
         <div className="flex h-[60vh] items-center justify-center">
           <Loader2 className="animate-spin text-[#3B4B89]" size={48} />
         </div>
-      </memberLayout>
+      </MemberLayout>
     );
   }
 
   // -------------------- UI --------------------
 
   return (
-    <memberLayout activeNav="home" isLoading={loading}>
+    <MemberLayout activeNav="home" isLoading={loading}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         {/* PAGE HEADER */}
@@ -448,7 +448,7 @@ const MemberPage = () => {
           {/* Testimonies */}
           <section className="bg-[#3B4B89] rounded-2xl p-6 shadow-sm text-white text-center flex flex-col">
             <h2 className="text-xl font-bold mb-4">Testimonies</h2>
-            <testimonyCarousel
+            <TestimonyCarousel
               testimonials={testimonials}
               onShareStory={() => setShowStoryModal(true)}
             />
@@ -461,7 +461,7 @@ const MemberPage = () => {
         isOpen={showStoryModal}
         onClose={() => setShowStoryModal(false)}
       />
-    </memberLayout>
+    </MemberLayout>
   );
 };
 
